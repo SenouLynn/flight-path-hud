@@ -1,0 +1,67 @@
+.app-shell {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: 14px;
+  text-align: left;
+}
+
+.header {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.eyebrow {
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  font-size: 0.68rem;
+  color: var(--muted);
+  margin: 0;
+}
+
+.intro {
+  color: var(--muted);
+  font-size: 0.9rem;
+  max-width: 76ch;
+}
+
+.panel {
+  border: 1px solid var(--border);
+  background: var(--bg-panel);
+  padding: 8px;
+  overflow-x: auto;
+}
+
+.mapping-table {
+  width: 100%;
+  border-collapse: collapse;
+  min-width: 920px;
+}
+
+.mapping-table th,
+.mapping-table td {
+  border: 1px solid var(--border);
+  padding: 8px 10px;
+  font-size: 0.82rem;
+  vertical-align: top;
+}
+
+.mapping-table thead th {
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  font-size: 0.68rem;
+  color: var(--muted);
+  background: #2f2f2f;
+}
+
+.mapping-table tbody tr:nth-child(even) {
+  background: var(--bg-panel-alt);
+}
+
+.mapping-table td:nth-child(5) {
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  font-size: 0.68rem;
+  color: var(--text-h);
+}
