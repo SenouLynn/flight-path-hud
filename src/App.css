@@ -33,10 +33,448 @@
   overflow-x: auto;
 }
 
+.panel-header {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  margin-bottom: 8px;
+}
+
+.panel-subtitle {
+  color: var(--muted);
+  font-size: 0.78rem;
+  max-width: 90ch;
+}
+
+.hud-fused-shell {
+  border: 1px solid var(--border);
+  background: #1f2124;
+  padding: 10px;
+}
+
+.hud-pfd {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.hud-main-row {
+  min-width: 0;
+}
+
+.hud-secondary-grid {
+  margin-top: 12px;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.hud-secondary-card {
+  border: 1px solid var(--border);
+  background: #15191e;
+  padding: 10px;
+  display: flex;
+  align-items: stretch;
+  justify-content: stretch;
+  min-width: 0;
+  min-height: 620px;
+}
+
+.hud-placeholder {
+  min-height: 92px;
+  display: grid;
+  place-items: center;
+  border: 1px dashed var(--border);
+  color: var(--muted);
+  font-size: 0.85rem;
+}
+
+.hud-heading {
+  width: 100%;
+  height: auto;
+  display: block;
+}
+
+.hud-heading-bg {
+  fill: #101216;
+}
+
+.hud-line-muted {
+  stroke: #3f4752;
+  stroke-width: 1;
+}
+
+.hud-line {
+  stroke: #dfe4eb;
+  stroke-width: 1.2;
+}
+
+.hud-heading-label {
+  fill: #cfd8e4;
+  font-size: 9px;
+  font-family: var(--mono);
+}
+
+.hud-heading-readout {
+  fill: #eef4ff;
+  font-size: 22px;
+  font-weight: 600;
+  font-family: var(--mono);
+  letter-spacing: 0.06em;
+}
+
+.hud-center-bug {
+  fill: #ffd36f;
+}
+
+.hud-attitude {
+  width: 100%;
+  height: auto;
+  display: block;
+}
+
+.hud-att-bg {
+  fill: #101216;
+}
+
+.hud-sky {
+  fill: #2b4f78;
+}
+
+.hud-ground {
+  fill: #6f4a2f;
+}
+
+.hud-horizon {
+  stroke: #f3f7ff;
+  stroke-width: 2;
+}
+
+.hud-ladder {
+  stroke: #d9e2f0;
+  stroke-width: 1.2;
+}
+
+.hud-ladder-label {
+  fill: #d9e2f0;
+  font-size: 8px;
+  font-family: var(--mono);
+}
+
+.hud-window-frame {
+  fill: none;
+  stroke: #36404f;
+  stroke-width: 2;
+}
+
+.hud-roll-arc {
+  fill: none;
+  stroke: #9aa9bb;
+  stroke-width: 1.2;
+}
+
+.hud-roll-mark {
+  stroke: #c2cede;
+  stroke-width: 1.2;
+}
+
+.hud-aircraft {
+  stroke: #ffe08f;
+  stroke-width: 2;
+}
+
+.hud-status-text {
+  fill: #aebbd0;
+  font-size: 10px;
+  font-family: var(--mono);
+}
+
+.hud-orientation {
+  width: 100%;
+  height: 100%;
+  min-height: 600px;
+  display: block;
+}
+
+.hud-orientation-empty {
+  width: 100%;
+  min-height: 600px;
+  display: grid;
+  place-items: center;
+  color: var(--muted);
+  font-size: 0.78rem;
+  border: 1px dashed var(--border);
+}
+
+.hud-orientation-bg {
+  fill: #0f1216;
+}
+
+.hud-world-sky {
+  fill: #1a3555;
+  opacity: 0.5;
+}
+
+.hud-world-ground {
+  fill: #4a311f;
+  opacity: 0.45;
+}
+
+.hud-world-level {
+  stroke: #d6deeb;
+  stroke-width: 1.2;
+}
+
+.hud-world-label {
+  fill: #98abc5;
+  font-size: 8px;
+  font-family: var(--mono);
+}
+
+.hud-trajectory {
+  width: 100%;
+  height: 100%;
+  min-height: 600px;
+  display: block;
+}
+
+.hud-trajectory-bg {
+  fill: #0f1216;
+}
+
+.hud-trajectory-axis {
+  stroke: #2f3b4b;
+  stroke-width: 1;
+}
+
+.hud-trajectory-grid {
+  stroke: #233041;
+  stroke-width: 1;
+}
+
+.hud-trajectory-origin {
+  fill: #ffd36f;
+  stroke: #fff2bd;
+  stroke-width: 1.2;
+}
+
+.hud-trajectory-path {
+  fill: none;
+  stroke: #89d0ff;
+  stroke-width: 4;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.hud-trajectory-tip {
+  fill: none;
+  stroke: #89d0ff;
+  stroke-width: 3.2;
+  stroke-linecap: round;
+}
+
+.hud-trajectory-stall {
+  stroke: #f0a96c;
+}
+
+.hud-trajectory-end {
+  fill: #ffd36f;
+  stroke: #fff2bd;
+  stroke-width: 1.2;
+}
+
+.hud-trajectory-core {
+  fill: #fff2bd;
+}
+
+.hud-trajectory-ladder {
+  fill: none;
+  stroke: #ffffff;
+  stroke-opacity: 0.45;
+  stroke-width: 1.1;
+  stroke-dasharray: 5 4;
+}
+
+.hud-trajectory-node {
+  fill: #8ec5ff;
+  opacity: 0.9;
+}
+
+.hud-trajectory-node-origin {
+  fill: #ffd36f;
+}
+
+.hud-trajectory-label,
+.hud-trajectory-hint,
+.hud-trajectory-stall-label {
+  fill: #aebbd0;
+  font-size: 10px;
+  font-family: var(--mono);
+}
+
+.hud-trajectory-hint {
+  font-size: 9px;
+  fill: #8195ab;
+}
+
+.hud-trajectory-stall-label {
+  fill: #ffb36b;
+  font-size: 11px;
+  letter-spacing: 0.08em;
+}
+
+.hud-trajectory-delta-positive {
+  fill: #9ad97a;
+}
+
+.hud-trajectory-delta-negative {
+  fill: #ffb36b;
+}
+
+.hud-trajectory-delta-neutral {
+  fill: #aebbd0;
+}
+
+.hud-orientation-ring {
+  fill: none;
+  stroke: #415166;
+  stroke-width: 2;
+}
+
+.hud-orientation-axis {
+  stroke: #2f3b4b;
+  stroke-width: 1;
+}
+
+.hud-axis-x {
+  stroke: #ff8e8e;
+  stroke-width: 1.4;
+}
+
+.hud-axis-y {
+  stroke: #8ef5aa;
+  stroke-width: 1.4;
+}
+
+.hud-axis-z {
+  stroke: #91b8ff;
+  stroke-width: 1.4;
+}
+
+.hud-axis-down {
+  stroke: #ffd48e;
+  stroke-width: 1.2;
+  stroke-dasharray: 3 2;
+}
+
+.hud-axis-label {
+  fill: #c7d2e2;
+  font-size: 8px;
+  font-family: var(--mono);
+}
+
+.hud-orientation-core {
+  fill: #1d2838;
+  stroke: #8fa4c3;
+  stroke-width: 1.2;
+}
+
+.hud-vehicle-edge {
+  fill: none;
+  stroke: #f5ca6b;
+  stroke-width: 2;
+}
+
+.hud-vehicle-edge-dim {
+  fill: none;
+  stroke: #ccab62;
+  stroke-width: 1.2;
+  opacity: 0.75;
+}
+
+.hud-orientation-nose {
+  fill: #ffd36f;
+}
+
+.hud-orientation-wings,
+.hud-orientation-tail {
+  stroke: #f0c768;
+  stroke-width: 2;
+}
+
+.hud-orientation-heading {
+  fill: #b6c6dd;
+  font-size: 9px;
+  font-family: var(--mono);
+  letter-spacing: 0.04em;
+}
+
+.hud-orientation-text {
+  fill: #9db1cd;
+  font-size: 9px;
+  font-family: var(--mono);
+}
+
 .mapping-table {
   width: 100%;
   border-collapse: collapse;
   min-width: 920px;
+}
+
+.heading-table {
+  min-width: 780px;
+}
+
+.attitude-table {
+  min-width: 980px;
+}
+
+.flight-table {
+  min-width: 1760px;
+}
+
+.live-table {
+  min-width: 980px;
+}
+
+.adapter-controls {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(140px, 1fr));
+  gap: 10px;
+  margin-bottom: 10px;
+}
+
+.adapter-control {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 0.8rem;
+  color: var(--muted);
+}
+
+.adapter-control select {
+  border: 1px solid var(--border);
+  background: var(--bg-control);
+  color: var(--text);
+  padding: 5px 8px;
+}
+
+.adapter-stat {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 2px;
+  border: 1px solid var(--border);
+  background: var(--bg-panel-alt);
+  padding: 6px 8px;
+  font-size: 0.75rem;
+  color: var(--muted);
+}
+
+.adapter-stat strong {
+  font-size: 0.9rem;
+  color: var(--text-h);
+  font-weight: 600;
 }
 
 .mapping-table th,
@@ -59,9 +497,64 @@
   background: var(--bg-panel-alt);
 }
 
-.mapping-table td:nth-child(5) {
+.registry-table td:nth-child(5) {
   text-transform: uppercase;
   letter-spacing: 0.04em;
   font-size: 0.68rem;
   color: var(--text-h);
+}
+
+.horizon-preview {
+  width: 150px;
+  height: 90px;
+  border: 1px solid var(--border);
+  background: #222;
+}
+
+.preview-axis {
+  stroke: #4f4f4f;
+  stroke-width: 1;
+}
+
+.preview-horizon {
+  stroke: #d8d8d8;
+  stroke-width: 2;
+}
+
+.path-preview {
+  width: 150px;
+  height: 150px;
+  border: 1px solid var(--border);
+  background: #222;
+}
+
+.preview-linear {
+  fill: none;
+  stroke: #8ec5ff;
+  stroke-width: 2;
+}
+
+.preview-turn {
+  fill: none;
+  stroke: #ffd28a;
+  stroke-width: 2;
+}
+
+@media (max-width: 860px) {
+  .hud-secondary-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .hud-orientation,
+  .hud-orientation-empty {
+    min-height: 280px;
+  }
+
+  .hud-trajectory {
+    min-height: 280px;
+  }
+
+  .adapter-controls {
+    grid-template-columns: repeat(2, minmax(120px, 1fr));
+  }
 }
