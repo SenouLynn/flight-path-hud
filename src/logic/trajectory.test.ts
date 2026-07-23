@@ -68,4 +68,30 @@ describe('resolvePredictiveTrajectory', () => {
     expect(trajectory.headingTrackDeltaDeg).toBeLessThan(0)
     expect(Math.abs(endpoint?.x ?? 0)).toBeGreaterThan(0)
   })
+
+  it('emits a nose-relative forward path that advances in depth and lifts when climbing', () => {
+    const trajectory = resolvePredictiveTrajectory({
+      timestampMs: 0,
+      vfrHud: {
+        groundSpeedMps: 24,
+        climbMps: 3,
+      },
+      attitude: {
+        pitchRad: Math.PI / 18,
+        rollRad: Math.PI / 12,
+      },
+    })
+
+    const forward = trajectory.forwardPoints
+    expect(forward).toHaveLength(trajectory.points.length)
+    expect(forward[0]).toEqual({ forwardM: 0, lateralM: 0, verticalM: 0, tSec: 0 })
+
+    // Depth increases monotonically over the early corridor (before any sharp turn-back).
+    expect(forward[1].forwardM).toBeGreaterThan(0)
+    expect(forward.at(-1)?.forwardM ?? 0).toBeGreaterThan(forward[1].forwardM)
+
+    // Positive climb → positive (upward) vertical offset; right bank → +right lateral.
+    expect(forward.at(-1)?.verticalM ?? 0).toBeGreaterThan(0)
+    expect(forward.at(-1)?.lateralM ?? 0).toBeGreaterThan(0)
+  })
 })

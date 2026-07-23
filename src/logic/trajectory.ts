@@ -11,8 +11,23 @@ export interface TrajectoryPoint {
   tSec: number
 }
 
+/**
+ * A predicted position expressed in a nose-relative frame (straight-ahead at
+ * t=0), suitable for a forward-looking perspective projection:
+ *   forwardM  — distance ahead along the initial nose axis (depth into screen)
+ *   lateralM  — signed sideways offset, +right, from turn + wind drift
+ *   verticalM — signed vertical offset, +up, from climb
+ */
+export interface ForwardPathPoint {
+  forwardM: number
+  lateralM: number
+  verticalM: number
+  tSec: number
+}
+
 export interface TrajectoryResolution {
   points: TrajectoryPoint[]
+  forwardPoints: ForwardPathPoint[]
   speedMps: number
   stallSpeedMps: number
   turnRateRadPerSec: number
@@ -97,14 +112,22 @@ export function resolvePredictiveTrajectory(
 
   const steps = Math.max(1, Math.floor(config.horizonSec / config.stepSec))
   const points: TrajectoryPoint[] = [{ x: 0, y: 0, tSec: 0 }]
+  const forwardPoints: ForwardPathPoint[] = [{ forwardM: 0, lateralM: 0, verticalM: 0, tSec: 0 }]
 
   let pathDirectionRad = worldDirectionRad
   let x = 0
   let y = 0
 
+  // Nose-relative integration for the forward perspective view: heading starts
+  // at 0 (straight ahead) so forward/lateral are measured off the current nose.
+  let relHeadingRad = 0
+  let forwardM = 0
+  let lateralM = 0
+
   for (let index = 1; index <= steps; index += 1) {
     const tSec = index * config.stepSec
     pathDirectionRad += turnRateRadPerSec * config.stepSec
+    relHeadingRad += turnRateRadPerSec * config.stepSec
 
     const forwardStep = effectiveForwardSpeed * config.stepSec
     const lateralStep = Math.sin(pathDirectionRad) * forwardStep + windDriftMps * config.stepSec
@@ -115,10 +138,15 @@ export function resolvePredictiveTrajectory(
     y += forwardStepY + climbStep
 
     points.push({ x, y, tSec })
+
+    forwardM += Math.cos(relHeadingRad) * forwardStep
+    lateralM += Math.sin(relHeadingRad) * forwardStep + windDriftMps * config.stepSec
+    forwardPoints.push({ forwardM, lateralM, verticalM: verticalRateMps * tSec, tSec })
   }
 
   return {
     points,
+    forwardPoints,
     speedMps,
     stallSpeedMps,
     turnRateRadPerSec,

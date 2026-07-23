@@ -261,9 +261,37 @@
 .hud-trajectory-path {
   fill: none;
   stroke: #89d0ff;
-  stroke-width: 4;
+  stroke-width: 2.4;
   stroke-linecap: round;
   stroke-linejoin: round;
+}
+
+.hud-trajectory-corridor {
+  stroke: #89d0ff;
+  stroke-opacity: 0.5;
+  stroke-width: 1.2;
+  stroke-linejoin: round;
+}
+
+.hud-trajectory-stall-fill {
+  stroke: #f0a96c;
+  stroke-opacity: 0.5;
+}
+
+.hud-trajectory-gate {
+  stroke: #9fd8ff;
+  stroke-width: 1.4;
+  stroke-linecap: round;
+}
+
+.hud-trajectory-vanish {
+  fill: none;
+  stroke: #6f86a3;
+  stroke-width: 1.4;
+}
+
+.hud-trajectory-vanish-core {
+  fill: #8aa0bd;
 }
 
 .hud-trajectory-tip {
