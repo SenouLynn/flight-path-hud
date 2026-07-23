@@ -30,7 +30,7 @@ export function HudPredictiveTrajectory({ sample, width = 620, height = 620 }: H
   const scale = Math.min(width, height) * 0.40 / maxExtent
   const svgPoints = trajectory.points.map((point) => ({
     x: centerX - point.x * scale,
-    y: centerY + point.y * scale,
+    y: centerY - point.y * scale,
   }))
 
   const endPoint = svgPoints.at(-1) ?? { x: centerX, y: centerY }
