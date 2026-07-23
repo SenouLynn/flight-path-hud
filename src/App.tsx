@@ -3,6 +3,7 @@ import './App.css'
 import { HudOrientationIndicator } from './components/HudOrientationIndicator'
 import { HudPrimaryFlightDisplay } from './components/HudPrimaryFlightDisplay'
 import { HudPredictiveTrajectory } from './components/HudPredictiveTrajectory'
+import { HudFlightPathRecorder } from './components/HudFlightPathRecorder'
 import { MAVLINK_FIELDS, MAVLINK_FIELD_KEYS } from './constants/mavlinkInputs'
 import { resolveAttitude } from './logic/attitude'
 import { resolveFlightPath2d, resolveFlightPath3d, resolvePredictivePath, resolveScalarTelemetry } from './logic/flightPath'
@@ -16,12 +17,13 @@ import {
   runHeadingReplay,
 } from './logic/replay'
 import {
-  buildMockLiveSample,
+  buildSyntheticMissionSamples,
   createLiveMockSource,
   createSyntheticReplaySource,
   type TelemetrySourceId,
 } from './stream/telemetrySource'
 import { useTelemetryFeed } from './stream/useTelemetryFeed'
+import { useFlightTrack } from './stream/useFlightTrack'
 
 function HorizonPreview({ x1, y1, x2, y2 }: { x1: number, y1: number, x2: number, y2: number }) {
   return (
@@ -62,10 +64,7 @@ function PathPreview({
 }
 
 function App() {
-  const streamSamples = useMemo(
-    () => Array.from({ length: 40 }, (_, index) => buildMockLiveSample(index * 180)),
-    [],
-  )
+  const streamSamples = useMemo(() => buildSyntheticMissionSamples(40, 180), [])
 
   const telemetrySources = useMemo(() => {
     const synthetic = createSyntheticReplaySource(streamSamples, 300)
@@ -79,7 +78,16 @@ function App() {
 
   const [sourceId, setSourceId] = useState<TelemetrySourceId>('synthetic-replay')
   const activeSource = telemetrySources[sourceId]
-  const { latestSample, packetCount } = useTelemetryFeed(activeSource)
+  const feed = useTelemetryFeed(activeSource)
+  const { latestSample, packetCount } = feed
+
+  // Live feed is open-ended → rolling window; finite/replay sources keep the
+  // full track so a whole logged flight is visible at once.
+  const trackConfig = useMemo(
+    () => (sourceId === 'live-mock' ? { maxPoints: 600, maxAgeSec: 45 } : { maxPoints: 4000 }),
+    [sourceId],
+  )
+  const flightTrack = useFlightTrack(feed, sourceId, trackConfig)
 
   const liveHeading = latestSample === null ? null : resolveHeading(latestSample)
   const liveAttitude = latestSample === null ? null : resolveAttitude(latestSample)
@@ -128,11 +136,14 @@ function App() {
                 pitchDeg={liveAttitude?.pitchDeg ?? null}
                 yawDeg={liveYawDeg}
                 width={620}
-                height={620}
+                height={480}
               />
             </div>
               <div className="hud-secondary-card">
-                <HudPredictiveTrajectory sample={latestSample} width={620} height={620} />
+                <HudPredictiveTrajectory sample={latestSample} width={620} height={480} />
+              </div>
+              <div className="hud-secondary-card">
+                <HudFlightPathRecorder track={flightTrack.track} source={flightTrack.source} width={620} height={480} />
               </div>
           </div>
         </div>

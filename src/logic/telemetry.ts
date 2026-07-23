@@ -16,6 +16,10 @@ export interface GlobalPositionIntSample {
   vxCms?: number
   vyCms?: number
   vzCms?: number
+  latDegE7?: number
+  lonDegE7?: number
+  altMm?: number
+  relativeAltMm?: number
 }
 
 export interface GpsRawIntSample {
@@ -93,6 +97,10 @@ function sanitizeGlobalPositionInt(
     vxCms: toFiniteNumber(input.vxCms),
     vyCms: toFiniteNumber(input.vyCms),
     vzCms: toFiniteNumber(input.vzCms),
+    latDegE7: toFiniteNumber(input.latDegE7),
+    lonDegE7: toFiniteNumber(input.lonDegE7),
+    altMm: toFiniteNumber(input.altMm),
+    relativeAltMm: toFiniteNumber(input.relativeAltMm),
   }
 
   if (
@@ -100,6 +108,10 @@ function sanitizeGlobalPositionInt(
     && sample.vxCms === undefined
     && sample.vyCms === undefined
     && sample.vzCms === undefined
+    && sample.latDegE7 === undefined
+    && sample.lonDegE7 === undefined
+    && sample.altMm === undefined
+    && sample.relativeAltMm === undefined
   ) {
     return undefined
   }

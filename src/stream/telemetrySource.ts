@@ -18,6 +18,14 @@ function clamp(value: number, min: number, max: number): number {
   return Math.min(max, Math.max(min, value))
 }
 
+// Equatorial meters per degree of latitude, matching logic/position.ts. Used
+// only to invert an integrated ENU path back into plausible LLA fixes so the
+// synthetic mission carries an absolute GPS track (exercises the lla_enu path).
+const METERS_PER_DEG_LAT = 111319.49
+const DEG_E7 = 1e7
+// Arbitrary launch point (Zürich-ish) at 500 m MSL — the ENU frame origin.
+const MOCK_ORIGIN = { latDegE7: 473977420, lonDegE7: 85455940, altMm: 500000 }
+
 export function buildMockLiveSample(timestampMs: number): TelemetrySample {
   const tSec = timestampMs / 1000
 
@@ -64,6 +72,53 @@ export function buildMockLiveSample(timestampMs: number): TelemetrySample {
       velCms: speedToCms(groundSpeedMps),
     },
   }
+}
+
+/**
+ * Build a finite synthetic mission: the analytic velocity from
+ * `buildMockLiveSample` cumulatively integrated into an ENU path, then inverted
+ * to absolute lat/lon/alt about `MOCK_ORIGIN`. Because the LLA is the exact
+ * algebraic inverse of `projectLlaToEnu` (quantized to int32 degE7 like real
+ * hardware), `resolveTrack` round-trips it back to the same ENU path. This is
+ * the source that drives the recorder's absolute (GPS) path.
+ */
+export function buildSyntheticMissionSamples(count = 40, stepMs = 180): TelemetrySample[] {
+  const dtSec = stepMs / 1000
+  const lat0Rad = ((MOCK_ORIGIN.latDegE7 / DEG_E7) * Math.PI) / 180
+  const metersPerDegLon = METERS_PER_DEG_LAT * Math.cos(lat0Rad)
+
+  let eastM = 0
+  let northM = 0
+  let upM = 0
+  const samples: TelemetrySample[] = []
+
+  for (let index = 0; index < count; index += 1) {
+    const timestampMs = index * stepMs
+    const base = buildMockLiveSample(timestampMs)
+    const gp = base.globalPositionInt ?? {}
+
+    // Advance the position by this frame's NED velocity (skip the first frame
+    // so the track starts exactly at the origin). vx = North, vy = East,
+    // vz = Down → up integrates as (-vz).
+    if (index > 0) {
+      northM += ((gp.vxCms ?? 0) / 100) * dtSec
+      eastM += ((gp.vyCms ?? 0) / 100) * dtSec
+      upM += (-(gp.vzCms ?? 0) / 100) * dtSec
+    }
+
+    samples.push({
+      ...base,
+      globalPositionInt: {
+        ...gp,
+        latDegE7: Math.round(MOCK_ORIGIN.latDegE7 + (northM / METERS_PER_DEG_LAT) * DEG_E7),
+        lonDegE7: Math.round(MOCK_ORIGIN.lonDegE7 + (eastM / metersPerDegLon) * DEG_E7),
+        altMm: Math.round(MOCK_ORIGIN.altMm + upM * 1000),
+        relativeAltMm: Math.round(upM * 1000),
+      },
+    })
+  }
+
+  return samples
 }
 
 export function createSyntheticReplaySource(
