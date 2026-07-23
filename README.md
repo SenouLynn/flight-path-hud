@@ -12,6 +12,12 @@ The goal is to make a dashboard HUD projected onto a reflex sight, hard-mounted 
 3. Prepare for translation into C++ or something. 
 
 
+## What this repo actually is
+A **validation harness** (React + TypeScript + Vite), not the flight HUD itself. All HUD
+math lives in pure, framework-free resolvers under [src/logic/](src/logic/) so it can be
+proven against known-answer replay frames and later ported to C++/ESP32 firmware. The app
+renders both a live mock feed and expected-vs-resolved validation tables.
+
 ## Features
 #### Basic Telemetry
 1. Attitude Indicator / Artificial Horizon — shows pitch AND roll together
@@ -19,5 +25,29 @@ The goal is to make a dashboard HUD projected onto a reflex sight, hard-mounted 
    - Roll: horizon line tilts
 2. Heading Indicator / Heading Tape — shows yaw (nose direction, compass-referenced)
 
-#### Extrapolation 
-1. Flight path indicatork
+#### Extrapolation
+1. Flight Path Marker (velocity vector) — 2D ground track + flight path angle
+2. Predictive path — linear and turn-aware (CTRV) projection, plus an integrated
+   trajectory that blends heading/track/bank/pitch with wind-drift and stall cues
+
+## Getting started
+```bash
+npm install
+npm run dev      # Vite dev server
+npm test         # Vitest known-answer suites
+npm run build    # tsc -b && vite build
+npm run lint
+```
+
+## Documentation
+- [docs/architecture.md](docs/architecture.md) — data flow, module map, conventions, tooling
+- [docs/heading_indicator.md](docs/heading_indicator.md) — heading source resolution
+- [docs/attitude_and_horizon_indicator.md](docs/attitude_and_horizon_indicator.md) — attitude/horizon + 3D orientation
+- [docs/flight_path_marker.md](docs/flight_path_marker.md) — FPM, FPA, predictive trajectory
+- [docs/decisions.md](docs/decisions.md) — Architecture Decision Record (ADR) log
+- [CHANGELOG.md](CHANGELOG.md) — notable changes over time
+
+> **For AI agents & contributors:** `docs/decisions.md` and `CHANGELOG.md` are living
+> documents. When you make a decision that shapes the architecture, add an ADR entry;
+> when you ship a notable change, add a changelog entry. See each file's header for the
+> format.

@@ -1,34 +1,53 @@
 # Heading Indicator
 
-## Options
-1. VFR_HUD (#74) — heading, int16, degrees, 0-360, ground-course-corrected magnetic heading. This is what most HUD implementations use since it's already in degrees and pre-packaged for display purposes.
-2. ATTITUDE.yaw (#30) — float, radians, -π to π, raw EKF yaw estimate (heading, not necessarily magnetic-corrected depending on EKF source).
-3. GLOBAL_POSITION_INT.hdg (#33) — uint16, centidegrees (divide by 100), 0-360, vehicle heading — but note this field can report UINT16_MAX if heading is unknown, so needs a validity check.
+Shows yaw — the direction the nose is pointing, compass-referenced. Implemented in
+[src/logic/heading.ts](../src/logic/heading.ts) and rendered by
+[HudHeadingIndicator.tsx](../src/components/HudHeadingIndicator.tsx).
 
-GPS course over ground (if you want COG instead of heading): GPS_RAW_INT.cog — centidegrees, this is track-over-ground not nose-heading, only relevant if you add a COG bug alongside the heading tape.
+## MAVLink source options
 
-For the visualizer: use VFR_HUD.heading as primary — it's already degrees, already magnetic-referenced, and avoids radian conversion. Fall back to ATTITUDE.yaw converted to degrees if VFR_HUD isn't streaming.
+| Source | Msg | Field | Type | Units | Notes |
+|--------|-----|-------|------|-------|-------|
+| **VFR_HUD.heading** (primary) | #74 | `heading` | int16 | deg (0–360) | Ground-course-corrected magnetic heading, already display-ready. What most HUDs use. |
+| **ATTITUDE.yaw** (fallback 1) | #30 | `yaw` | float | rad (−π…π) | Raw EKF yaw estimate; not necessarily magnetic-corrected. Converted to degrees. |
+| **GLOBAL_POSITION_INT.hdg** (fallback 2) | #33 | `hdg` | uint16 | centideg (÷100) | Vehicle heading. Reports `65535` (`UINT16_MAX`) when unknown — must be rejected. |
 
-## GPS Heading
- 
+GPS course-over-ground (`GPS_RAW_INT.cog`, #24, centideg) is **track**, not nose-heading,
+and is handled by the flight-path logic, not here. See
+[flight_path_marker.md](./flight_path_marker.md).
 
-## Flight Path Extrapolation
-Use velocity-vector data, not heading
-GLOBAL_POSITION_INT (#33) — the key one:
+## Algorithm: `resolveHeading(sample)`
 
-vx, vy, vz — int16, cm/s, NED frame (North-East-Down)
-Compute ground track angle: atan2(vy, vx) — this is your true extrapolated direction of travel
-Compute flight path angle (climb/descent): atan2(-vz, sqrt(vx² + vy²)) — this gives you the vertical component for a proper FPM (the little circle-with-wings symbol that sits above/below the horizon line depending on climb/descent rate)
+A **priority fallback chain**. The first source present (after sanitization) wins, and the
+result records which one was used plus an `isFallback` flag:
 
-This is what real aircraft HUDs use for the velocity vector symbol — it fuses heading, wind drift, and vertical speed into a single "where you're actually headed" indicator, decoupled from where the nose is pointing.
-Alternative/supplementary source: GPS_RAW_INT (#24)
+1. `VFR_HUD.heading` → normalize to 0–360 → `source: 'VFR_HUD.heading'`, `isFallback: false`.
+2. else `ATTITUDE.yaw` → `yawRadiansToHeadingDegrees` (rad→deg then wrap) → `isFallback: true`.
+3. else `GLOBAL_POSITION_INT.hdg` → reject `65535`, else `/100` and normalize → `isFallback: true`.
+4. else `{ headingDeg: null, source: 'none', isFallback: false }`.
 
-vel — cm/s ground speed
-cog — centidegrees, course over ground
-Simpler 2D-only version if you don't need the vertical FPM component, or as a cross-check against the EKF-derived GLOBAL_POSITION_INT values
+Key helpers:
 
-For extrapolating forward (projecting a predicted path, not just current instant)
-If you want a predictive trail (e.g., "in 3 seconds you'll be here" arc), you'll want to combine the velocity vector with either:
+- `normalizeHeadingDegrees(x)` — wraps any degree value into `[0, 360)` (handles negatives
+  and values like `370 → 10`).
+- `yawRadiansToHeadingDegrees(yawRad)` — `yaw * 180/π`, then normalized. A yaw of `−π/2`
+  becomes `270°`.
+- `UNKNOWN_GLOBAL_HEADING_VALUE = 65535` — the sentinel that maps to "no heading".
 
-Simple linear extrapolation: current lat/lon/alt + (vx,vy,vz × t) for a few seconds — cheap, decent for short lookaheads, breaks down in turns
-Turn-aware extrapolation: incorporate ATTITUDE.yawspeed (turn rate) to curve the projected path — much better for your fixed-wing/QuadPlane since it banks into turns, and a straight-line projection during a bank will look visually wrong on the HUD
+Returned shape (`HeadingResolution`): `{ headingDeg: number | null, source, isFallback }`.
+
+## Rendering (`HudHeadingIndicator`)
+
+- A horizontal **scrolling tape** centered on current heading, `±70°` visible.
+- `pixelsPerDegree = width / 120`; minor ticks every 5°, major (labeled) every 10°.
+- `shortestDeltaDegrees` places each tick relative to center, correctly wrapping across the
+  0/360 seam so the tape scrolls continuously.
+- Cardinal ticks render as `N/E/S/W`; others as zero-padded 3-digit bearings.
+- A center bug + numeric readout show the exact current heading.
+
+## Validation
+
+`HEADING_VALIDATION_FRAMES` in [replay.ts](../src/logic/replay.ts) covers: VFR primary,
+wrap (`370 → 10`), ATTITUDE fallback (`−π/2 → 270`), GLOBAL centideg (`12345 → 123.45`),
+and the unknown sentinel (`65535 → null`). Unit tests live in
+[heading.test.ts](../src/logic/heading.test.ts).
