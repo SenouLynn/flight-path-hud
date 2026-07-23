@@ -219,3 +219,113 @@ one sign convention. Not yet implemented.
 - ✅ Would eliminate the inversion class of bugs.
 - ⚠️ Requires reconciling the component's SVG transform math with the logic module's
   endpoint-rotation model and re-verifying against the attitude replay frames.
+
+## ADR-0009: Orientation indicator — aerospace body frame + fixed chase camera
+
+- **Status:** Accepted
+- **Date:** 2026-07-23
+- **Deciders:** team
+
+### Context
+The 3D orientation panel ([HudOrientationIndicator.tsx](../src/components/HudOrientationIndicator.tsx))
+cross-wired roll and pitch: its vehicle vertices were authored with the nose along **+Y**,
+but the rotation code applied roll about **X** and pitch about **Y** as if the nose were
+along **+X** (standard aerospace). A `roll` input therefore drove a pitch-looking motion and
+vice-versa. The abstract wireframe plus an X/Y/Z/D axis triad and a flat compass ring also
+made the vehicle's attitude hard to read.
+
+### Decision
+Rewrite the panel around one explicit body frame — **+X nose, +Y left wing, +Z up** — with
+roll/pitch/yaw wired to the matching axes and signs verified numerically against telemetry
+(right bank drops the right wing, nose-up lifts the nose, heading-up swings the nose
+clockwise). Render a recognizable aircraft (fuselage, swept wings, stabilizer, vertical fin)
+through a fixed chase camera (~58° elevation, perspective) with painter's-algorithm depth
+sorting. Drop the compass ring and axis triad in favor of a static ground grid.
+
+### Consequences
+- ✅ Each of roll/pitch/yaw now tracks the readout; orientation is legible at a glance.
+- ⚠️ The component still re-implements rotation math rather than consuming a shared logic
+  helper (same divergence risk this document flags in ADR-0008); correctness rests on the
+  numeric checks, not a single-source transform.
+
+### Alternatives considered
+- Patch only the axis swap — corrects the math but leaves the unreadable wireframe/triad.
+- Extract a shared 3D transform into `src/logic` — no such helper exists yet; deferred.
+
+## ADR-0010: Nose-relative `forwardPoints` for the perspective corridor
+
+- **Status:** Accepted
+- **Date:** 2026-07-23
+- **Deciders:** team
+
+### Context
+The predictive view moved to a forward-looking (nose-camera) perspective. The existing
+`TrajectoryResolution.points[]` fuse forward progress and climb onto a single axis (a
+heading/track/climb blend for the old 2D plot), which cannot be projected in true 3D.
+
+### Decision
+Add `ForwardPathPoint { forwardM, lateralM, verticalM, tSec }` and a `forwardPoints[]` array
+to the resolution, integrated in [trajectory.ts](../src/logic/trajectory.ts) in a
+**nose-relative frame** (relative heading starts at 0; `+forward` ahead, `+lateral` right,
+`+vertical` up). Purely additive — the original `points[]` and its tests are unchanged.
+
+### Consequences
+- ✅ The perspective view consumes a clean, unit-tested 3D path; the logic layer stays the
+  single source of truth (upholds ADR-0001).
+- ⚠️ Two representations of the same path now live in one resolution and must stay in sync.
+
+## ADR-0011: Predictive corridor as a bore-sighted, two-layer HUD
+
+- **Status:** Accepted
+- **Date:** 2026-07-23
+- **Deciders:** team
+
+### Context
+The goal for the predictive panel is to replace what a pilot *feels* in the cockpit with a
+visual reference — attitude relative to the ground **and** where the nose is predicted to go,
+both readable at once. An earlier single-group version glued the corridor to the world and
+rolled it opposite to the attitude indicator, so the two horizons disagreed.
+
+### Decision
+Render two decoupled SVG layers that rotate about a **fixed boresight cross** at center:
+- **World** (ground grid + horizon) rolls with `rotate(-roll)` and pitch-translates, matching
+  [HudAttitudeIndicator](../src/components/HudAttitudeIndicator.tsx) exactly so the horizons
+  agree.
+- **Flight path** (the corridor) banks the **opposite** way, `rotate(+roll)`, so a right bank
+  starts it left of the boresight and sweeps it out to the right — mirroring the felt motion.
+  Pitch is baked into the path layer's **effective camera height** (nose-down shrinks it, so
+  the start lifts above the boresight and the corridor recedes downward). Projection is a
+  pinhole camera sitting above the flight path.
+
+### Consequences
+- ✅ Ground orientation, flight-path bank, and pitch are all legible together; the corridor's
+  horizon matches the attitude indicator by construction.
+- ⚠️ Two roll sign conventions coexist (`-roll` world, `+roll` path) and must be kept straight;
+  more transform math is re-implemented in the component (the ADR-0008 tension persists).
+
+### Alternatives considered
+- A single stabilized plan view — clearer to build, but loses the felt-motion cue.
+- One rigid group for world + path — couples them and mismatches the attitude-indicator roll.
+
+## ADR-0012: Corridor surface colored by climb slope, not screen position
+
+- **Status:** Accepted
+- **Date:** 2026-07-23
+- **Deciders:** team
+
+### Context
+To disambiguate an up-then-down swoop from a down-then-up one, the corridor surface is
+two-toned. Keying the color to **screen height** (above/below the boresight) left a steady
+climb half-brown near the aircraft and made the boundary "ebb and flow" with perspective —
+the vertical sense was unreadable.
+
+### Decision
+Color each ribbon segment by the sign of its **climb** (Δ`verticalM`): a rising stretch shows
+the **top** surface (sky), a falling stretch shows the **bottom** (ground), level is neutral.
+The color flips only at a real crest or trough. Implemented as per-segment polygons (not a
+gradient) so the boundary locks to the data rather than to a fixed screen coordinate.
+
+### Consequences
+- ✅ A steady climb/descent reads as one solid hue; genuine crests show a true colour change.
+- ⚠️ N polygons per corridor instead of one filled path. The current constant-climb model
+  never produces a crest — that only appears once climb-rate telemetry varies over the horizon.
