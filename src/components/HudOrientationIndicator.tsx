@@ -9,9 +9,10 @@ interface Vec3 {
   z: number
 }
 
-interface Vec2 {
+interface Projected {
   x: number
   y: number
+  depth: number
 }
 
 function rotateX(point: Vec3, angleRad: number): Vec3 {
@@ -44,22 +45,18 @@ function rotateZ(point: Vec3, angleRad: number): Vec3 {
   }
 }
 
+/**
+ * Body frame: +X = nose (forward), +Y = LEFT wing, +Z = up (canopy). Right-handed.
+ *
+ * Roll is a rotation about the fuselage axis (X), pitch about the wing axis (Y),
+ * yaw about the vertical axis (Z). The pitch and yaw signs are negated so the
+ * displayed motion matches the telemetry sense in this left-up frame:
+ *   +roll  -> right wing drops (right bank)
+ *   +pitch -> nose rises
+ *   +yaw (increasing heading) -> nose swings clockwise as seen from above
+ */
 function applyAttitude(point: Vec3, rollRad: number, pitchRad: number, yawRad: number): Vec3 {
-  // Aircraft convention: roll around X, pitch around Y, yaw around Z.
-  return rotateZ(rotateY(rotateX(point, rollRad), pitchRad), yawRad)
-}
-
-function projectTo2d(point: Vec3, center: number, focalLength: number): Vec2 {
-  const depth = point.z + 140
-  const scale = focalLength / Math.max(70, depth)
-  return {
-    x: center + point.x * scale,
-    y: center - point.y * scale,
-  }
-}
-
-function pointsToPolyline(points: Vec2[]): string {
-  return points.map((point) => `${point.x},${point.y}`).join(' ')
+  return rotateZ(rotateY(rotateX(point, rollRad), -pitchRad), -yawRad)
 }
 
 export interface HudOrientationIndicatorProps {
@@ -70,19 +67,100 @@ export interface HudOrientationIndicatorProps {
   height?: number
 }
 
+// Fixed chase camera: look at the vehicle from behind and above.
+const CAMERA_ELEVATION_RAD = (58 * Math.PI) / 180
+const FOCAL_LENGTH = 430
+const CAMERA_DISTANCE = 300
+const MODEL_SCALE = 3.0
+
+function makeProjector(centerX: number, centerY: number) {
+  const sinE = Math.sin(CAMERA_ELEVATION_RAD)
+  const cosE = Math.cos(CAMERA_ELEVATION_RAD)
+
+  // World frame after attitude: +X forward, +Y left, +Z up.
+  // Camera basis: screen-right = -Y, screen-up = X·sinE + Z·cosE, depth = X·cosE - Z·sinE.
+  return function project(point: Vec3): Projected {
+    const screenUp = point.x * sinE + point.z * cosE
+    const screenRight = -point.y
+    const depth = point.x * cosE - point.z * sinE
+    const scale = FOCAL_LENGTH / (CAMERA_DISTANCE + depth)
+    return {
+      x: centerX + screenRight * scale,
+      y: centerY - screenUp * scale,
+      depth,
+    }
+  }
+}
+
+// Aircraft planform in body units (nose +X, left +Y, up +Z), scaled at render.
+const MODEL = {
+  noseTip: { x: 34, y: 0, z: 0 },
+  shoulderL: { x: 12, y: 5, z: 1.5 },
+  shoulderR: { x: 12, y: -5, z: 1.5 },
+  hipL: { x: -22, y: 4, z: 0 },
+  hipR: { x: -22, y: -4, z: 0 },
+  tailTip: { x: -30, y: 0, z: 2 },
+
+  wingRootFwdL: { x: 8, y: 4, z: 0 },
+  wingTipL: { x: -6, y: 30, z: 0 },
+  wingRootAftL: { x: -4, y: 4, z: 0 },
+  wingRootFwdR: { x: 8, y: -4, z: 0 },
+  wingTipR: { x: -6, y: -30, z: 0 },
+  wingRootAftR: { x: -4, y: -4, z: 0 },
+
+  hstabRootFwdL: { x: -20, y: 3, z: 0 },
+  hstabTipL: { x: -28, y: 13, z: 0 },
+  hstabRootAftL: { x: -30, y: 3, z: 0 },
+  hstabRootFwdR: { x: -20, y: -3, z: 0 },
+  hstabTipR: { x: -28, y: -13, z: 0 },
+  hstabRootAftR: { x: -30, y: -3, z: 0 },
+
+  finRootFwd: { x: -18, y: 0, z: 1 },
+  finTop: { x: -27, y: 0, z: 14 },
+  finRootAft: { x: -30, y: 0, z: 1 },
+} as const
+
+type ModelKey = keyof typeof MODEL
+
+interface Face {
+  keys: ModelKey[]
+  className: string
+}
+
+// Painter's algorithm draws far faces first; the fin is shaded distinctly so
+// "up" is always readable.
+const FACES: Face[] = [
+  { keys: ['wingTipL', 'wingRootFwdL', 'wingRootAftL'], className: 'hud-craft-wing' },
+  { keys: ['wingTipR', 'wingRootFwdR', 'wingRootAftR'], className: 'hud-craft-wing' },
+  { keys: ['hstabTipL', 'hstabRootFwdL', 'hstabRootAftL'], className: 'hud-craft-stab' },
+  { keys: ['hstabTipR', 'hstabRootFwdR', 'hstabRootAftR'], className: 'hud-craft-stab' },
+  { keys: ['noseTip', 'shoulderL', 'hipL', 'tailTip', 'hipR', 'shoulderR'], className: 'hud-craft-body' },
+  { keys: ['finRootFwd', 'finTop', 'finRootAft'], className: 'hud-craft-fin' },
+]
+
+function polygonPoints(keys: ModelKey[], project: (p: Vec3) => Projected, attitude: (p: Vec3) => Vec3): { points: string, depth: number } {
+  let depthSum = 0
+  const coords = keys.map((key) => {
+    const base = MODEL[key]
+    const scaled = { x: base.x * MODEL_SCALE, y: base.y * MODEL_SCALE, z: base.z * MODEL_SCALE }
+    const projected = project(attitude(scaled))
+    depthSum += projected.depth
+    return `${projected.x.toFixed(2)},${projected.y.toFixed(2)}`
+  })
+  return { points: coords.join(' '), depth: depthSum / keys.length }
+}
+
 export function HudOrientationIndicator({
   rollDeg,
   pitchDeg,
   yawDeg,
-  width = 420,
-  height = 330,
+  width = 620,
+  height = 620,
 }: HudOrientationIndicatorProps) {
   if (rollDeg === null || pitchDeg === null || yawDeg === null) {
     return <div className="hud-orientation-empty">Orientation unavailable</div>
   }
 
-  const viewMin = Math.min(width, height)
-  const radius = viewMin / 2
   const centerX = width / 2
   const centerY = height / 2
   const wrappedYaw = normalizeDegrees(yawDeg)
@@ -91,101 +169,60 @@ export function HudOrientationIndicator({
   const pitchRad = (pitchDeg * Math.PI) / 180
   const yawRad = (wrappedYaw * Math.PI) / 180
 
-  const focalLength = 250
-  const modelScale = 2.8
+  const project = makeProjector(centerX, centerY)
+  const attitude = (point: Vec3) => applyAttitude(point, rollRad, pitchRad, yawRad)
 
-  const vehicleVertices: Record<string, Vec3> = {
-    nose: { x: 0, y: 30 * modelScale, z: 10 * modelScale },
-    tail: { x: 0, y: -24 * modelScale, z: 10 * modelScale },
-    leftWing: { x: -28 * modelScale, y: 2 * modelScale, z: 8 * modelScale },
-    rightWing: { x: 28 * modelScale, y: 2 * modelScale, z: 8 * modelScale },
-    top: { x: 0, y: 0, z: 24 * modelScale },
-    bottom: { x: 0, y: 0, z: -10 * modelScale },
-  }
-
-  const transformed = Object.fromEntries(
-    Object.entries(vehicleVertices).map(([key, vertex]) => {
-      const rotated = applyAttitude(vertex, rollRad, pitchRad, yawRad)
-      const projected = projectTo2d(rotated, radius, focalLength)
-      return [key, { x: projected.x + (centerX - radius), y: projected.y + (centerY - radius) }]
-    }),
-  ) as Record<keyof typeof vehicleVertices, Vec2>
-
-  const axisLength = 105
-  const axisEnds = {
-    x: projectTo2d(applyAttitude({ x: axisLength, y: 0, z: 0 }, rollRad, pitchRad, yawRad), radius, focalLength),
-    y: projectTo2d(applyAttitude({ x: 0, y: axisLength, z: 0 }, rollRad, pitchRad, yawRad), radius, focalLength),
-    z: projectTo2d(applyAttitude({ x: 0, y: 0, z: axisLength }, rollRad, pitchRad, yawRad), radius, focalLength),
-  }
-
-  const bodyDown = projectTo2d(
-    applyAttitude({ x: 0, y: 0, z: -axisLength }, rollRad, pitchRad, yawRad),
-    radius,
-    focalLength,
+  // Static world-referenced ground grid (z = 0 plane) for a horizon/attitude cue.
+  const gridHalf = 150
+  const gridStep = 30
+  const gridTicks = Array.from(
+    { length: (gridHalf * 2) / gridStep + 1 },
+    (_, index) => -gridHalf + index * gridStep,
   )
-
-  const axisProjected = {
-    x: { x: axisEnds.x.x + (centerX - radius), y: axisEnds.x.y + (centerY - radius) },
-    y: { x: axisEnds.y.x + (centerX - radius), y: axisEnds.y.y + (centerY - radius) },
-    z: { x: axisEnds.z.x + (centerX - radius), y: axisEnds.z.y + (centerY - radius) },
-    down: { x: bodyDown.x + (centerX - radius), y: bodyDown.y + (centerY - radius) },
+  const gridLines: Array<{ x1: number, y1: number, x2: number, y2: number }> = []
+  for (const offset of gridTicks) {
+    const alongY0 = project({ x: -gridHalf, y: offset, z: 0 })
+    const alongY1 = project({ x: gridHalf, y: offset, z: 0 })
+    gridLines.push({ x1: alongY0.x, y1: alongY0.y, x2: alongY1.x, y2: alongY1.y })
+    const alongX0 = project({ x: offset, y: -gridHalf, z: 0 })
+    const alongX1 = project({ x: offset, y: gridHalf, z: 0 })
+    gridLines.push({ x1: alongX0.x, y1: alongX0.y, x2: alongX1.x, y2: alongX1.y })
   }
 
-  const centerPoint = { x: centerX, y: centerY }
+  const faces = FACES.map((face) => ({
+    className: face.className,
+    ...polygonPoints(face.keys, project, attitude),
+  })).sort((a, b) => b.depth - a.depth)
 
-  const ringRadius = radius - 18
-  const frameLeft = centerX - ringRadius
-  const frameTop = centerY - ringRadius
-  const frameSize = ringRadius * 2
+  const nose = project(attitude({
+    x: MODEL.noseTip.x * MODEL_SCALE,
+    y: MODEL.noseTip.y * MODEL_SCALE,
+    z: MODEL.noseTip.z * MODEL_SCALE,
+  }))
 
   return (
     <svg className="hud-orientation" viewBox={`0 0 ${width} ${height}`} role="img" aria-label="Vehicle orientation indicator">
       <rect x={0} y={0} width={width} height={height} className="hud-orientation-bg" rx={10} ry={10} />
 
-      <rect x={frameLeft} y={frameTop} width={frameSize} height={frameSize / 2} className="hud-world-sky" rx={6} ry={6} />
-      <rect x={frameLeft} y={centerY} width={frameSize} height={frameSize / 2} className="hud-world-ground" rx={0} ry={0} />
-      <circle cx={centerX} cy={centerY} r={ringRadius} className="hud-orientation-ring" />
-      <line x1={frameLeft} y1={centerY} x2={frameLeft + frameSize} y2={centerY} className="hud-world-level" />
-      <line x1={centerX} y1={frameTop - 4} x2={centerX} y2={frameTop + frameSize + 4} className="hud-orientation-axis" />
-      <line x1={frameLeft - 4} y1={centerY} x2={frameLeft + frameSize + 4} y2={centerY} className="hud-orientation-axis" />
-      <text x={centerX} y={frameTop + 12} textAnchor="middle" className="hud-world-label">N</text>
-      <text x={centerX} y={frameTop + frameSize - 8} textAnchor="middle" className="hud-world-label">S</text>
-      <text x={frameLeft + 8} y={centerY - 6} className="hud-world-label">W</text>
-      <text x={frameLeft + frameSize - 8} y={centerY - 6} textAnchor="end" className="hud-world-label">E</text>
+      <g className="hud-orient-grid">
+        {gridLines.map((line, index) => (
+          <line key={index} x1={line.x1} y1={line.y1} x2={line.x2} y2={line.y2} />
+        ))}
+      </g>
 
-      <line x1={centerPoint.x} y1={centerPoint.y} x2={axisProjected.x.x} y2={axisProjected.x.y} className="hud-axis-x" />
-      <line x1={centerPoint.x} y1={centerPoint.y} x2={axisProjected.y.x} y2={axisProjected.y.y} className="hud-axis-y" />
-      <line x1={centerPoint.x} y1={centerPoint.y} x2={axisProjected.z.x} y2={axisProjected.z.y} className="hud-axis-z" />
-      <line x1={centerPoint.x} y1={centerPoint.y} x2={axisProjected.down.x} y2={axisProjected.down.y} className="hud-axis-down" />
+      {faces.map((face, index) => (
+        <polygon key={index} className={face.className} points={face.points} />
+      ))}
+      <circle cx={nose.x} cy={nose.y} r={4} className="hud-craft-nose" />
 
-      <text x={axisProjected.x.x + 3} y={axisProjected.x.y + 3} className="hud-axis-label">X</text>
-      <text x={axisProjected.y.x + 3} y={axisProjected.y.y + 3} className="hud-axis-label">Y</text>
-      <text x={axisProjected.z.x + 3} y={axisProjected.z.y + 3} className="hud-axis-label">Z</text>
-      <text x={axisProjected.down.x + 4} y={axisProjected.down.y + 4} className="hud-axis-label">D</text>
-
-      <polyline
-        className="hud-vehicle-edge"
-        points={pointsToPolyline([
-          transformed.leftWing,
-          transformed.nose,
-          transformed.rightWing,
-          transformed.tail,
-          transformed.leftWing,
-        ])}
-      />
-      <line x1={transformed.nose.x} y1={transformed.nose.y} x2={transformed.top.x} y2={transformed.top.y} className="hud-vehicle-edge" />
-      <line x1={transformed.tail.x} y1={transformed.tail.y} x2={transformed.bottom.x} y2={transformed.bottom.y} className="hud-vehicle-edge-dim" />
-      <line x1={transformed.top.x} y1={transformed.top.y} x2={transformed.bottom.x} y2={transformed.bottom.y} className="hud-vehicle-edge-dim" />
-      <circle cx={transformed.nose.x} cy={transformed.nose.y} r={2.8} className="hud-orientation-nose" />
-
-      <text x={centerX} y={18} className="hud-orientation-heading" textAnchor="middle">
+      <text x={centerX} y={22} className="hud-orientation-heading" textAnchor="middle">
         HDG {Math.round(wrappedYaw).toString().padStart(3, '0')}
       </text>
-      <text x={12} y={height - 12} className="hud-orientation-text">
-        P {pitchDeg.toFixed(1)}
+      <text x={14} y={height - 14} className="hud-orientation-text">
+        PITCH {pitchDeg.toFixed(1)}°
       </text>
-      <text x={width - 12} y={height - 12} textAnchor="end" className="hud-orientation-text">
-        R {rollDeg.toFixed(1)}
+      <text x={width - 14} y={height - 14} textAnchor="end" className="hud-orientation-text">
+        ROLL {rollDeg.toFixed(1)}°
       </text>
     </svg>
   )
