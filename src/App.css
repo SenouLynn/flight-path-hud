@@ -268,8 +268,8 @@
 
 .hud-trajectory-corridor {
   stroke: #89d0ff;
-  stroke-opacity: 0.5;
-  stroke-width: 1.2;
+  stroke-opacity: 0.32;
+  stroke-width: 1;
   stroke-linejoin: round;
 }
 
@@ -284,20 +284,27 @@
   stroke-linecap: round;
 }
 
-.hud-trajectory-vanish {
-  fill: none;
-  stroke: #6f86a3;
-  stroke-width: 1.4;
+.hud-trajectory-horizon {
+  stroke: #4a5b70;
+  stroke-width: 1.2;
+  stroke-opacity: 0.85;
 }
 
-.hud-trajectory-vanish-core {
-  fill: #8aa0bd;
+.hud-trajectory-boresight line {
+  stroke: #ffd36f;
+  stroke-width: 1.6;
+  stroke-linecap: round;
+}
+
+.hud-trajectory-boresight circle {
+  fill: #ffd36f;
 }
 
 .hud-trajectory-tip {
   fill: none;
   stroke: #89d0ff;
-  stroke-width: 3.2;
+  stroke-opacity: 0.45;
+  stroke-width: 1.6;
   stroke-linecap: round;
 }
 
@@ -306,9 +313,8 @@
 }
 
 .hud-trajectory-end {
-  fill: #ffd36f;
-  stroke: #fff2bd;
-  stroke-width: 1.2;
+  fill: #7f93ad;
+  fill-opacity: 0.7;
 }
 
 .hud-trajectory-core {
