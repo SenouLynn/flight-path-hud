@@ -1,12 +1,14 @@
 import { resolveAttitude } from '../logic/attitude'
 import { resolvePredictiveTrajectory } from '../logic/trajectory'
-import type { ForwardPathPoint } from '../logic/trajectory'
+import type { ForwardPathPoint, TrajectoryConfig } from '../logic/trajectory'
 import type { TelemetrySample } from '../logic/telemetry'
 
 interface HudPredictiveTrajectoryProps {
   sample: TelemetrySample | null
   width?: number
   height?: number
+  /** Overrides the trajectory integrator config (e.g. a playground stall speed). */
+  config?: TrajectoryConfig
 }
 
 function clamp(value: number, min: number, max: number): number {
@@ -81,12 +83,14 @@ function centerlinePath(
     .join(' ')
 }
 
-export function HudPredictiveTrajectory({ sample, width = 620, height = 620 }: HudPredictiveTrajectoryProps) {
+export function HudPredictiveTrajectory({ sample, width = 620, height = 620, config }: HudPredictiveTrajectoryProps) {
   if (sample === null) {
     return <div className="hud-orientation-empty">Predictive path unavailable</div>
   }
 
-  const trajectory = resolvePredictiveTrajectory(sample)
+  const trajectory = config === undefined
+    ? resolvePredictiveTrajectory(sample)
+    : resolvePredictiveTrajectory(sample, config)
   const attitude = resolveAttitude(sample)
   const rollDeg = attitude.rollDeg ?? 0
   const pitchDeg = attitude.pitchDeg ?? 0

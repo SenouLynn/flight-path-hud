@@ -23,6 +23,18 @@ tagged release exists.
 ## [Unreleased]
 
 ### Added
+- **Static parameter playground** at the `/playground` route
+  ([PlaygroundView.tsx](src/pages/PlaygroundView.tsx)): sliders for roll, pitch, heading,
+  airspeed, and stall speed drive the PFD, 3D orientation, and predictive-trajectory
+  instruments from a single frozen "moment in time." Inputs are packed into a real sanitized
+  sample by [buildStaticSample](src/stream/staticSample.ts) and resolved by the exact
+  production logic stack, with a derived-values panel mirroring the resolver outputs — a visual
+  validation surface alongside the numeric replay tests (ADR-0016).
+- `react-router-dom` with `HashRouter`; the app now has two routes, `/validator` (the existing
+  dashboard, moved verbatim to [ValidatorView.tsx](src/pages/ValidatorView.tsx)) and
+  `/playground`, with a top nav ([App.tsx](src/App.tsx)).
+- Reusable [ParameterSlider](src/components/ParameterSlider.tsx) control (label + range +
+  clamped numeric readout).
 - Documentation set: [docs/architecture.md](docs/architecture.md) (data flow, module map,
   conventions), plus fleshed-out [heading](docs/heading_indicator.md),
   [attitude/horizon](docs/attitude_and_horizon_indicator.md), and
@@ -62,6 +74,16 @@ tagged release exists.
   fallback, source selection) plus a mock↔resolver round-trip test.
 
 ### Changed
+- **Airspeed is now a first-class telemetry field.** `airSpeedMps` added to `VfrHudSample` +
+  sanitizer ([telemetry.ts](src/logic/telemetry.ts)) and resolved by `resolveScalarTelemetry`
+  ([flightPath.ts](src/logic/flightPath.ts), new `airSpeedMps`/`airSpeedKnots`/`airSpeedSource`).
+  The air-relative physics in [trajectory.ts](src/logic/trajectory.ts) — stall flag, forward
+  reach, climb geometry, bank-turn denominator — now key off airspeed, falling back to
+  groundspeed when absent; groundspeed still drives the ground-track/wind-drift term. Corrects a
+  stall-vs-groundspeed conflation valid only in still air (ADR-0016). Additive: existing callers
+  and replay frames are unchanged by the fallback.
+- `HudPredictiveTrajectory` accepts an optional `config` prop to override the trajectory
+  integrator (e.g. a playground stall speed); default behavior is unchanged.
 - Second-row grid expanded from two boxes to **three** with graduated breakpoints
   (`repeat(3)` → `repeat(2)` ≤1320px → `1fr` ≤860px). The boxes now size to their content
   (shorter `620×480` viewBox, `height:auto`) instead of matching the first row's height.

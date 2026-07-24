@@ -37,6 +37,36 @@ describe('resolveScalarTelemetry', () => {
     expect(resolved.climbSource).toBe('VFR_HUD.climb')
   })
 
+  it('resolves airspeed from VFR_HUD.airspeed independently of groundspeed', () => {
+    const resolved = resolveScalarTelemetry({
+      timestampMs: 0,
+      vfrHud: {
+        airSpeedMps: 20,
+        groundSpeedMps: 16,
+      },
+    })
+
+    expect(resolved.airSpeedMps).toBeCloseTo(20, 8)
+    expect(resolved.airSpeedKnots).toBeCloseTo(38.87688, 5)
+    expect(resolved.airSpeedSource).toBe('VFR_HUD.airspeed')
+    // Groundspeed is a separate channel and must be unaffected.
+    expect(resolved.groundSpeedMps).toBeCloseTo(16, 8)
+    expect(resolved.speedSource).toBe('VFR_HUD.groundspeed')
+  })
+
+  it('reports airspeed as null when VFR_HUD.airspeed is absent', () => {
+    const resolved = resolveScalarTelemetry({
+      timestampMs: 0,
+      vfrHud: {
+        groundSpeedMps: 16,
+      },
+    })
+
+    expect(resolved.airSpeedMps).toBeNull()
+    expect(resolved.airSpeedKnots).toBeNull()
+    expect(resolved.airSpeedSource).toBe('none')
+  })
+
   it('falls back to GLOBAL_POSITION_INT and GPS_RAW_INT when VFR missing', () => {
     const globalResolved = resolveScalarTelemetry({
       timestampMs: 0,

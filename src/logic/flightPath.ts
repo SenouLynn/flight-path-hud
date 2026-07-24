@@ -7,9 +7,12 @@ const STATIONARY_EPSILON_MPS = 0.01
 const YAW_RATE_EPSILON_RAD_PER_SEC = 0.000001
 
 export interface ScalarTelemetryResolution {
+  airSpeedMps: number | null
+  airSpeedKnots: number | null
   groundSpeedMps: number | null
   groundSpeedKnots: number | null
   climbMps: number | null
+  airSpeedSource: 'VFR_HUD.airspeed' | 'none'
   speedSource: 'VFR_HUD.groundspeed' | 'GLOBAL_POSITION_INT.vx_vy' | 'GPS_RAW_INT.vel' | 'none'
   climbSource: 'VFR_HUD.climb' | 'GLOBAL_POSITION_INT.vz' | 'none'
 }
@@ -84,8 +87,12 @@ function buildTimeSteps(config: PredictivePathConfig): number[] {
 export function resolveScalarTelemetry(sampleInput: TelemetrySample): ScalarTelemetryResolution {
   const sample = sanitizeTelemetrySample(sampleInput)
 
+  const vfrAirSpeed = sample.vfrHud?.airSpeedMps
   const vfrGroundSpeed = sample.vfrHud?.groundSpeedMps
   const vfrClimb = sample.vfrHud?.climbMps
+
+  const airSpeedMps = vfrAirSpeed ?? null
+  const airSpeedSource = vfrAirSpeed !== undefined ? 'VFR_HUD.airspeed' : 'none'
 
   const vxCms = sample.globalPositionInt?.vxCms
   const vyCms = sample.globalPositionInt?.vyCms
@@ -125,9 +132,12 @@ export function resolveScalarTelemetry(sampleInput: TelemetrySample): ScalarTele
         : 'none'
 
   return {
+    airSpeedMps,
+    airSpeedKnots: airSpeedMps === null ? null : mpsToKnots(airSpeedMps),
     groundSpeedMps: speedMps,
     groundSpeedKnots: speedMps === null ? null : mpsToKnots(speedMps),
     climbMps,
+    airSpeedSource,
     speedSource,
     climbSource,
   }

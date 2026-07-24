@@ -29,6 +29,7 @@ export interface TrajectoryResolution {
   points: TrajectoryPoint[]
   forwardPoints: ForwardPathPoint[]
   speedMps: number
+  airSpeedMps: number
   stallSpeedMps: number
   turnRateRadPerSec: number
   verticalRateMps: number
@@ -90,6 +91,11 @@ export function resolvePredictiveTrajectory(
   const track = resolveFlightPath2d(sample)
 
   const speedMps = scalar.groundSpeedMps ?? 0
+  // Air-relative physics (stall, forward reach, climb geometry, turn rate) key
+  // off airspeed; groundspeed stays for the ground-track/wind-drift term. When
+  // airspeed is absent we fall back to groundspeed so still-air callers and the
+  // existing replay frames are unchanged.
+  const airSpeedMps = scalar.airSpeedMps ?? speedMps
   const pitchDeg = attitude.pitchDeg ?? 0
   const rollDeg = attitude.rollDeg ?? 0
   const pitchRad = degreesToRadians(pitchDeg)
@@ -100,15 +106,15 @@ export function resolvePredictiveTrajectory(
   const yawRateRadPerSec = sample.attitude?.yawSpeedRadPerSec ?? 0
 
   const stallSpeedMps = config.stallSpeedMps
-  const isStalled = speedMps < stallSpeedMps
-  const effectiveForwardSpeed = Math.max(0, speedMps - stallSpeedMps)
-  const headingBlend = clamp((speedMps - stallSpeedMps) / Math.max(1, stallSpeedMps), 0, 1)
+  const isStalled = airSpeedMps < stallSpeedMps
+  const effectiveForwardSpeed = Math.max(0, airSpeedMps - stallSpeedMps)
+  const headingBlend = clamp((airSpeedMps - stallSpeedMps) / Math.max(1, stallSpeedMps), 0, 1)
   const worldDirectionRad = blendAnglesRadians(headingRad, trackRad, Math.min(1, config.headingTrackBlend + headingBlend * 0.35))
   const windDriftMps = clamp(speedMps * Math.sin(shortestAngleRadians(headingRad, trackRad)) * config.windOffsetGain, -8, 8)
 
-  const bankTurnRate = (GRAVITY_MPS2 * Math.tan(rollRad)) / Math.max(speedMps, stallSpeedMps)
+  const bankTurnRate = (GRAVITY_MPS2 * Math.tan(rollRad)) / Math.max(airSpeedMps, stallSpeedMps)
   const turnRateRadPerSec = clamp(yawRateRadPerSec + bankTurnRate, -1.8, 1.8)
-  const verticalRateMps = (speedMps * Math.sin(pitchRad)) + (scalar.climbMps ?? 0)
+  const verticalRateMps = (airSpeedMps * Math.sin(pitchRad)) + (scalar.climbMps ?? 0)
 
   const steps = Math.max(1, Math.floor(config.horizonSec / config.stepSec))
   const points: TrajectoryPoint[] = [{ x: 0, y: 0, tSec: 0 }]
@@ -148,6 +154,7 @@ export function resolvePredictiveTrajectory(
     points,
     forwardPoints,
     speedMps,
+    airSpeedMps,
     stallSpeedMps,
     turnRateRadPerSec,
     verticalRateMps,

@@ -424,3 +424,54 @@ dead-reckoned track drifts below its origin.
 ### Alternatives considered
 - Full geodetic/ECEF conversion — accurate everywhere, unnecessary math for HUD-scale extents.
 - Web-Mercator — distorts distances by latitude and complicates the vertical axis.
+
+## ADR-0016: Static parameter playground as a visual validation surface
+
+- **Status:** Accepted
+- **Date:** 2026-07-24
+- **Deciders:** team
+
+### Context
+The logic resolvers are proven numerically by replay unit tests, but a passing test does not
+prove the *rendered* HUD is correct — sign or convention drift (see the attitude two-source
+inversion noted in [architecture.md](architecture.md)) is invisible to a number-only test. The
+only way to see the instruments move was to watch a mock source replay on a `setInterval`
+loop, where the operator is a passive observer of a fixed dataset. We wanted a static "moment
+in time" where dynamism comes from tweaking parametrized inputs, complementing the automated
+suite with a human-in-the-loop visual check.
+
+### Decision
+Add a second route, `/playground` ([src/pages/PlaygroundView.tsx](../src/pages/PlaygroundView.tsx)),
+alongside the existing dashboard (`/validator`). Sliders for roll, pitch, heading, airspeed,
+and stall speed are packed into a **real, sanitized `TelemetrySample`** by
+[buildStaticSample](../src/stream/staticSample.ts) and run through the identical production
+resolver stack (`resolveAttitude` / `resolveHeading` / `resolveScalarTelemetry` /
+`resolvePredictiveTrajectory`) that drives the live feed. A derived-values panel surfaces the
+resolver outputs beside the instruments — a live mirror of a single test case. Global
+positioning is excluded (meaningless for a static instant), so the Flight Path Recorder is
+omitted. Routing uses `react-router-dom` with a `HashRouter` (the app has no backend and may be
+served statically), the first non-React runtime dependency.
+
+As part of this, **airspeed becomes a first-class telemetry field**: `airSpeedMps` is added to
+`VfrHudSample` and resolved by `resolveScalarTelemetry`, and the air-relative physics in
+[trajectory.ts](../src/logic/trajectory.ts) (stall flag, forward reach, climb geometry, bank-turn
+denominator) now key off airspeed — falling back to groundspeed when airspeed is absent. Stall
+is fundamentally an airspeed phenomenon; the previous code compared it against groundspeed,
+which only holds in still air.
+
+### Consequences
+- ✅ Visual validation of the render pipeline, not just the math; the exact resolver stack is
+  exercised, so the playground cannot drift from production behavior.
+- ✅ Airspeed/groundspeed are now distinct channels, correcting a real conflation and improving
+  the live HUD too. The `?? groundspeed` fallback keeps every existing caller and replay frame
+  unchanged (additive, opt-in behavior).
+- ⚠️ First non-React dependency (`react-router-dom`). `HashRouter` yields `/#/playground` URLs
+  rather than clean paths — an accepted trade for zero server configuration.
+- ⚠️ Stall speed remains a config parameter (playground slider), not a telemetry field; a future
+  ADR may promote it if a real vehicle parameter source appears.
+
+### Alternatives considered
+- Lightweight `useState` view toggle instead of a router — rejected in favor of real,
+  addressable routes for a growing multi-page app.
+- Keeping airspeed playground-local (feed groundspeed, pass stall via config) — rejected because
+  it leaves the core conflation in place and misses the chance to model airspeed properly.

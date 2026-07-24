@@ -7,6 +7,7 @@ export interface AttitudeSample {
 
 export interface VfrHudSample {
   headingDeg?: number
+  airSpeedMps?: number
   groundSpeedMps?: number
   climbMps?: number
 }
@@ -74,11 +75,17 @@ function sanitizeVfrHud(input: VfrHudSample | undefined): VfrHudSample | undefin
 
   const sample: VfrHudSample = {
     headingDeg: toFiniteNumber(input.headingDeg),
+    airSpeedMps: toFiniteNumber(input.airSpeedMps),
     groundSpeedMps: toFiniteNumber(input.groundSpeedMps),
     climbMps: toFiniteNumber(input.climbMps),
   }
 
-  if (sample.headingDeg === undefined && sample.groundSpeedMps === undefined && sample.climbMps === undefined) {
+  if (
+    sample.headingDeg === undefined
+    && sample.airSpeedMps === undefined
+    && sample.groundSpeedMps === undefined
+    && sample.climbMps === undefined
+  ) {
     return undefined
   }
 

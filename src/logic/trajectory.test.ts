@@ -20,6 +20,65 @@ describe('resolvePredictiveTrajectory', () => {
     expect(Math.abs(trajectory.points.at(-1)?.x ?? 0)).toBeLessThan(5)
   })
 
+  it('keys the stall flag and forward reach off airspeed, not groundspeed', () => {
+    // Airspeed is below the 14 m/s stall default while groundspeed is well above
+    // it (e.g. a strong tailwind). Stall must trigger on the airspeed.
+    const trajectory = resolvePredictiveTrajectory({
+      timestampMs: 0,
+      vfrHud: {
+        airSpeedMps: 11,
+        groundSpeedMps: 30,
+        climbMps: 0,
+      },
+      attitude: {
+        pitchRad: 0,
+        rollRad: 0,
+      },
+    })
+
+    expect(trajectory.airSpeedMps).toBeCloseTo(11, 8)
+    expect(trajectory.isStalled).toBe(true)
+    // Below stall → effectiveForwardSpeed is zero, so the corridor never advances.
+    expect(Math.abs(trajectory.points.at(-1)?.y ?? 0)).toBeLessThan(0.0001)
+  })
+
+  it('stays unstalled when airspeed is above stall even if groundspeed is below', () => {
+    // Headwind case: low groundspeed but healthy airspeed keeps the wing flying.
+    const trajectory = resolvePredictiveTrajectory({
+      timestampMs: 0,
+      vfrHud: {
+        airSpeedMps: 20,
+        groundSpeedMps: 8,
+        climbMps: 0,
+      },
+      attitude: {
+        pitchRad: 0,
+        rollRad: 0,
+      },
+    })
+
+    expect(trajectory.isStalled).toBe(false)
+    expect(trajectory.points.at(-1)?.y ?? 0).toBeGreaterThan(0)
+  })
+
+  it('falls back to groundspeed for air-relative physics when airspeed is absent', () => {
+    const trajectory = resolvePredictiveTrajectory({
+      timestampMs: 0,
+      vfrHud: {
+        groundSpeedMps: 24,
+        climbMps: 0,
+      },
+      attitude: {
+        pitchRad: 0,
+        rollRad: 0,
+      },
+    })
+
+    // No airspeed channel → the resolver treats groundspeed as the air-relative speed.
+    expect(trajectory.airSpeedMps).toBeCloseTo(24, 8)
+    expect(trajectory.isStalled).toBe(false)
+  })
+
   it('curves and climbs when pitch, bank, and yaw rate are present', () => {
     const trajectory = resolvePredictiveTrajectory({
       timestampMs: 0,
