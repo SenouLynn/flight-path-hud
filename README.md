@@ -1,6 +1,6 @@
 # HUD Visualizer
 **Setup & Problem Statement**
-For my FPV setup, I'm running a Hawkeye Firefly 4k Split camera which supports analog video streaming AND onboard 4k recording. Furthermore the camera is fixed to a pan/tilt gimbal in the general area of a 'cockpit'. The presenting issue with gimbal'd FPV is loss of orientation in relation to the aircraft and the aircrafts orientation to the ground. Secondarily, I use video quite a bit in my debugging process as I focus 90% of my focus on piloting. Building an ingestion harness is a nice side-effect. Maybe a custom blackbox/log analyzer/replayer would be cool.
+For my FPV setup, I'm running a Hawkeye Firefly 4k Split camera which supports analog video streaming AND onboard 4k recording. Furthermore the camera is fixed to a pan/tilt gimbal in the general area of a 'cockpit'. The presenting issue with gimbal'd FPV is loss of orientation in relation to the aircraft and the aircrafts orientation to the ground. Secondarily, I use video quite a bit in my debugging process as 90% of my focus is on piloting. Building an ingestion harness is a nice side-effect. Maybe a custom blackbox/log analyzer/replayer would be cool.
 
 **Solution Statement**
 Naively this could be solved with tape or 3d printing a static item and glue to the body. That's no fun though. 
