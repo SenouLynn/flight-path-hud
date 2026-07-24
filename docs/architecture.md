@@ -66,10 +66,12 @@ Two things drive the UI simultaneously:
 | [src/logic/attitude.ts](../src/logic/attitude.ts) | Pitch/roll → horizon line transform |
 | [src/logic/flightPath.ts](../src/logic/flightPath.ts) | Ground speed/climb, 2D track, 3D FPA, predictive path |
 | [src/logic/trajectory.ts](../src/logic/trajectory.ts) | Integrated predictive trajectory (blends heading/track/bank/pitch) |
+| [src/logic/position.ts](../src/logic/position.ts) | Hybrid position resolver: GPS LLA→ENU with velocity-integration fallback; pure `resolveTrack` fold |
 | [src/logic/replay.ts](../src/logic/replay.ts) | Known-answer validation frames + replay runners |
 | [src/constants/mavlinkInputs.ts](../src/constants/mavlinkInputs.ts) | Canonical MAVLink field registry (message/field/units/type) |
 | [src/stream/telemetrySource.ts](../src/stream/telemetrySource.ts) | Synthetic-replay and live-mock sample generators |
 | [src/stream/useTelemetryFeed.ts](../src/stream/useTelemetryFeed.ts) | React hook subscribing to a `TelemetrySource` |
+| [src/stream/useFlightTrack.ts](../src/stream/useFlightTrack.ts) | Bounded breadcrumb accumulator over the feed (the only stateful data-path layer) |
 | [src/components/](../src/components/) | SVG HUD instruments (see below) |
 | [src/App.tsx](../src/App.tsx) | Wires feed + replay tables + instrument previews |
 
@@ -82,6 +84,7 @@ Two things drive the UI simultaneously:
 | [HudAttitudeIndicator](../src/components/HudAttitudeIndicator.tsx) | Artificial horizon + pitch ladder + roll arc |
 | [HudOrientationIndicator](../src/components/HudOrientationIndicator.tsx) | 3D wireframe vehicle model (roll/pitch/yaw) |
 | [HudPredictiveTrajectory](../src/components/HudPredictiveTrajectory.tsx) | Integrated forward path with drift/stall cues |
+| [HudFlightPathRecorder](../src/components/HudFlightPathRecorder.tsx) | Orbitable 3D breadcrumb of accumulated position (ENU world, ground shadow + drop-lines) |
 
 ## Validation harness (`replay.ts`)
 

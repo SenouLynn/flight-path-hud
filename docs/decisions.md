@@ -329,3 +329,98 @@ gradient) so the boundary locks to the data rather than to a fixed screen coordi
 - ✅ A steady climb/descent reads as one solid hue; genuine crests show a true colour change.
 - ⚠️ N polygons per corridor instead of one filled path. The current constant-climb model
   never produces a crest — that only appears once climb-rate telemetry varies over the horizon.
+
+## ADR-0013: Hybrid position resolver — absolute GPS with velocity-integration fallback
+
+- **Status:** Accepted
+- **Date:** 2026-07-23
+- **Deciders:** team
+
+### Context
+The flight-path recorder needs the aircraft's position over time, but `TelemetrySample`
+modeled only velocities — no absolute position. Real `GLOBAL_POSITION_INT` carries
+`lat`/`lon`/`alt`; a recorded log (ArduPilot `.bin`, MissionPlanner `.tlog`) would too. But a
+live feed may momentarily lack a fix, and the existing mocks emit velocity only.
+
+### Decision
+Add [position.ts](../src/logic/position.ts) with a `source`-tagged fallback chain
+(upholding ADR-0003): prefer absolute `GLOBAL_POSITION_INT.lat/lon/alt` projected to local
+ENU (`'GLOBAL_POSITION_INT.lla_enu'`), else dead-reckon NED velocity over dt
+(`'GLOBAL_POSITION_INT.vxvy_vz_integrated'`), else `'none'`. Extend `GlobalPositionIntSample`
+with `latDegE7`/`lonDegE7`/`altMm`/`relativeAltMm` (sanitized per ADR-0002) and register the
+four fields in [mavlinkInputs.ts](../src/constants/mavlinkInputs.ts). The synthetic-replay
+source carries the absolute track; live-mock stays velocity-only, so switching sources in the
+UI visibly flips the `source`.
+
+### Consequences
+- ✅ One resolver serves both real GPS logs and velocity-only streams; provenance is visible
+  and assertable, and directly informs which fields firmware must guarantee.
+- ✅ The two branches are each continuously exercised by a real UI toggle.
+- ⚠️ Dead-reckoned position drifts (no absolute reference) and mixing the two frames within
+  one track would jump; the accumulator resets origin on source switch (ADR-0014).
+
+### Alternatives considered
+- Absolute-only — simplest, but the recorder goes blank whenever a fix is absent.
+- Velocity-only — works with today's fields, but drifts and never uses real GPS.
+
+## ADR-0014: Stateful breadcrumb accumulation in a hook; resolver stays a pure fold
+
+- **Status:** Accepted
+- **Date:** 2026-07-23
+- **Deciders:** team
+
+### Context
+A trajectory *recording* needs history, but every `src/logic` resolver is stateless
+(ADR-0001) and `useTelemetryFeed` keeps only the latest sample. Position integration
+fundamentally needs the previous point + dt — genuine mutable state, the first such need in
+the harness.
+
+### Decision
+Keep the math pure: `resolvePositionStep(prev, sample, origin)` takes prior state as an
+argument, and `resolveTrack(samples[])` folds it for batch/log/replay use — both portable to
+C++. Quarantine mutability in [useFlightTrack.ts](../src/stream/useFlightTrack.ts), a React
+hook owning the ring buffer, captured origin, and integrator state in refs. It bounds the
+track (`maxPoints` + optional `maxAgeSec`): full track for finite/replay sources, rolling
+window for the open-ended live feed. Appends are gated on the feed's monotonic `packetCount`
+(StrictMode/dup-safe); source switch resets origin+buffer, guarded on read against a stale
+snapshot.
+
+### Consequences
+- ✅ The logic layer remains the single, pure, testable source of truth; only the React
+  adapter holds state. A finite log is just a sample array fed to `resolveTrack`.
+- ⚠️ First deviation from "no state in the data path"; the hook now carries reset/dedup
+  concerns that must stay correct across StrictMode and source switches.
+
+### Alternatives considered
+- Accumulate inside the resolver (module-level buffer) — breaks purity and C++ portability.
+- Extend `useTelemetryFeed` to keep history — overloads a hook other instruments use latest-only.
+
+## ADR-0015: Local ENU tangent-plane frame via equirectangular projection
+
+- **Status:** Accepted
+- **Date:** 2026-07-23
+- **Deciders:** team
+
+### Context
+The recorder is world-referenced (unlike the nose-relative corridor, ADR-0010). GPS is
+geodetic (lat/lon/alt); rendering needs cartesian meters. At HUD/flight scale a full geodesic
+is overkill, but the axis and sign conventions must be pinned to avoid a mirrored or inverted
+track — the class of bug ADR-0005 guards for velocity.
+
+### Decision
+Project fixes into a local **ENU** frame (x=East, y=North, z=Up) anchored at the first fix,
+using an equirectangular approximation: `north = Δlat·111319.49`, `east =
+Δlon·111319.49·cos(lat0)`, `up = Δalt_mm/1000`. NED velocity maps in as vx→North, vy→East,
+−vz→Up (per ADR-0005). The `METERS_PER_DEG_LAT` constant is duplicated in `logic/` rather than
+shared from `stream/` to keep the resolver dependency-free. The render ground plane is
+anchored to the track's **minimum** altitude so shadows always fall downward, even when a
+dead-reckoned track drifts below its origin.
+
+### Consequences
+- ✅ Sub-meter-accurate at flight scale, trivially portable, one documented frame convention.
+- ⚠️ Error grows with distance from the origin and near the poles (equirectangular, not
+  geodesic); acceptable for a single flight's extent. Mixed-origin tracks are not composable.
+
+### Alternatives considered
+- Full geodetic/ECEF conversion — accurate everywhere, unnecessary math for HUD-scale extents.
+- Web-Mercator — distorts distances by latitude and complicates the vertical axis.
