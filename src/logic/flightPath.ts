@@ -1,3 +1,4 @@
+import { headingRateFromBodyRates } from './attitude'
 import { normalizeHeadingDegrees } from './heading'
 import { sanitizeTelemetrySample, type TelemetrySample } from './telemetry'
 
@@ -270,8 +271,22 @@ export function resolvePredictivePath(
     }
   }
 
+  // ATTITUDE carries BODY angular rates; the CTRV arc must rotate the ground
+  // track at the EARTH-frame heading rate ψ̇ = (sin φ·q + cos φ·r)/cos θ, not the
+  // raw body yaw rate r (they diverge with bank). Same transform the trajectory
+  // resolver uses, so both interpret yawspeed identically.
+  const pitchRateRadPerSec = sample.attitude?.pitchSpeedRadPerSec
   const yawRateRadPerSec = sample.attitude?.yawSpeedRadPerSec
-  const hasYawRate = yawRateRadPerSec !== undefined && Math.abs(yawRateRadPerSec) >= YAW_RATE_EPSILON_RAD_PER_SEC
+  const hasBodyRates = pitchRateRadPerSec !== undefined || yawRateRadPerSec !== undefined
+  const headingRateRadPerSec = hasBodyRates
+    ? headingRateFromBodyRates(
+      sample.attitude?.rollRad ?? 0,
+      sample.attitude?.pitchRad ?? 0,
+      pitchRateRadPerSec ?? 0,
+      yawRateRadPerSec ?? 0,
+    )
+    : 0
+  const hasTurn = hasBodyRates && Math.abs(headingRateRadPerSec) >= YAW_RATE_EPSILON_RAD_PER_SEC
   const theta0 = Math.atan2(vyMps, vxMps)
   const timeSteps = buildTimeSteps(config)
 
@@ -282,7 +297,7 @@ export function resolvePredictivePath(
   }))
 
   const turnAware = timeSteps.map((tSec) => {
-    if (!hasYawRate || yawRateRadPerSec === undefined) {
+    if (!hasTurn) {
       return {
         tSec,
         northM: vxMps * tSec,
@@ -290,8 +305,8 @@ export function resolvePredictivePath(
       }
     }
 
-    const northM = (speedMps / yawRateRadPerSec) * (Math.sin(theta0 + yawRateRadPerSec * tSec) - Math.sin(theta0))
-    const eastM = -(speedMps / yawRateRadPerSec) * (Math.cos(theta0 + yawRateRadPerSec * tSec) - Math.cos(theta0))
+    const northM = (speedMps / headingRateRadPerSec) * (Math.sin(theta0 + headingRateRadPerSec * tSec) - Math.sin(theta0))
+    const eastM = -(speedMps / headingRateRadPerSec) * (Math.cos(theta0 + headingRateRadPerSec * tSec) - Math.cos(theta0))
 
     return {
       tSec,
@@ -301,7 +316,7 @@ export function resolvePredictivePath(
   })
 
   return {
-    source: hasYawRate ? 'GLOBAL_POSITION_INT+ATTITUDE.yawspeed' : 'GLOBAL_POSITION_INT.linear',
+    source: hasTurn ? 'GLOBAL_POSITION_INT+ATTITUDE.yawspeed' : 'GLOBAL_POSITION_INT.linear',
     isValid: true,
     linear,
     turnAware,

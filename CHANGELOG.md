@@ -74,6 +74,31 @@ tagged release exists.
   fallback, source selection) plus a mock↔resolver round-trip test.
 
 ### Changed
+- **Predictive trajectory turn/climb now derive from body-rate Euler kinematics** instead of
+  static bank/pitch angles ([trajectory.ts](src/logic/trajectory.ts), ADR-0017). Turn rate is
+  `ψ̇ = (sin φ·q + cos φ·r)/cos θ` from `ATTITUDE.pitchspeed`/`yawspeed` (no more
+  `yawRate + g·tan φ/V` double-count); a held bank with no rotation no longer fabricates a turn.
+  Climb comes from the velocity vector's flight-path angle (`γ₀ = asin(vs/V)`, bending at
+  `γ̇ = cos φ·q − sin φ·r`), so a level nose-up coordinated turn reads as level. New resolution
+  fields: `coordinatedTurnRateRadPerSec` (slip/skid reference), `climbAngleRateRadPerSec`,
+  `flightPathAngleDeg`. `g·tan φ/V` is retained as the attitude-only fallback.
+- `ATTITUDE.pitchspeed` (`pitchSpeedRadPerSec`) plumbed into `AttitudeSample` + sanitizer
+  ([telemetry.ts](src/logic/telemetry.ts)).
+- Playground inputs split into **airframe** (roll, pitch, pitch-rate, yaw-rate) and **velocity
+  vector** (airspeed, flight-path angle, heading) groups, with a coordination readout comparing
+  actual vs coordinated turn rate ([PlaygroundView.tsx](src/pages/PlaygroundView.tsx)).
+- Mock generator ([telemetrySource.ts](src/stream/telemetrySource.ts)) now emits **body angular
+  rates** (`pitchspeed`/`yawspeed` via the inverse Euler transform of its analytic attitude
+  motion) plus `airSpeedMps`, so the live/replay feed is consistent with the corrected trajectory
+  kinematics (ADR-0017). Previously `yawspeed` carried the earth-frame heading rate — a
+  now-visible mismatch under the body-rate model, and pitch rate was absent (spurious pitching in
+  turns).
+- `resolvePredictivePath` ([flightPath.ts](src/logic/flightPath.ts)) now rotates its CTRV arc at
+  the **earth-frame heading rate** `ψ̇ = (sin φ·q + cos φ·r)/cos θ` rather than treating body
+  `yawspeed` as a heading rate directly — so it and the trajectory corridor interpret `yawspeed`
+  identically. The Euler transform is factored into shared helpers `headingRateFromBodyRates` /
+  `climbAngleRateFromBodyRates` ([attitude.ts](src/logic/attitude.ts)). No-op for wings-level
+  frames (ψ̇ = r there), so the replay fixtures are unchanged.
 - **Airspeed is now a first-class telemetry field.** `airSpeedMps` added to `VfrHudSample` +
   sanitizer ([telemetry.ts](src/logic/telemetry.ts)) and resolved by `resolveScalarTelemetry`
   ([flightPath.ts](src/logic/flightPath.ts), new `airSpeedMps`/`airSpeedKnots`/`airSpeedSource`).

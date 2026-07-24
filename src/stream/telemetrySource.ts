@@ -33,13 +33,31 @@ export function buildMockLiveSample(timestampMs: number): TelemetrySample {
   const turnPhase = turnFrequencyRadPerSec * tSec
   const headingAmplitudeDeg = 55
 
+  const pitchFrequencyRadPerSec = 0.55
+  const pitchAmplitudeRad = 0.16
+
   const headingDeg = normalizeHeadingDegrees(180 + headingAmplitudeDeg * Math.sin(turnPhase))
   const rollRad = 0.45 * Math.cos(turnPhase)
-  const pitchRad = Math.sin(tSec * 0.55) * 0.16
+  const pitchRad = pitchAmplitudeRad * Math.sin(tSec * pitchFrequencyRadPerSec)
   const yawRad = ((headingDeg - 180) * Math.PI) / 180
-  const yawSpeedRadPerSec = (headingAmplitudeDeg * Math.PI / 180) * turnFrequencyRadPerSec * Math.cos(turnPhase)
+
+  // Analytic EARTH-frame rates of the synthesized motion: derivatives of the
+  // heading and pitch angles above.
+  const headingRateRadPerSec = (headingAmplitudeDeg * Math.PI / 180) * turnFrequencyRadPerSec * Math.cos(turnPhase) // ψ̇
+  const pitchAngleRateRadPerSec = pitchAmplitudeRad * pitchFrequencyRadPerSec * Math.cos(tSec * pitchFrequencyRadPerSec) // θ̇
+
+  // MAVLink ATTITUDE carries BODY angular rates, not earth-frame ones. Convert
+  // via the inverse Euler kinematics so the trajectory resolver's forward
+  // transform (ψ̇ = (sinφ·q + cosφ·r)/cosθ, γ̇ = cosφ·q − sinφ·r) reproduces
+  // exactly this heading/pitch motion. Roll rate p is not consumed downstream,
+  // so it is omitted.
+  const pitchSpeedRadPerSec = pitchAngleRateRadPerSec * Math.cos(rollRad) + headingRateRadPerSec * Math.cos(pitchRad) * Math.sin(rollRad)
+  const yawSpeedRadPerSec = -pitchAngleRateRadPerSec * Math.sin(rollRad) + headingRateRadPerSec * Math.cos(pitchRad) * Math.cos(rollRad)
 
   const groundSpeedMps = 16 + Math.sin(tSec * 0.26) * 1.8
+  // Still-air mock: no wind model yet, so true airspeed equals groundspeed. The
+  // channels are kept distinct so the airspeed-driven stall path is exercised.
+  const airSpeedMps = groundSpeedMps
   const climbMps = Math.sin(tSec * 0.38) * 1.6
   const trackDeg = headingDeg + Math.sin(tSec * 0.22) * 6
   const trackRad = (trackDeg * Math.PI) / 180
@@ -54,10 +72,12 @@ export function buildMockLiveSample(timestampMs: number): TelemetrySample {
       rollRad,
       pitchRad,
       yawRad,
+      pitchSpeedRadPerSec,
       yawSpeedRadPerSec,
     },
     vfrHud: {
       headingDeg,
+      airSpeedMps,
       groundSpeedMps,
       climbMps,
     },

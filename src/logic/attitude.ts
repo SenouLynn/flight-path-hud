@@ -43,6 +43,44 @@ export function radiansToDegrees(valueRad: number): number {
   return valueRad * RAD_TO_DEG
 }
 
+// |pitch| beyond this is clamped for the cos(θ) divisor only, keeping the
+// near-vertical singularity in the Euler transforms from blowing up (80°).
+const MAX_PITCH_FOR_RATE_RAD = 1.396
+const MIN_COS_PITCH = 0.17
+
+/**
+ * Earth-frame heading (turn) rate ψ̇ from body angular rates, via the standard
+ * aircraft Euler kinematics: ψ̇ = (sin φ·q + cos φ·r) / cos θ. When banked, body
+ * pitch rate q feeds heading change — the coordinated-turn coupling. `q`/`r` are
+ * body pitch/yaw rates (rad/s), the raw meaning of ATTITUDE.pitchspeed/yawspeed.
+ * A pure single-sample function — no history, portable to firmware.
+ */
+export function headingRateFromBodyRates(
+  rollRad: number,
+  pitchRad: number,
+  pitchRateRadPerSec: number,
+  yawRateRadPerSec: number,
+): number {
+  const cosPitchGuarded = Math.max(
+    MIN_COS_PITCH,
+    Math.cos(clamp(pitchRad, -MAX_PITCH_FOR_RATE_RAD, MAX_PITCH_FOR_RATE_RAD)),
+  )
+  return (Math.sin(rollRad) * pitchRateRadPerSec + Math.cos(rollRad) * yawRateRadPerSec) / cosPitchGuarded
+}
+
+/**
+ * Earth-frame flight-path (climb) angle rate γ̇ = cos φ·q − sin φ·r. In a bank,
+ * pitch rate is scaled by cos φ — a banked pull turns more and climbs less than
+ * the same pull wings-level.
+ */
+export function climbAngleRateFromBodyRates(
+  rollRad: number,
+  pitchRateRadPerSec: number,
+  yawRateRadPerSec: number,
+): number {
+  return Math.cos(rollRad) * pitchRateRadPerSec - Math.sin(rollRad) * yawRateRadPerSec
+}
+
 export function normalizeRollDegrees(valueDeg: number): number {
   const normalized = valueDeg % 360
   const wrapped = normalized > 180 ? normalized - 360 : normalized

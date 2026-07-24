@@ -2,6 +2,7 @@ export interface AttitudeSample {
   rollRad?: number
   pitchRad?: number
   yawRad?: number
+  pitchSpeedRadPerSec?: number
   yawSpeedRadPerSec?: number
 }
 
@@ -53,6 +54,7 @@ function sanitizeAttitude(input: AttitudeSample | undefined): AttitudeSample | u
     rollRad: toFiniteNumber(input.rollRad),
     pitchRad: toFiniteNumber(input.pitchRad),
     yawRad: toFiniteNumber(input.yawRad),
+    pitchSpeedRadPerSec: toFiniteNumber(input.pitchSpeedRadPerSec),
     yawSpeedRadPerSec: toFiniteNumber(input.yawSpeedRadPerSec),
   }
 
@@ -60,6 +62,7 @@ function sanitizeAttitude(input: AttitudeSample | undefined): AttitudeSample | u
     sample.rollRad === undefined
     && sample.pitchRad === undefined
     && sample.yawRad === undefined
+    && sample.pitchSpeedRadPerSec === undefined
     && sample.yawSpeedRadPerSec === undefined
   ) {
     return undefined

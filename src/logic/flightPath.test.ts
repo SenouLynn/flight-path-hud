@@ -213,6 +213,24 @@ describe('resolvePredictivePath', () => {
     expect(linearEnd?.northM).toBeCloseTo(turnEnd?.northM ?? 0, 8)
     expect(linearEnd?.eastM).toBeCloseTo(turnEnd?.eastM ?? 0, 8)
   })
+
+  it('rotates the predicted track at the earth-frame heading rate, not raw body yawspeed', () => {
+    const base = { timestampMs: 0, globalPositionInt: { vxCms: 1000, vyCms: 0 } }
+
+    const level = resolvePredictivePath({ ...base, attitude: { rollRad: 0, yawSpeedRadPerSec: 0.3 } })
+    const banked = resolvePredictivePath({ ...base, attitude: { rollRad: Math.PI / 4, yawSpeedRadPerSec: 0.3 } })
+
+    const linEnd = level.linear.at(-1)!
+    const deviation = (path: typeof level) => {
+      const end = path.turnAware.at(-1)!
+      return Math.hypot(end.northM - linEnd.northM, end.eastM - linEnd.eastM)
+    }
+
+    // Same body yaw rate, but the banked frame's r projects to a smaller earth-
+    // frame heading rate (cos 45°), so its arc curves less away from straight.
+    expect(deviation(banked)).toBeGreaterThan(0)
+    expect(deviation(banked)).toBeLessThan(deviation(level))
+  })
 })
 
 describe('runFlightPathReplay', () => {

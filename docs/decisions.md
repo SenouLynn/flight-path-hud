@@ -475,3 +475,67 @@ which only holds in still air.
   addressable routes for a growing multi-page app.
 - Keeping airspeed playground-local (feed groundspeed, pass stall via config) — rejected because
   it leaves the core conflation in place and misses the chance to model airspeed properly.
+
+## ADR-0017: Trajectory turn/climb from body-rate Euler kinematics, not static bank/pitch
+
+- **Status:** Accepted
+- **Date:** 2026-07-24
+- **Deciders:** team
+
+### Context
+The predictive trajectory ([trajectory.ts](../src/logic/trajectory.ts)) derived its path geometry
+from the static Euler *angles*: turn rate as `yawspeed + g·tan(roll)/V` and vertical rate as
+`V·sin(pitch)`. Three defects surfaced when validating on the playground (ADR-0016):
+1. **Turn double-count.** In coordinated flight the measured body yaw rate `r` already ≈
+   `g·tan φ/V`, so adding a bank-derived rate on top roughly doubled the turn.
+2. **Bank ≠ turn.** A held bank with no rotation (a slip) still predicted a turn; the model
+   could not represent "banked but not turning."
+3. **Pitch ≠ flight-path angle.** `V·sin(pitch)` ignores angle of attack (γ = θ − α), so a level
+   coordinated turn — nose-up to hold altitude — showed a phantom climb.
+
+### Decision
+Drive the path from the aircraft's **rotation and velocity state**, using only common-dialect
+MAVLink and staying a pure single-sample function (no history):
+
+- **Turn rate** is the Euler kinematic transform of body rates `ψ̇ = (sin φ·q + cos φ·r)/cos θ`
+  (`q` = `ATTITUDE.pitchspeed`, newly plumbed; `r` = `yawspeed`). When banked, pitch rate feeds
+  heading change — the coordinated-turn coupling falls out of the kinematics. The rates are
+  trusted whenever present (even zero); the coordinated-turn formula `g·tan φ/V` is kept only as
+  the **fallback** for attitude-only samples, and is also surfaced as
+  `coordinatedTurnRateRadPerSec` so a caller can read slip/skid by comparing it to the actual
+  rate — coordination feedback without a sideslip field.
+- **Climb** comes from the **velocity vector**: initial flight-path angle `γ₀ = asin(vs/V)` from
+  measured vertical speed when known, else the pitch proxy. It then bends over the horizon at
+  `γ̇ = cos φ·q − sin φ·r`. This is the seam a future velocity-vector flight-path marker plugs
+  into. `cos θ` is guarded away from zero (|pitch| capped at 80° for that division).
+- The forward **pace** stays the stall-referenced speed (`max(0, V − stall)`) to preserve the
+  below-stall corridor collapse and the tuned camera scale; only the velocity vector's
+  *direction* (γ, ψ) carries the corrected geometry.
+
+The static playground ([PlaygroundView.tsx](../src/pages/PlaygroundView.tsx)) splits inputs into
+**airframe** (roll, pitch, pitch-rate, yaw-rate) and **velocity vector** (airspeed, flight-path
+angle, heading) groups; FPA is entered as a `climbMps = V·sin γ` so pitch drives only the display.
+
+### Consequences
+- ✅ Coordinated turns are correct: nose-up banked turns stay level; a slip (bank, no rotation)
+  no longer fabricates a turn; the turn rate is no longer doubled.
+- ✅ Stateless and portable — body rates are instantaneous ATTITUDE fields, so the resolver still
+  ports cleanly to the ESP32 with no sample history.
+- ✅ Coordination (slip/skid) is readable from `actual vs coordinated` turn rate, with zero
+  non-standard MAVLink.
+- ✅ The Euler transform is shared (`headingRateFromBodyRates` / `climbAngleRateFromBodyRates` in
+  [attitude.ts](../src/logic/attitude.ts)) so both the trajectory corridor and the CTRV
+  `resolvePredictivePath` rotate on the same earth-frame heading rate — `yawspeed` means body `r`
+  everywhere. A no-op for wings-level frames, so the replay fixtures are unchanged.
+- ⚠️ Attitude-only samples still can't separate climb from turn (the AoA wall); full fidelity
+  needs the velocity vector, which is now the primary path when vertical speed is present.
+- ⚠️ True aerodynamic coordination (induced drag / lift loss in a slip) is out of scope; the
+  model is kinematic, not a force model. Sideslip would need `AOA_SSA` (non-common dialect).
+
+### Alternatives considered
+- Coordinated-turn rate as primary (bank → turn), rates as a correction — rejected: it can't
+  represent a slip and re-introduces the "bank always turns" error; better as the fallback only.
+- Finite-differencing attitude across samples to get rates — rejected: introduces state, defeats
+  the pure single-sample/portability property when the rate fields already exist.
+- Sideslip-based coordination (`AOA_SSA`) — deferred: not in the common MAVLink dialect (per the
+  playground's constraint).
