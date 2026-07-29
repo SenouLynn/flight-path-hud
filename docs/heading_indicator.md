@@ -1,8 +1,8 @@
 # Heading Indicator
 
 Shows yaw — the direction the nose is pointing, compass-referenced. Implemented in
-[src/logic/heading.ts](../src/logic/heading.ts) and rendered by
-[HudHeadingIndicator.tsx](../src/components/HudHeadingIndicator.tsx).
+[src/logic/heading.ts](../apps/web/src/logic/heading.ts) and rendered by
+[HudHeadingIndicator.tsx](../apps/web/src/components/HudHeadingIndicator.tsx).
 
 ## MAVLink source options
 
@@ -47,7 +47,7 @@ Returned shape (`HeadingResolution`): `{ headingDeg: number | null, source, isFa
 
 ## Validation
 
-`HEADING_VALIDATION_FRAMES` in [replay.ts](../src/logic/replay.ts) covers: VFR primary,
+`HEADING_VALIDATION_FRAMES` in [replay.ts](../apps/web/src/logic/replay.ts) covers: VFR primary,
 wrap (`370 → 10`), ATTITUDE fallback (`−π/2 → 270`), GLOBAL centideg (`12345 → 123.45`),
 and the unknown sentinel (`65535 → null`). Unit tests live in
-[heading.test.ts](../src/logic/heading.test.ts).
+[heading.test.ts](../apps/web/src/logic/heading.test.ts).

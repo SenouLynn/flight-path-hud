@@ -14,9 +14,11 @@ I want to build a reflex sight/holo sight on which I project a predictive trajec
 
 
 ## What this repo actually is
-A **validation harness** (React + TypeScript + Vite), not the flight HUD itself. All HUD
-math lives in pure, framework-free resolvers under [src/logic/](src/logic/) so it can be
-proven against known-answer replay frames and later ported to C++/ESP32 firmware. The app
+A **monorepo** for HUD validation and rendering experiments, not the flight HUD itself.
+The browser validation harness lives in [apps/web](apps/web); the separate native experiment
+lives in [apps/desktop](apps/desktop). All browser HUD math lives in
+pure, framework-free resolvers under [apps/web/src/logic/](apps/web/src/logic/) so it can be
+proven against known-answer replay frames and later ported to C++/ESP32 firmware. The web app
 renders both a live mock feed and expected-vs-resolved validation tables.
 
 ## Features
@@ -43,11 +45,14 @@ renders both a live mock feed and expected-vs-resolved validation tables.
 ## Getting started
 ```bash
 npm install
-npm run dev      # Vite dev server
-npm test         # Vitest known-answer suites
-npm run build    # tsc -b && vite build
-npm run lint
+npm run dev:web      # Vite dev server
+npm run test:web     # Vitest known-answer suites
+npm run build:web    # tsc -b && vite build
+npm run lint:web
 ```
+
+The native Dear ImGui experiment has an intentionally independent toolchain. Bootstrap it
+once with `npm run bootstrap:desktop`, then see its [README](apps/desktop/README.md).
 
 ## Documentation
 - [docs/architecture.md](docs/architecture.md) — data flow, module map, conventions, tooling
