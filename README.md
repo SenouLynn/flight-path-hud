@@ -21,6 +21,10 @@ pure, framework-free resolvers under [apps/web/src/logic/](apps/web/src/logic/) 
 proven against known-answer replay frames and later ported to C++/ESP32 firmware. The web app
 renders both a live mock feed and expected-vs-resolved validation tables.
 
+The future device application starts in [apps/esp32](apps/esp32). Its C++ core can be run on
+your local machine before it is flashed to a board: `npm run test:esp32` runs host tests and
+`npm run preview:esp32` writes a deterministic SVG preview.
+
 ## Features
 #### Basic Telemetry
 1. Attitude Indicator / Artificial Horizon — shows pitch AND roll together
@@ -43,6 +47,28 @@ renders both a live mock feed and expected-vs-resolved validation tables.
 
 
 ## Getting started
+
+### One-time macOS tools
+
+Install the Xcode command-line tools first. They provide the system C++ compiler and `make`
+used by the boardless ESP32 validation loop:
+
+```bash
+xcode-select --install
+```
+
+Install [Homebrew](https://brew.sh/) if it is not already available, then install the shared
+JavaScript and native-build tools:
+
+```bash
+brew install node cmake ninja
+```
+
+`git` is also required when bootstrapping the desktop experiment; Xcode's command-line tools
+normally provide it. Verify with `git --version`.
+
+### Browser validation app
+
 ```bash
 npm install
 npm run dev:web      # Vite dev server
@@ -51,8 +77,64 @@ npm run build:web    # tsc -b && vite build
 npm run lint:web
 ```
 
-The native Dear ImGui experiment has an intentionally independent toolchain. Bootstrap it
-once with `npm run bootstrap:desktop`, then see its [README](apps/desktop/README.md).
+### Desktop Dear ImGui experiment (optional)
+
+The desktop experiment is an upstream checkout and has its own npm/CMake setup:
+
+```bash
+npm run bootstrap:desktop
+cd apps/desktop/runtime
+npm install
+cmake -B cmake-build-debug -DCMAKE_BUILD_TYPE=Debug -G Ninja
+cmake --build cmake-build-debug
+./cmake-build-debug/examples/showcase/showcase
+```
+
+See the experiment's [README](apps/desktop/README.md) for its structure and caveats.
+
+### ESP32 firmware
+
+You can develop the portable C++ core immediately after installing the Xcode command-line
+tools—no microcontroller, USB driver, or PlatformIO installation is needed:
+
+```bash
+npm run test:esp32       # host C++ tests
+npm run preview:esp32    # writes apps/esp32/build/hud-preview.svg
+```
+
+For flashing a physical board, use one of these PlatformIO setups:
+
+1. **Recommended IDE path:** install [VS Code](https://code.visualstudio.com/), then install the
+   official **PlatformIO IDE** extension. It includes PlatformIO Core, so no separate CLI install
+   is necessary. [PlatformIO's VS Code guide](https://docs.platformio.org/en/latest/integration/ide/vscode.html)
+   has the current steps.
+2. **CLI path:** install PlatformIO's isolated virtual environment using its
+   [recommended installer](https://docs.platformio.org/en/latest/core/installation/methods/installer-script.html).
+   On macOS/Linux, the official quick-start commands are:
+
+   ```bash
+   curl -fsSL -o get-platformio.py https://raw.githubusercontent.com/platformio/platformio-core-installer/master/get-platformio.py
+   python3 get-platformio.py
+   ```
+
+   The installer creates `~/.platformio/penv/bin/pio`. Follow PlatformIO's
+   [shell-command setup](https://docs.platformio.org/en/stable/core/installation/shell-commands.html)
+   if `pio` is not available in a new terminal.
+
+With PlatformIO available, build and flash from the firmware directory. The first build
+downloads the ESP32 platform/toolchain declared by `platformio.ini`:
+
+```bash
+cd apps/esp32
+pio run
+pio run --target upload
+pio device monitor
+```
+
+The initial board target is generic `esp32dev`. Before uploading, update `board = esp32dev` in
+[apps/esp32/platformio.ini](apps/esp32/platformio.ini) to match the actual board. If it does not
+appear as a serial port after connecting it, install the USB-UART driver specified by that
+board's manufacturer (commonly CP210x or CH340).
 
 ## Documentation
 - [docs/architecture.md](docs/architecture.md) — data flow, module map, conventions, tooling

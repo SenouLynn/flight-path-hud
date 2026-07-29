@@ -9,6 +9,8 @@
     "build:web": "npm run build --workspace @flight-path-hud/web",
     "lint:web": "npm run lint --workspace @flight-path-hud/web",
     "test:web": "npm run test --workspace @flight-path-hud/web",
+    "test:esp32": "make -C apps/esp32 test",
+    "preview:esp32": "make -C apps/esp32 run",
     "bootstrap:desktop": "git clone https://github.com/tmikov/imgui-react-runtime.git apps/desktop/runtime"
   }
 }

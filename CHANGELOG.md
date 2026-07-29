@@ -23,6 +23,10 @@ tagged release exists.
 ## [Unreleased]
 
 ### Added
+- [ESP32 firmware project](apps/esp32) with a PlatformIO `esp32dev` target and a portable C++
+  HUD core. The same heading resolver and primary-flight-display scene composition compile on
+  the host via `npm run test:esp32`; `npm run preview:esp32` writes an SVG frame for local visual
+  validation before any hardware is connected (ADR-0019).
 - Monorepo layout: the existing Vite validation harness now lives in
   [apps/web](apps/web), while [apps/desktop](apps/desktop) is an
   isolated local checkout location for the Dear ImGui + React desktop experiment (ADR-0018).

@@ -82,6 +82,35 @@ commands and no shared runtime dependency.
 - Replace the Vite application — rejected because it would discard a useful SVG validation
   surface before the native prototype is proven.
 
+## ADR-0019: Firmware core is host-runnable and renderer-agnostic
+
+- **Status:** Accepted
+- **Date:** 2026-07-29
+- **Deciders:** team
+
+### Context
+The ESP32 application needs C++ code that can be verified quickly without a board, while the
+display controller and its final graphics library have not been selected. Tying HUD geometry to
+Arduino now would make desktop testing and hardware replacement unnecessarily difficult.
+
+### Decision
+Create [apps/esp32](../apps/esp32) as a PlatformIO Arduino project with a portable `hud/` C++
+library. Scene composition emits a tiny line/text `HudDrawTarget` interface. A system-C++ host
+runner implements that interface as SVG, while the future ESP32 display adapter will implement
+the same interface through the chosen OLED driver.
+
+### Consequences
+- ✅ Resolver behavior and generated draw geometry are testable locally with `make test` and
+  `make run`, before flashing firmware.
+- ✅ Display-library selection remains a narrow adapter decision rather than a rewrite of HUD
+  math or layout.
+- ⚠️ The initial `esp32dev` target and serial-only firmware entry point must be tailored once
+  the actual ESP32 variant and OLED controller are known.
+
+### Alternatives considered
+- Start directly in Arduino `setup()`/`loop()` — rejected because it would require hardware for
+  every visual or numerical validation cycle.
+
 ## ADR-0001: HUD logic as pure, framework-free resolvers
 
 - **Status:** Accepted

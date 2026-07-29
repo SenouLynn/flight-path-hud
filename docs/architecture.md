@@ -9,6 +9,10 @@ The sibling [apps/desktop](../apps/desktop) directory is a separate,
 upstream Dear ImGui + React desktop experiment. It has its own CMake and npm setup and does not
 share the web app's runtime or build graph.
 
+[apps/esp32](../apps/esp32) is the future on-device application. Its `hud/` C++ library has no
+Arduino or display-driver dependency: a native runner turns its line/text draw commands into SVG
+for local inspection, and the ESP32 will later provide the corresponding OLED adapter.
+
 See the [README](../README.md) for the physical setup and motivation.
 
 ## Data flow
