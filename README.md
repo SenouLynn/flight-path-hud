@@ -1,6 +1,6 @@
 # HUD Visualizer
 **Setup & Problem Statement**
-I'm running a Hawkeye Firefly 4k Split camera which supports analog video streaming & onboard 4k recording. The camera is fixed to a pan/tilt gimbal. Loss of orientation to the craft and the ground is shockingly easy (and historically catastrophic). Also I use video quite a bit for debugging so having non-telemetry frame of reference can be helpful in log-analysis and debugging. 
+I'm running a Hawkeye Firefly 4k Split camera which supports analog video streaming & onboard 4k recording. The camera is fixed to a pan/tilt gimbal. Loss of orientation to the craft and the ground is shockingly easy (and historically catastrophic). Also I use video quite a bit for debugging so having non-telemetry frame of reference can be helpful in log-analysis and debugging. As POV rotates with the gimbal, having a fixed-reference with additional telemetry seems useful.
 
 **Solution Statement**
 Yeah this can be solved with a piece of tape. I'd rather over-engineer a solution. 
@@ -9,7 +9,7 @@ I want to build a reflex sight/holo sight on which I project a predictive trajec
 
 **Repo Purpose**
 1. Flesh out what features I actually want.
-2. Establish algorithm for extrapolating cardinality in 3 dimensions. 
+2. Establish core functions and algorithm for extrapolating cardinality in Euclidean space. 
 3. Prepare for translation into C++ or lua (or whatever). 
 
 
@@ -25,15 +25,20 @@ renders both a live mock feed and expected-vs-resolved validation tables.
    - Pitch: horizon line moves up/down
    - Roll: horizon line tilts
 2. Heading Indicator / Heading Tape — shows yaw (nose direction, compass-referenced)
-3. Basic orientation
+3. Rigid body orientation in 3 dimensional space (no velocity)
 
 #### Extrapolation
-1. Flight Path Marker (velocity vector) — 2D ground track + flight path angle
-2. Predictive path — linear and turn-aware (CTRV) projection, plus an integrated
-   trajectory that blends heading/track/bank/pitch with wind-drift and stall cues
+1. Predictive path — linear and turn-aware (CTRV) projection, plus an integrated
+   trajectory that blends heading/track/bank/pitch with wind-drift, stall cues, and 
 
 ### Log Consumption
 1. GPS/Location positional replay
+2. PID replay/tuning
+
+## General Knowledge 
+1. Basic physics engine - run mock simulations
+
+
 
 ## Getting started
 ```bash
