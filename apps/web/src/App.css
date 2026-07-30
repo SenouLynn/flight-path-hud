@@ -1,55 +1,80 @@
 .app-shell {
   display: flex;
   flex-direction: column;
-  gap: 14px;
-  padding: 14px;
+  gap: 8px;
+  min-height: 100svh;
+  padding: 6px 10px 10px;
   text-align: left;
+}
+
+.app-chrome {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 3px 0 6px;
+}
+
+.app-title {
+  color: var(--muted);
+  font-size: 0.7rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
 }
 
 .header {
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 3px;
 }
 
 .eyebrow {
   text-transform: uppercase;
   letter-spacing: 0.08em;
-  font-size: 0.68rem;
+  font-size: 0.65rem;
   color: var(--muted);
   margin: 0;
 }
 
 .intro {
   color: var(--muted);
-  font-size: 0.9rem;
+  font-size: 0.8rem;
   max-width: 76ch;
 }
 
+/* Panels read as ImGui windows: a thin 1px border, a slightly darker title
+   strip carrying the h2 (rather than a boxed card), and a flat body — no drop
+   shadows or gradients, matching ImGui's flat-shaded default style. */
 .panel {
   border: 1px solid var(--border);
+  border-radius: var(--radius);
   background: var(--bg-panel);
-  padding: 8px;
+  padding: 0 6px 6px;
   overflow-x: auto;
 }
 
 .panel-header {
   display: flex;
   flex-direction: column;
-  gap: 3px;
-  margin-bottom: 8px;
+  gap: 2px;
+  margin: 0 -6px 6px;
+  padding: 5px 8px;
+  background: var(--title-strip);
+  border-bottom: 1px solid var(--border);
+  border-radius: var(--radius) var(--radius) 0 0;
 }
 
 .panel-subtitle {
   color: var(--muted);
-  font-size: 0.78rem;
+  font-size: 0.72rem;
   max-width: 90ch;
 }
 
 .hud-fused-shell {
   border: 1px solid var(--border);
-  background: #1f2124;
-  padding: 10px;
+  border-radius: var(--radius);
+  background: #0d0e11;
+  padding: 6px;
 }
 
 .hud-pfd {
@@ -63,16 +88,17 @@
 }
 
 .hud-secondary-grid {
-  margin-top: 12px;
+  margin-top: 6px;
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 12px;
+  gap: 6px;
 }
 
 .hud-secondary-card {
   border: 1px solid var(--border);
-  background: #15191e;
-  padding: 10px;
+  border-radius: var(--radius);
+  background: #101216;
+  padding: 4px;
   display: flex;
   align-items: stretch;
   justify-content: stretch;
@@ -122,6 +148,14 @@
   font-weight: 600;
   font-family: var(--mono);
   letter-spacing: 0.06em;
+}
+
+.hud-heading-compact .hud-heading-label {
+  font-size: 7px;
+}
+
+.hud-heading-compact .hud-heading-readout {
+  font-size: 16px;
 }
 
 .hud-center-bug {
@@ -424,6 +458,51 @@
   font-family: var(--mono);
 }
 
+/* Text-only instrument card — same dark instrument-panel language as its SVG
+   siblings (mono font, muted blue-grey labels) but laid out as HTML text
+   since there's no graphic to draw. */
+.hud-flight-state {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  width: 100%;
+  padding: 6px 8px;
+}
+
+.hud-flight-state-title {
+  font-family: var(--mono);
+  font-size: 10px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: #98abc5;
+  margin: 0;
+}
+
+.hud-flight-state-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px 14px;
+}
+
+.hud-flight-state-stat {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  font-family: var(--mono);
+  font-size: 10px;
+  color: var(--muted);
+}
+
+.hud-flight-state-stat strong {
+  font-size: 12px;
+  color: #eef4ff;
+  font-weight: 600;
+}
+
+.hud-flight-state-warn strong {
+  color: #ffb36b;
+}
+
 .mapping-table {
   width: 100%;
   border-collapse: collapse;
@@ -449,23 +528,33 @@
 .adapter-controls {
   display: grid;
   grid-template-columns: repeat(4, minmax(140px, 1fr));
-  gap: 10px;
-  margin-bottom: 10px;
+  gap: 8px;
+  margin-bottom: 8px;
 }
 
 .adapter-control {
   display: flex;
   flex-direction: column;
-  gap: 4px;
-  font-size: 0.8rem;
+  gap: 3px;
+  font-size: 0.72rem;
   color: var(--muted);
 }
 
 .adapter-control select {
   border: 1px solid var(--border);
+  border-radius: var(--radius);
   background: var(--bg-control);
   color: var(--text);
-  padding: 5px 8px;
+  padding: 4px 6px;
+}
+
+.adapter-control select:hover {
+  border-color: var(--border-strong);
+}
+
+.adapter-control select:focus-visible {
+  outline: none;
+  border-color: var(--accent);
 }
 
 .adapter-stat {
@@ -473,33 +562,38 @@
   flex-direction: column;
   justify-content: center;
   gap: 2px;
-  border: 1px solid var(--border);
-  background: var(--bg-panel-alt);
-  padding: 6px 8px;
-  font-size: 0.75rem;
+  border-radius: var(--radius);
+  background: var(--bg-control);
+  padding: 5px 8px;
+  font-size: 0.7rem;
   color: var(--muted);
 }
 
 .adapter-stat strong {
-  font-size: 0.9rem;
-  color: var(--text-h);
+  font-family: var(--mono);
+  font-size: 0.85rem;
+  color: var(--accent);
   font-weight: 600;
 }
 
+/* ImGui tables lean on horizontal rules and alternating row tint rather than
+   a full grid of boxed cells. */
 .mapping-table th,
 .mapping-table td {
-  border: 1px solid var(--border);
-  padding: 8px 10px;
-  font-size: 0.82rem;
+  border: none;
+  border-bottom: 1px solid var(--border);
+  padding: 5px 9px;
+  font-size: 0.76rem;
   vertical-align: top;
 }
 
 .mapping-table thead th {
   text-transform: uppercase;
-  letter-spacing: 0.06em;
-  font-size: 0.68rem;
+  letter-spacing: 0.05em;
+  font-size: 0.65rem;
   color: var(--muted);
-  background: #2f2f2f;
+  background: var(--title-strip);
+  border-bottom: 1px solid var(--border-strong);
 }
 
 .mapping-table tbody tr:nth-child(even) {
@@ -636,43 +730,112 @@
   fill: #ffd36f;
 }
 
+/* Segmented tab strip, styled like ImGui's tab bar: unselected tabs sit flush
+   against a shared baseline; the active tab lifts slightly and picks up the
+   accent blue instead of just going lighter grey. */
 .app-nav {
   display: flex;
-  gap: 4px;
+  gap: 2px;
+  margin: 0;
   border-bottom: 1px solid var(--border);
-  padding-bottom: 8px;
 }
 
 .app-nav-link {
-  padding: 6px 14px;
-  border: 1px solid var(--border);
+  padding: 3px 11px 4px;
+  border: 1px solid transparent;
   border-bottom: none;
-  background: var(--bg-panel-alt);
+  border-radius: var(--radius) var(--radius) 0 0;
+  background: transparent;
   color: var(--muted);
-  font-size: 0.82rem;
+  font-size: 0.72rem;
   text-decoration: none;
-  letter-spacing: 0.04em;
+  letter-spacing: 0.03em;
+}
+
+.app-nav-link:hover {
+  background: var(--accent-soft);
+  color: var(--text-h);
 }
 
 .app-nav-link.active {
-  background: var(--bg-control);
-  color: var(--text-h);
+  background: var(--bg-panel);
+  border-color: var(--border);
+  color: var(--accent);
   font-weight: 600;
+  position: relative;
+  top: 1px;
 }
 
 .playground-controls {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
-  gap: 14px;
+  gap: 8px;
 }
 
+.playground-layout {
+  display: grid;
+  grid-template-columns: minmax(260px, 300px) minmax(0, 1fr);
+  align-items: start;
+  gap: 8px;
+  min-height: 0;
+}
+
+.playground-sidebar {
+  position: sticky;
+  top: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  max-height: calc(100svh - 16px);
+  overflow-y: auto;
+  padding-right: 2px;
+}
+
+.playground-header {
+  padding: 2px 2px 0;
+}
+
+.playground-header h1 {
+  font-size: clamp(1.1rem, 1.6vw, 1.35rem);
+}
+
+.playground-header .intro {
+  font-size: 0.76rem;
+}
+
+.playground-control-panel {
+  overflow: visible;
+}
+
+.playground-sidebar .playground-controls {
+  grid-template-columns: 1fr;
+  gap: 5px;
+}
+
+.playground-sidebar .parameter-slider {
+  padding: 5px 8px;
+}
+
+.playground-content {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-width: 0;
+}
+
+.playground-instruments {
+  overflow: hidden;
+}
+
+/* Frame-style control, matching ImGui's FrameBg rectangles: flat fill, thin
+   border, no card elevation. */
 .parameter-slider {
   display: flex;
   flex-direction: column;
-  gap: 6px;
-  border: 1px solid var(--border);
-  background: var(--bg-panel-alt);
-  padding: 10px 12px;
+  gap: 4px;
+  border-radius: var(--radius);
+  background: var(--bg-control);
+  padding: 5px 8px;
 }
 
 .parameter-slider-head {
@@ -683,65 +846,146 @@
 }
 
 .parameter-slider-label {
-  font-size: 0.78rem;
+  font-size: 0.68rem;
   color: var(--muted);
   text-transform: uppercase;
-  letter-spacing: 0.06em;
+  letter-spacing: 0.05em;
 }
 
 .parameter-slider-value {
   font-family: var(--mono);
-  font-size: 1rem;
+  font-size: 0.86rem;
   color: var(--text-h);
   font-weight: 600;
 }
 
 .parameter-slider-value em {
   font-style: normal;
-  font-size: 0.72rem;
+  font-size: 0.66rem;
   color: var(--muted);
   font-weight: 400;
 }
 
+/* Custom range track/thumb: ImGui's slider is a filled rectangle with a small
+   grab notch, not the browser-default thin groove + round knob. The filled
+   portion isn't literally paintable with a single <input>, so the fill is
+   faked with the track's linear-gradient (solid up to the value stop) and the
+   thumb is squared off to read as the grab handle rather than a separate dot. */
 .parameter-slider input[type='range'] {
+  appearance: none;
   width: 100%;
-  accent-color: #ffd36f;
+  height: 14px;
+  margin: 2px 0;
+  background: var(--bg-panel-alt);
+  border-radius: 2px;
+  border: 1px solid var(--border);
 }
 
+.parameter-slider input[type='range']::-webkit-slider-runnable-track {
+  height: 12px;
+  background: transparent;
+}
+
+.parameter-slider input[type='range']::-webkit-slider-thumb {
+  appearance: none;
+  width: 8px;
+  height: 12px;
+  border-radius: 1px;
+  background: var(--accent);
+  border: none;
+  cursor: pointer;
+  margin-top: 0;
+}
+
+.parameter-slider input[type='range']::-moz-range-track {
+  height: 12px;
+  background: transparent;
+  border: none;
+}
+
+.parameter-slider input[type='range']::-moz-range-thumb {
+  width: 8px;
+  height: 12px;
+  border-radius: 1px;
+  background: var(--accent);
+  border: none;
+  cursor: pointer;
+}
+
+.parameter-slider input[type='range']:hover::-webkit-slider-thumb,
+.parameter-slider input[type='range']:focus-visible::-webkit-slider-thumb {
+  background: #6bb2ff;
+}
+
+.parameter-slider input[type='range']:focus-visible {
+  outline: none;
+  border-color: var(--accent);
+}
+
+/* Derived-values row: plain label/value pairs on one line (no chip border or
+   fill) — closer to ImGui's Columns()/SameLine() readouts than boxed cards.
+   Kept as a single non-wrapping flex row per the "fit on one line" request;
+   it scrolls horizontally on narrow viewports instead of wrapping to a second
+   row. */
 .playground-readout {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-  gap: 10px;
+  display: flex;
+  flex-wrap: nowrap;
+  overflow-x: auto;
+  gap: 0;
 }
 
 .readout-stat {
   display: flex;
   flex-direction: column;
-  gap: 3px;
-  border: 1px solid var(--border);
-  background: var(--bg-panel-alt);
-  padding: 8px 10px;
-  font-size: 0.75rem;
+  gap: 1px;
+  /* Content-sized, not stretch/shrink — a stretched flex item combined with
+     nowrap text just overflows into its neighbour instead of wrapping or
+     shrinking, which is what caused the garbled overlap here. Sizing to
+     content and letting the row's overflow-x:auto take over is what keeps
+     every stat legible on one line. */
+  flex: 0 0 auto;
+  padding: 2px 10px;
+  font-size: 0.65rem;
   color: var(--muted);
+  border-left: 1px solid var(--border);
+  white-space: nowrap;
+}
+
+.readout-stat:first-child {
+  border-left: none;
+  padding-left: 2px;
 }
 
 .readout-stat strong {
   font-family: var(--mono);
-  font-size: 0.9rem;
+  font-size: 0.78rem;
   color: var(--text-h);
   font-weight: 600;
-}
-
-.readout-stat-warn {
-  border-color: #ffb36b;
 }
 
 .readout-stat-warn strong {
   color: #ffb36b;
 }
 
-@media (max-width: 1320px) {
-  .hud-secondary-grid {
+@media (max-width: 960px) {
+  .playground-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .playground-sidebar {
+    position: static;
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    max-height: none;
+    overflow: visible;
+    padding: 0;
+  }
+
+  .playground-header {
+    grid-column: 1 / -1;
+  }
+
+  .playground-sidebar .playground-controls {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
@@ -763,5 +1007,15 @@
 
   .adapter-controls {
     grid-template-columns: repeat(2, minmax(120px, 1fr));
+  }
+}
+
+@media (max-width: 620px) {
+  .playground-sidebar {
+    display: flex;
+  }
+
+  .playground-sidebar .playground-controls {
+    grid-template-columns: 1fr;
   }
 }

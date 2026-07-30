@@ -135,14 +135,14 @@ function ValidatorView() {
                 pitchDeg={liveAttitude?.pitchDeg ?? null}
                 yawDeg={liveYawDeg}
                 width={620}
-                height={480}
+                height={360}
               />
             </div>
               <div className="hud-secondary-card">
-                <HudPredictiveTrajectory sample={latestSample} width={620} height={480} />
+                <HudPredictiveTrajectory sample={latestSample} width={620} height={360} />
               </div>
               <div className="hud-secondary-card">
-                <HudFlightPathRecorder track={flightTrack.track} source={flightTrack.source} width={620} height={480} />
+                <HudFlightPathRecorder track={flightTrack.track} source={flightTrack.source} width={620} height={360} />
               </div>
           </div>
         </div>

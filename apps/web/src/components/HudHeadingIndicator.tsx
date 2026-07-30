@@ -50,6 +50,17 @@ export function HudHeadingIndicator({
 
   const centerX = width / 2
   const centerY = height / 2
+  const compact = height <= 56
+  // Compact geometry is expressed as fractions of height (calibrated against
+  // the original height=48 constants) rather than fixed pixel offsets, so the
+  // tape keeps its proportions when height is pushed well below 48 (e.g. the
+  // half-height 24px tape used by the primary flight display).
+  const tickBaseline = height - (compact ? height * 0.1667 : 20)
+  const majorTickTop = height - (compact ? height * 0.3958 : 40)
+  const minorTickTop = height - (compact ? height * 0.2917 : 32)
+  const labelY = height - (compact ? height * 0.4792 : 46)
+  const bugTop = compact ? height * 0.1042 : 14
+  const bugBottom = compact ? height * 0.3125 : 30
   const pixelsPerDegree = width / 120
   const majorTickStep = 10
   const minorTickStep = 5
@@ -68,22 +79,22 @@ export function HudHeadingIndicator({
   }
 
   return (
-    <svg className="hud-heading" viewBox={`0 0 ${width} ${height}`} role="img" aria-label="Heading indicator">
+    <svg className={`hud-heading${compact ? ' hud-heading-compact' : ''}`} viewBox={`0 0 ${width} ${height}`} role="img" aria-label="Heading indicator">
       <rect x={0} y={0} width={width} height={height} className="hud-heading-bg" />
 
-      <line x1={0} y1={height - 20} x2={width} y2={height - 20} className="hud-line-muted" />
+      <line x1={0} y1={tickBaseline} x2={width} y2={tickBaseline} className="hud-line-muted" />
 
       {ticks.map((tick) => (
         <g key={`${tick.value}-${tick.x}`}>
           <line
             x1={tick.x}
-            y1={height - 20}
+            y1={tickBaseline}
             x2={tick.x}
-            y2={tick.isMajor ? height - 40 : height - 32}
+            y2={tick.isMajor ? majorTickTop : minorTickTop}
             className="hud-line"
           />
           {tick.isMajor ? (
-            <text x={tick.x} y={height - 46} className="hud-heading-label" textAnchor="middle">
+            <text x={tick.x} y={labelY} className="hud-heading-label" textAnchor="middle">
               {formatHeadingLabel(tick.value)}
             </text>
           ) : null}
@@ -91,7 +102,7 @@ export function HudHeadingIndicator({
       ))}
 
       <polygon
-        points={`${centerX - 9},14 ${centerX + 9},14 ${centerX},30`}
+        points={`${centerX - (compact ? 5 : 9)},${bugTop} ${centerX + (compact ? 5 : 9)},${bugTop} ${centerX},${bugBottom}`}
         className="hud-center-bug"
       />
       <text x={centerX} y={centerY + 2} className="hud-heading-readout" textAnchor="middle">

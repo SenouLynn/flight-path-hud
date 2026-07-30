@@ -10,10 +10,13 @@ function navLinkClass({ isActive }: { isActive: boolean }): string {
 function App() {
   return (
     <main className="app-shell">
-      <nav className="app-nav">
-        <NavLink to="/validator" className={navLinkClass}>Validator</NavLink>
-        <NavLink to="/playground" className={navLinkClass}>Playground</NavLink>
-      </nav>
+      <header className="app-chrome">
+        <p className="app-title">HUD Parameter Playground</p>
+        <nav className="app-nav" aria-label="Application views">
+          <NavLink to="/validator" className={navLinkClass}>Validator</NavLink>
+          <NavLink to="/playground" className={navLinkClass}>Playground</NavLink>
+        </nav>
+      </header>
 
       <Routes>
         <Route path="/" element={<Navigate to="/validator" replace />} />
