@@ -51,3 +51,14 @@ your local machine before it is flashed to a board: `npm run test:esp32` runs ho
 
 ## Mock GCS Dash (Mavlink Exploration)
 1. Rebuild a basic GCS (QGroundControl or MissionPlanner) with READONLY capabilities. 
+2. Video streaming exploration
+
+## Documentation
+- [docs/architecture.md](docs/architecture.md) — data flow, module map, conventions, tooling
+- [docs/heading_indicator.md](docs/heading_indicator.md) — heading source resolution
+- [docs/attitude_and_horizon_indicator.md](docs/attitude_and_horizon_indicator.md) — attitude/horizon + 3D orientation
+- [docs/flight_path_marker.md](docs/flight_path_marker.md) — FPM, FPA, predictive trajectory
+- [docs/mavlink_gcs_consume_plan.md](docs/mavlink_gcs_consume_plan.md) — receive-only MAVLink GCS roadmap and concrete next steps
+- [docs/gcs_runtime_blueprint.md](docs/gcs_runtime_blueprint.md) — portable runtime architecture for cloud-web and Pi-local deployment
+- [docs/decisions.md](docs/decisions.md) — Architecture Decision Record (ADR) log
+- [CHANGELOG.md](CHANGELOG.md) — notable changes over time

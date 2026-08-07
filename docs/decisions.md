@@ -54,6 +54,49 @@ The entries below were reconstructed from the initial implementation (commits `9
 `355baff`) and documented on 2026-07-23. Dates reflect when each decision was first made in
 the code.
 
+## ADR-0021: Video streaming is a first-class sidecar with adapter ports
+
+- **Status:** Accepted
+- **Date:** 2026-08-07
+- **Deciders:** team
+
+### Context
+An operational GCS typically includes video alongside telemetry and mission views. Planned
+camera paths include analog receiver capture (USB capture devices) and digital camera output
+(Firefly Split PC-CAM over UVC). Locking the architecture to one capture path or one delivery
+protocol would make future deployment profiles brittle.
+
+### Decision
+Model video as a first-class sidecar under the same ports-and-adapters strategy as telemetry:
+
+- Add video ingress, relay, and health ports.
+- Support both analog and digital camera adapters behind those ports.
+- Use a media-router baseline (MediaMTX) with low-latency browser delivery as primary target.
+- Keep UI integration protocol-agnostic through a stable video stream contract.
+
+Related architecture and plan details are tracked in:
+- [docs/gcs_runtime_blueprint.md](./gcs_runtime_blueprint.md)
+- [docs/mavlink_gcs_consume_plan.md](./mavlink_gcs_consume_plan.md)
+
+### Consequences
+- ✅ Video can be added without coupling camera transport details into domain telemetry logic.
+- ✅ Analog and digital camera paths can coexist and be swapped per deployment target.
+- ✅ Cloud and local Pi profiles can reuse one UI contract.
+- ⚠️ Introduces additional service/process complexity and stream-health surface area.
+- ⚠️ Requires explicit latency and reconnect observability in the operator UI.
+
+### Alternatives considered
+- Defer video architecture until after telemetry implementation — rejected because video is core
+  to GCS operator workflow and should shape ports/contracts early.
+- Couple video directly inside the frontend using a single protocol path — rejected because it
+  would hinder adapter portability and Pi/cloud parity.
+
+### Implementation preference note (2026-08-07)
+- Default first path: Firefly PC-CAM (UVC) adapter with WebRTC browser delivery via MediaMTX.
+- Secondary path: analog receiver via USB capture adapter.
+- Optional path: OpenIPC as an additional network-stream adapter when hardware supports it.
+- Constraint: all three paths must terminate at the same video relay and UI port contracts.
+
 ## ADR-0020: Multi-target GCS via ports and adapters
 
 - **Status:** Accepted

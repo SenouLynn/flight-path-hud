@@ -17,6 +17,9 @@ Portability rule:
 - Core telemetry/domain logic must be transport-agnostic and UI-framework-agnostic.
 - MAVLink transport, decode, and relay paths must be swappable adapters behind stable ports.
 
+Related design blueprint:
+- [gcs_runtime_blueprint.md](./gcs_runtime_blueprint.md) defines runtime profiles for local Pi direct-link and cloud-relayed web viewing.
+
 ## Architecture Guardrails (Hexagonal / Ports and Adapters)
 
 Define ports first, then implement adapters:
@@ -51,6 +54,7 @@ Non-goal for early phases:
   - Decode core telemetry messages.
   - Normalize data into the existing TypeScript telemetry model.
   - Visualize live telemetry, stream health, map track, and mission overlays.
+  - Add video as a sidecar stream (analog capture and digital camera paths) with shared operator context in GCS views.
 - Out of scope (for now):
   - Sending commands (arm, mode, mission upload, parameter writes).
   - Flight control authority.
@@ -82,6 +86,10 @@ A browser GCS page in `apps/web` that can:
 4. Views
 - Keep `UnifiedView` for HUD.
 - Add a GCS view with stream diagnostics and map/mission context.
+
+5. Video sidecar
+- Keep video stream transport behind ports/adapters so analog capture and digital camera paths can coexist.
+- Present one stable video panel contract to the UI regardless of ingest source.
 
 ## Concrete Work Plan
 
@@ -211,6 +219,32 @@ Proposed file additions:
 Definition of done:
 - Live aircraft track and mission route are visible and coherent on map.
 
+## Phase 5b: Video Sidecar Foundation (1.5 to 2.5 days)
+
+Tasks:
+- Define video ports/interfaces:
+  - `VideoIngressPort`
+  - `VideoRelayPort`
+  - `VideoHealthPort`
+- Choose initial media router baseline (MediaMTX).
+- Stand up one analog capture adapter path and one digital UVC path:
+  - analog receiver via USB capture
+  - Firefly Split PC-CAM via UVC capture
+- Deliver low-latency browser playback path (WebRTC preferred; fallback path documented).
+- Add stream health fields to UI state:
+  - fps
+  - bitrate
+  - reconnect state
+  - latency estimate
+
+Proposed workspace additions:
+- `apps/video-bridge/`
+- `docs/video_pipeline_notes.md`
+
+Definition of done:
+- GCS view can show live video from at least one physical adapter path and one mock/replay path.
+- Video source is swappable without changes to telemetry resolver logic.
+
 ## Phase 6: Validation, Replay, and Hardening (1 day)
 
 Tasks:
@@ -225,6 +259,7 @@ Tasks:
 - Add adapter contract tests:
   - replay fixture can drive the same ports as UDP/serial ingress
   - UI stream behavior is unchanged across adapters
+  - video fixture stream can drive the same UI video contract as live adapters
 
 Definition of done:
 - Deterministic replay catches regressions before live tests.
@@ -236,6 +271,7 @@ Definition of done:
 3. Scaffold `apps/mavlink-bridge` with UDP input and WebSocket output.
 4. Connect bridge output to web app and verify HUD updates.
 5. Add `GcsView` with stream health cards.
+6. Define video sidecar contracts and pick first adapter path (analog USB capture or Firefly PC-CAM UVC).
 
 ## Test Checklist Per Phase
 
@@ -243,6 +279,7 @@ Definition of done:
 - Manual test with synthetic source still passing.
 - Manual test with bridge disconnected/reconnected.
 - Verify heading, climb, and altitude signs against known expected motion.
+- Verify video stream reconnect behavior and latency indicator sanity.
 - Keep `npm run test:web`, `npm run build:web`, and `npm run lint:web` passing.
 
 ## Risks and Mitigations
@@ -257,6 +294,8 @@ Definition of done:
   - Mitigation: heartbeat age warning thresholds and stale banners.
 - Risk: Early implementation accidentally hard-couples to one transport path.
   - Mitigation: define/test ports first; require at least one alternate adapter stub (file replay or serial mock) before phase exit.
+- Risk: Video transport lock-in or unbounded latency.
+  - Mitigation: keep video protocol behind relay port; benchmark local and cloud profiles; show live latency/health in UI.
 
 ## Success Criteria
 
