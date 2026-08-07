@@ -54,6 +54,40 @@ The entries below were reconstructed from the initial implementation (commits `9
 `355baff`) and documented on 2026-07-23. Dates reflect when each decision was first made in
 the code.
 
+## ADR-0020: Multi-target GCS via ports and adapters
+
+- **Status:** Accepted
+- **Date:** 2026-08-07
+- **Deciders:** team
+
+### Context
+The receive-only MAVLink GCS now has two intended deployment modes: a browser viewer fed through
+cloud relay, and a Raspberry Pi ground-station GUI that may read directly from local
+receiver-linked transports (UDP/serial) before any upstream relay. Building around a single
+transport or runtime would make the second target expensive to add.
+
+### Decision
+Adopt a hexagonal (ports-and-adapters) structure for MAVLink ingest and publish paths:
+
+- Keep telemetry domain/resolver logic transport-agnostic and UI-framework-agnostic.
+- Define ingress/normalization/stream-health ports first.
+- Implement UDP SITL and WebSocket adapters first, with serial/file replay as planned follow-on
+  adapters.
+
+The implementation plan is tracked in
+[docs/mavlink_gcs_consume_plan.md](./mavlink_gcs_consume_plan.md).
+
+### Consequences
+- ✅ Web/cloud and Pi-local deployment can share one domain core.
+- ✅ Transport changes (UDP, serial, replay file, cloud relay) stay adapter-scoped.
+- ✅ Testing can use adapter contract fixtures and deterministic replay.
+- ⚠️ Requires explicit port contracts and interface discipline up front.
+- ⚠️ Adds minor boilerplate compared with a direct socket-to-UI path.
+
+### Alternatives considered
+- Build directly around WebSocket/browser path first and refactor later — rejected because it
+  would likely entangle domain flow with one runtime and increase later Pi integration cost.
+
 ## ADR-0018: Isolate rendering experiments in sibling applications
 
 - **Status:** Accepted

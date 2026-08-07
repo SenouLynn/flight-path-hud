@@ -1,6 +1,48 @@
-# MAVLink GCS Consume-Only Plan
+# MAVLink v2 GCS Consume-Only Plan
 
-A concrete, learning-first roadmap to evolve this repo into a receive-only Ground Control Station (GCS) that can ingest MAVLink streams, visualize telemetry, and display mission/map context.
+A concrete, roadmap to evolve this repo into a receive-only Ground Control Station (GCS) that can ingest MAVLink streams, visualize telemetry, and display mission/map context and serve as a validation harness. 
+
+## Future Targets (Logged Constraint)
+
+This plan must support both of these runtime targets without rewriting core logic:
+
+- Cloud-relayed web viewer:
+  - Vehicle/receiver in field sends MAVLink upstream.
+  - Browser GCS consumes a relay stream (typically WebSocket).
+- Raspberry Pi ground-station viewer:
+  - Local process consumes receiver link directly (for example UDP/serial).
+  - Pi-hosted GUI can run without cloud dependency, then optionally relay onward.
+
+Portability rule:
+- Core telemetry/domain logic must be transport-agnostic and UI-framework-agnostic.
+- MAVLink transport, decode, and relay paths must be swappable adapters behind stable ports.
+
+## Architecture Guardrails (Hexagonal / Ports and Adapters)
+
+Define ports first, then implement adapters:
+
+- Input ports:
+  - `TelemetryIngressPort`: emits byte frames or decoded MAVLink envelopes.
+  - `MissionIngressPort`: emits mission items/updates.
+- Application ports:
+  - `TelemetryNormalizationPort`: maps MAVLink payloads to `TelemetrySample`.
+  - `StreamHealthPort`: exposes packet rate, heartbeat age, decode/drop counters.
+- Output ports:
+  - `GcsStreamPort`: publishes normalized stream to UI clients.
+  - `RecordingPort`: optional sink for replay capture.
+
+Adapter examples (initial + future):
+
+- Inbound adapters:
+  - UDP SITL adapter (initial).
+  - Serial receiver adapter (Raspberry Pi target).
+  - Log-file replay adapter.
+- Outbound adapters:
+  - WebSocket broadcast adapter for browser UI.
+  - In-process queue adapter for local desktop/Pi GUI.
+
+Non-goal for early phases:
+- Do not couple resolver logic to Node sockets, browser sockets, or any single SDK API.
 
 ## Scope
 
@@ -65,6 +107,7 @@ Tasks:
   - `sysId`, `compId`, `messageName`, `sequence`, `recvTimestampMs`.
 - Add TypeScript runtime guards for malformed packets.
 - Add test fixtures with representative messages.
+- Define explicit port interfaces for ingress and publish paths before implementing adapters.
 
 Proposed file additions:
 - `apps/web/src/stream/externalTypes.ts`
@@ -109,6 +152,7 @@ Tasks:
   - `GLOBAL_POSITION_INT`
   - `GPS_RAW_INT`
 - Add a simple per-message counter and decode error counter.
+- Keep decoder and normalization independent from UDP/WebSocket plumbing so the same core can back a Pi-local adapter.
 
 Proposed workspace addition:
 - `apps/mavlink-bridge/`
@@ -178,6 +222,9 @@ Tasks:
   - heartbeat timeout
   - source switch without stale state bleed
   - out-of-order timestamps
+- Add adapter contract tests:
+  - replay fixture can drive the same ports as UDP/serial ingress
+  - UI stream behavior is unchanged across adapters
 
 Definition of done:
 - Deterministic replay catches regressions before live tests.
@@ -208,6 +255,8 @@ Definition of done:
   - Mitigation: explicit active `sysId/compId` selector in GCS view.
 - Risk: Hidden disconnects.
   - Mitigation: heartbeat age warning thresholds and stale banners.
+- Risk: Early implementation accidentally hard-couples to one transport path.
+  - Mitigation: define/test ports first; require at least one alternate adapter stub (file replay or serial mock) before phase exit.
 
 ## Success Criteria
 
