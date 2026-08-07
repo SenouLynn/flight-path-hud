@@ -20,7 +20,7 @@
   --sans: 'IBM Plex Sans', 'Segoe UI', sans-serif;
   --heading: 'IBM Plex Sans', 'Segoe UI', sans-serif;
   --mono: 'IBM Plex Mono', 'SFMono-Regular', Consolas, monospace;
-  font: 13px/1.4 var(--sans);
+  font: 14px/1.4 var(--sans);
   letter-spacing: 0;
   color: var(--text);
   background: var(--bg);

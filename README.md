@@ -141,6 +141,7 @@ board's manufacturer (commonly CP210x or CH340).
 - [docs/heading_indicator.md](docs/heading_indicator.md) — heading source resolution
 - [docs/attitude_and_horizon_indicator.md](docs/attitude_and_horizon_indicator.md) — attitude/horizon + 3D orientation
 - [docs/flight_path_marker.md](docs/flight_path_marker.md) — FPM, FPA, predictive trajectory
+- [docs/mavlink_gcs_consume_plan.md](docs/mavlink_gcs_consume_plan.md) — receive-only MAVLink GCS roadmap and concrete next steps
 - [docs/decisions.md](docs/decisions.md) — Architecture Decision Record (ADR) log
 - [CHANGELOG.md](CHANGELOG.md) — notable changes over time
 

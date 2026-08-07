@@ -67,6 +67,50 @@ function clamp(value: number, min: number, max: number): number {
   return Math.min(max, Math.max(min, value))
 }
 
+export type CoordinationLabel = 'wings level' | 'coordinated' | 'flat turn (rudder only)' | 'slipping' | 'skidding'
+export type CoordinationDirection = 'left' | 'right' | null
+
+/**
+ * Read turn coordination from the kinematics alone (no sideslip field): compare
+ * the actual turn rate against the coordinated-turn rate the current bank
+ * implies. Under-turning for the bank reads as a slip, over-turning as a skid.
+ */
+export function resolveCoordinationLabel(actualRadPerSec: number, coordinatedRadPerSec: number): CoordinationLabel {
+  if (Math.abs(coordinatedRadPerSec) < 0.02) {
+    return Math.abs(actualRadPerSec) < 0.02 ? 'wings level' : 'flat turn (rudder only)'
+  }
+  const tolerance = Math.max(0.03, Math.abs(coordinatedRadPerSec) * 0.15)
+  if (Math.abs(actualRadPerSec - coordinatedRadPerSec) <= tolerance) {
+    return 'coordinated'
+  }
+  return Math.abs(actualRadPerSec) < Math.abs(coordinatedRadPerSec) ? 'slipping' : 'skidding'
+}
+
+/** The two "nothing to call out" coordination states — everything else gets flagged. */
+export function isCoordinationNominal(label: CoordinationLabel): boolean {
+  return label === 'wings level' || label === 'coordinated'
+}
+
+/**
+ * Resolve lateral cue direction for abnormal coordination call-outs.
+ * Returns the side the aircraft is slipping/skidding toward, when knowable.
+ */
+export function resolveCoordinationDirection(actualRadPerSec: number, coordinatedRadPerSec: number): CoordinationDirection {
+  const label = resolveCoordinationLabel(actualRadPerSec, coordinatedRadPerSec)
+  if (label !== 'slipping' && label !== 'skidding') {
+    return null
+  }
+
+  // Signed mismatch between the coordinated and actual turn rates. Positive
+  // means the aircraft is drifting right of coordinated, negative left.
+  const lateralMismatch = coordinatedRadPerSec - actualRadPerSec
+  if (Math.abs(lateralMismatch) < 0.0001) {
+    return null
+  }
+
+  return lateralMismatch > 0 ? 'right' : 'left'
+}
+
 function degreesToRadians(valueDeg: number): number {
   return (valueDeg * Math.PI) / 180
 }

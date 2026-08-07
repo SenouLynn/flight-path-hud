@@ -1,13 +1,14 @@
-import { useMemo, useState } from 'react'
+import { useMemo } from 'react'
+import { AircraftControlsPanel } from '../components/AircraftControlsPanel'
 import { HudFlightState } from '../components/HudFlightState'
 import { HudOrientationIndicator } from '../components/HudOrientationIndicator'
 import { HudPrimaryFlightDisplay } from '../components/HudPrimaryFlightDisplay'
 import { HudPredictiveTrajectory } from '../components/HudPredictiveTrajectory'
-import { ParameterSlider } from '../components/ParameterSlider'
+import { useAircraftControls } from '../hooks/useAircraftControls'
 import { resolveAttitude } from '../logic/attitude'
 import { resolveScalarTelemetry } from '../logic/flightPath'
 import { resolveHeading } from '../logic/heading'
-import { DEFAULT_TRAJECTORY_CONFIG, resolvePredictiveTrajectory } from '../logic/trajectory'
+import { DEFAULT_TRAJECTORY_CONFIG, resolveCoordinationLabel, resolvePredictiveTrajectory } from '../logic/trajectory'
 import { buildStaticSample } from '../stream/staticSample'
 
 const RAD_TO_DEG = 180 / Math.PI
@@ -16,34 +17,17 @@ function formatNumber(value: number | null, precision = 2): string {
   return value === null ? 'N/A' : value.toFixed(precision)
 }
 
-/**
- * Read turn coordination from the kinematics alone (no sideslip field): compare
- * the actual turn rate against the coordinated-turn rate the current bank
- * implies. Under-turning for the bank reads as a slip, over-turning as a skid.
- */
-function coordinationLabel(actualRadPerSec: number, coordinatedRadPerSec: number): string {
-  if (Math.abs(coordinatedRadPerSec) < 0.02) {
-    return Math.abs(actualRadPerSec) < 0.02 ? 'wings level' : 'flat turn (rudder only)'
-  }
-  const tolerance = Math.max(0.03, Math.abs(coordinatedRadPerSec) * 0.15)
-  if (Math.abs(actualRadPerSec - coordinatedRadPerSec) <= tolerance) {
-    return 'coordinated'
-  }
-  return Math.abs(actualRadPerSec) < Math.abs(coordinatedRadPerSec) ? 'slipping' : 'skidding'
-}
-
 function PlaygroundView() {
-  // Airframe attitude — how the aircraft is oriented and rotating.
-  const [rollDeg, setRollDeg] = useState(0)
-  const [pitchDeg, setPitchDeg] = useState(0)
-  const [pitchRateDps, setPitchRateDps] = useState(0)
-  const [yawRateDps, setYawRateDps] = useState(0)
-
-  // Velocity vector — where the aircraft is actually going.
-  const [airSpeedMps, setAirSpeedMps] = useState(22)
-  const [flightPathAngleDeg, setFlightPathAngleDeg] = useState(0)
-  const [headingDeg, setHeadingDeg] = useState(0)
-  const [stallSpeedMps, setStallSpeedMps] = useState(DEFAULT_TRAJECTORY_CONFIG.stallSpeedMps)
+  const {
+    rollDeg, setRollDeg,
+    pitchDeg, setPitchDeg,
+    pitchRateDps, setPitchRateDps,
+    yawRateDps, setYawRateDps,
+    airSpeedMps, setAirSpeedMps,
+    flightPathAngleDeg, setFlightPathAngleDeg,
+    headingDeg, setHeadingDeg,
+    stallSpeedMps, setStallSpeedMps,
+  } = useAircraftControls(DEFAULT_TRAJECTORY_CONFIG.stallSpeedMps)
 
   // Build one real, sanitized sample and run it through the exact production
   // resolver stack — this is the visual counterpart to the logic unit tests.
@@ -73,7 +57,7 @@ function PlaygroundView() {
 
   const turnRateDps = trajectory.turnRateRadPerSec * RAD_TO_DEG
   const coordinatedDps = trajectory.coordinatedTurnRateRadPerSec * RAD_TO_DEG
-  const coordination = coordinationLabel(trajectory.turnRateRadPerSec, trajectory.coordinatedTurnRateRadPerSec)
+  const coordination = resolveCoordinationLabel(trajectory.turnRateRadPerSec, trajectory.coordinatedTurnRateRadPerSec)
 
   return (
     <div className="playground-layout">
@@ -85,31 +69,24 @@ function PlaygroundView() {
           </p>
         </section>
 
-        <section className="panel playground-control-panel">
-          <div className="panel-header">
-            <h2>Airframe attitude</h2>
-            <p className="panel-subtitle">Orientation and body rates. Yaw rate turns; pitch rate pulls.</p>
-          </div>
-          <div className="playground-controls">
-            <ParameterSlider label="Roll" unit="°" min={-90} max={90} step={1} value={rollDeg} onChange={setRollDeg} />
-            <ParameterSlider label="Pitch" unit="°" min={-90} max={90} step={1} value={pitchDeg} onChange={setPitchDeg} />
-            <ParameterSlider label="Pitch rate (q)" unit=" °/s" min={-30} max={30} step={0.5} value={pitchRateDps} onChange={setPitchRateDps} precision={1} />
-            <ParameterSlider label="Yaw rate (r)" unit=" °/s" min={-60} max={60} step={0.5} value={yawRateDps} onChange={setYawRateDps} precision={1} />
-          </div>
-        </section>
-
-        <section className="panel playground-control-panel">
-          <div className="panel-header">
-            <h2>Velocity vector &amp; speed</h2>
-            <p className="panel-subtitle">Flight path is independent of pitch attitude.</p>
-          </div>
-          <div className="playground-controls">
-            <ParameterSlider label="Airspeed" unit=" m/s" min={0} max={60} step={0.5} value={airSpeedMps} onChange={setAirSpeedMps} precision={1} />
-            <ParameterSlider label="Flight-path angle" unit="°" min={-30} max={30} step={0.5} value={flightPathAngleDeg} onChange={setFlightPathAngleDeg} precision={1} />
-            <ParameterSlider label="Heading" unit="°" min={-180} max={180} step={1} value={headingDeg} onChange={setHeadingDeg} />
-            <ParameterSlider label="Stall speed" unit=" m/s" min={0} max={30} step={0.5} value={stallSpeedMps} onChange={setStallSpeedMps} precision={1} />
-          </div>
-        </section>
+        <AircraftControlsPanel
+          rollDeg={rollDeg}
+          setRollDeg={setRollDeg}
+          pitchDeg={pitchDeg}
+          setPitchDeg={setPitchDeg}
+          pitchRateDps={pitchRateDps}
+          setPitchRateDps={setPitchRateDps}
+          yawRateDps={yawRateDps}
+          setYawRateDps={setYawRateDps}
+          airSpeedMps={airSpeedMps}
+          setAirSpeedMps={setAirSpeedMps}
+          flightPathAngleDeg={flightPathAngleDeg}
+          setFlightPathAngleDeg={setFlightPathAngleDeg}
+          headingDeg={headingDeg}
+          setHeadingDeg={setHeadingDeg}
+          stallSpeedMps={stallSpeedMps}
+          setStallSpeedMps={setStallSpeedMps}
+        />
       </aside>
 
       <div className="playground-content">

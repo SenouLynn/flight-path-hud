@@ -10,15 +10,15 @@
 .app-chrome {
   display: flex;
   flex-direction: column;
-  gap: 4px;
-  padding: 3px 0 6px;
+  gap: 6px;
+  padding: 4px 0 8px;
 }
 
 .app-title {
   color: var(--muted);
-  font-size: 0.7rem;
-  font-weight: 600;
-  letter-spacing: 0.08em;
+  font-size: clamp(0.92rem, 0.55vw + 0.72rem, 1.18rem);
+  font-weight: 700;
+  letter-spacing: 0.1em;
   text-transform: uppercase;
 }
 
@@ -92,6 +92,12 @@
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 6px;
+}
+
+/* Same top gap as .hud-secondary-grid, for the Unified view's single big
+   instrument card sitting directly under the heading tape (no grid needed). */
+.hud-main-row + .hud-secondary-card {
+  margin-top: 6px;
 }
 
 .hud-secondary-card {
@@ -400,6 +406,49 @@
 
 .hud-trajectory-delta-neutral {
   fill: #aebbd0;
+}
+
+.hud-unified {
+  width: 100%;
+  height: auto;
+  display: block;
+}
+
+@keyframes hud-unified-stall-flash {
+  0%, 49.999% { opacity: 1; }
+  50%, 100% { opacity: 0; }
+}
+
+.hud-unified-stall-text {
+  fill: #ffb36b;
+  font-size: 34px;
+  font-weight: 700;
+  font-family: var(--mono);
+  letter-spacing: 0.08em;
+  paint-order: stroke;
+  stroke: #000;
+  stroke-width: 4px;
+  stroke-linejoin: round;
+  animation: hud-unified-stall-flash 0.6s steps(1, end) infinite;
+}
+
+.hud-unified-coordination-text {
+  fill: #ffb36b;
+  font-size: 11px;
+  font-weight: 600;
+  font-family: var(--mono);
+  letter-spacing: 0.08em;
+  paint-order: stroke;
+  stroke: #000;
+  stroke-width: 3px;
+  stroke-linejoin: round;
+}
+
+.hud-unified-coordination-arrow {
+  fill: #ffb36b;
+  stroke: #000;
+  stroke-width: 1.6;
+  stroke-linejoin: round;
 }
 
 .hud-orient-grid line {
@@ -735,21 +784,22 @@
    accent blue instead of just going lighter grey. */
 .app-nav {
   display: flex;
-  gap: 2px;
+  gap: 4px;
   margin: 0;
   border-bottom: 1px solid var(--border);
 }
 
 .app-nav-link {
-  padding: 3px 11px 4px;
+  padding: 5px 13px 6px;
   border: 1px solid transparent;
   border-bottom: none;
   border-radius: var(--radius) var(--radius) 0 0;
   background: transparent;
   color: var(--muted);
-  font-size: 0.72rem;
+  font-size: clamp(0.84rem, 0.25vw + 0.75rem, 1rem);
+  font-weight: 600;
   text-decoration: none;
-  letter-spacing: 0.03em;
+  letter-spacing: 0.04em;
 }
 
 .app-nav-link:hover {
@@ -761,7 +811,7 @@
   background: var(--bg-panel);
   border-color: var(--border);
   color: var(--accent);
-  font-weight: 600;
+  font-weight: 700;
   position: relative;
   top: 1px;
 }
@@ -816,6 +866,81 @@
   padding: 5px 8px;
 }
 
+.display-preset-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 5px;
+}
+
+.display-preset-button {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+  width: 100%;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--bg-control);
+  color: var(--text);
+  padding: 6px 8px;
+  text-align: left;
+  cursor: pointer;
+}
+
+.display-preset-button:hover {
+  border-color: var(--border-strong);
+  background: var(--bg-panel-alt);
+}
+
+.display-preset-button.active {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+}
+
+.display-preset-button:focus-visible {
+  outline: none;
+  border-color: var(--accent);
+}
+
+.display-preset-label {
+  font-size: 0.72rem;
+  color: var(--text-h);
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+}
+
+.display-preset-meta {
+  font-family: var(--mono);
+  font-size: 0.72rem;
+  color: var(--muted);
+}
+
+.display-preset-note {
+  margin-top: 6px;
+  font-size: 0.72rem;
+  color: var(--muted);
+}
+
+.hud-profile-preview {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: #090a0c;
+  overflow: hidden;
+}
+
+.hud-profile-screen {
+  width: 100%;
+  height: 100%;
+}
+
+.hud-profile-scaled {
+  min-width: 0;
+}
+
 .playground-content {
   display: flex;
   flex-direction: column;
@@ -825,6 +950,24 @@
 
 .playground-instruments {
   overflow: hidden;
+}
+
+.hud-fused-shell-screen {
+  width: 100%;
+  height: 100%;
+  border: none;
+  border-radius: 0;
+  padding: 0;
+}
+
+.hud-main-row + .hud-secondary-card.hud-secondary-card-screen {
+  margin-top: 0;
+}
+
+.hud-secondary-card-screen {
+  border: none;
+  border-radius: 0;
+  padding: 0;
 }
 
 /* Frame-style control, matching ImGui's FrameBg rectangles: flat fill, thin

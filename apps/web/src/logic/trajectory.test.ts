@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { resolvePredictiveTrajectory } from './trajectory'
+import { resolveCoordinationDirection, resolvePredictiveTrajectory } from './trajectory'
 
 describe('resolvePredictiveTrajectory', () => {
   it('marks sub-stall speed as stalled and keeps the curve near center', () => {
@@ -245,5 +245,29 @@ describe('resolvePredictiveTrajectory — turn/climb kinematics', () => {
     // implies a coordinated turn would exist.
     expect(trajectory.turnRateRadPerSec).toBeCloseTo(0, 5)
     expect(Math.abs(trajectory.coordinatedTurnRateRadPerSec)).toBeGreaterThan(0.1)
+  })
+})
+
+describe('resolveCoordinationDirection', () => {
+  it('points toward the inside for an under-turning right bank (slip)', () => {
+    expect(resolveCoordinationDirection(0.1, 0.3)).toBe('right')
+  })
+
+  it('points toward the outside for an over-turning right bank (skid)', () => {
+    expect(resolveCoordinationDirection(0.5, 0.3)).toBe('left')
+  })
+
+  it('points toward the inside for an under-turning left bank (slip)', () => {
+    expect(resolveCoordinationDirection(-0.1, -0.3)).toBe('left')
+  })
+
+  it('points toward the outside for an over-turning left bank (skid)', () => {
+    expect(resolveCoordinationDirection(-0.5, -0.3)).toBe('right')
+  })
+
+  it('handles opposite-sign turn-vs-bank cases using signed mismatch', () => {
+    // Right-bank implied turn, but actual turn is left. The mismatch says the
+    // aircraft is drifting to the right.
+    expect(resolveCoordinationDirection(-0.25, 0.3)).toBe('right')
   })
 })
