@@ -2,13 +2,16 @@
   "name": "flight-path-hud",
   "private": true,
   "workspaces": [
-    "apps/web"
+    "apps/web",
+    "apps/mavlink-bridge"
   ],
   "scripts": {
     "dev:web": "npm run dev --workspace @flight-path-hud/web",
     "build:web": "npm run build --workspace @flight-path-hud/web",
     "lint:web": "npm run lint --workspace @flight-path-hud/web",
     "test:web": "npm run test --workspace @flight-path-hud/web",
+    "start:bridge": "npm run start --workspace @flight-path-hud/mavlink-bridge",
+    "sample:bridge": "npm run sample:udp --workspace @flight-path-hud/mavlink-bridge",
     "test:esp32": "make -C apps/esp32 test",
     "preview:esp32": "make -C apps/esp32 run",
     "bootstrap:desktop": "git clone https://github.com/tmikov/imgui-react-runtime.git apps/desktop/runtime"
