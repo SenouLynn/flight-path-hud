@@ -1,13 +1,17 @@
 import { normalizeHeadingDegrees } from '../logic/heading'
 import { type TelemetrySample } from '../logic/telemetry'
+import type { StreamHealthSnapshot } from './streamPorts'
 
-export type TelemetrySourceId = 'synthetic-replay' | 'live-mock'
+export type TelemetrySourceId = 'synthetic-replay' | 'live-mock' | 'ws-external'
 
 export interface TelemetrySource {
   id: TelemetrySourceId
   label: string
   intervalMs: number
-  start: (onSample: (sample: TelemetrySample) => void) => () => void
+  start: (
+    onSample: (sample: TelemetrySample) => void,
+    onHealthUpdate?: (snapshot: StreamHealthSnapshot) => void,
+  ) => () => void
 }
 
 function speedToCms(speedMps: number): number {
