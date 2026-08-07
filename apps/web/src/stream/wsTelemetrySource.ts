@@ -1,3 +1,4 @@
+import type { TelemetrySample } from '../logic/telemetry'
 import {
     parseExternalTelemetryEnvelope,
     type ExternalTelemetryEnvelope,
@@ -14,9 +15,16 @@ export interface WebSocketLike {
   close: () => void
 }
 
+export interface SystemFilter {
+  sysId: number
+  compId: number
+}
+
 export interface CreateWsTelemetrySourceOptions {
   url: string
   label?: string
+  /** Read per message so switching the selected system does not force a reconnect. */
+  getSystemFilter?: () => SystemFilter | null
   reconnectInitialMs?: number
   reconnectMaxMs?: number
   reconnectMultiplier?: number
@@ -31,6 +39,8 @@ function buildDefaultStreamHealth(connectionState: StreamConnectionState): Strea
     droppedPacketCount: 0,
     lastHeartbeatAgeMs: 0,
     connectionState,
+    messageRates: [],
+    systems: [],
   }
 }
 
@@ -60,10 +70,47 @@ function toHeartbeatAgeMs(lastHeartbeatAtMs: number | null, nowMs: number): numb
   return delta < 0 ? 0 : delta
 }
 
+function mergeSection<T extends object>(previousSection: T | undefined, nextSection: T | undefined): T | undefined {
+  if (nextSection === undefined) {
+    return previousSection
+  }
+
+  if (previousSection === undefined) {
+    return nextSection
+  }
+
+  // Sanitizing sets absent fields to an explicit `undefined`, so a plain spread
+  // would erase known-good siblings (e.g. a GLOBAL_POSITION_INT without lat/lon
+  // wiping the last fix). Carry the previous value forward for those instead.
+  const merged: Record<string, unknown> = { ...previousSection }
+  for (const [key, value] of Object.entries(nextSection)) {
+    if (value !== undefined) {
+      merged[key] = value
+    }
+  }
+
+  return merged as T
+}
+
+function toSystemKey(sysId: number, compId: number): string {
+  return `${sysId}:${compId}`
+}
+
+function mergeTelemetrySample(previousSample: TelemetrySample | null, nextSample: TelemetrySample): TelemetrySample {
+  return {
+    timestampMs: nextSample.timestampMs,
+    attitude: mergeSection(previousSample?.attitude, nextSample.attitude),
+    vfrHud: mergeSection(previousSample?.vfrHud, nextSample.vfrHud),
+    globalPositionInt: mergeSection(previousSample?.globalPositionInt, nextSample.globalPositionInt),
+    gpsRawInt: mergeSection(previousSample?.gpsRawInt, nextSample.gpsRawInt),
+  }
+}
+
 export function createWsTelemetrySource(options: CreateWsTelemetrySourceOptions): TelemetrySource {
   const {
     url,
     label = 'External stream (ws)',
+    getSystemFilter,
     reconnectInitialMs = 500,
     reconnectMaxMs = 5000,
     reconnectMultiplier = 1.8,
@@ -82,25 +129,44 @@ export function createWsTelemetrySource(options: CreateWsTelemetrySourceOptions)
       let healthTimer: ReturnType<typeof setInterval> | null = null
       let reconnectDelayMs = reconnectInitialMs
       let packetsSinceLastTick = 0
+      let packetRateHz = 0
       let decodeErrorCount = 0
       let droppedPacketCount = 0
       let lastHeartbeatAtMs: number | null = null
       let connectionState: StreamConnectionState = 'connecting'
+      let activeSysId: number | undefined
+      let activeCompId: number | undefined
+      let messageRates: StreamHealthSnapshot['messageRates'] = []
+      let systems: StreamHealthSnapshot['systems'] = []
 
-      const publishHealth = () => {
-        onHealthUpdate?.({
-          packetRateHz: packetsSinceLastTick,
-          decodeErrorCount,
-          droppedPacketCount,
-          lastHeartbeatAgeMs: toHeartbeatAgeMs(lastHeartbeatAtMs, Date.now()),
-          connectionState,
-        })
+      // Partial messages merge per source system, so two vehicles never fuse into one sample.
+      const sampleBySystem = new Map<string, TelemetrySample>()
+
+      const buildHealthSnapshot = (): StreamHealthSnapshot => ({
+        packetRateHz,
+        decodeErrorCount,
+        droppedPacketCount,
+        lastHeartbeatAgeMs: toHeartbeatAgeMs(lastHeartbeatAtMs, Date.now()),
+        connectionState,
+        activeSysId,
+        activeCompId,
+        messageRates,
+        systems,
+      })
+
+      const emitHealth = () => {
+        onHealthUpdate?.(buildHealthSnapshot())
+      }
+
+      const onHealthTick = () => {
+        packetRateHz = packetsSinceLastTick
         packetsSinceLastTick = 0
+        emitHealth()
       }
 
       const setConnectionState = (next: StreamConnectionState) => {
         connectionState = next
-        publishHealth()
+        emitHealth()
       }
 
       const scheduleReconnect = () => {
@@ -140,18 +206,15 @@ export function createWsTelemetrySource(options: CreateWsTelemetrySourceOptions)
         if (!envelope) {
           decodeErrorCount += 1
           droppedPacketCount += 1
-          publishHealth()
+          emitHealth()
           return
         }
 
         packetsSinceLastTick += 1
+        messageRates = envelope.health?.messageRates ?? messageRates
+        systems = envelope.health?.systems ?? systems
 
-        if (envelope.messageName === 'HEARTBEAT') {
-          lastHeartbeatAtMs = Date.now()
-        }
-
-        onSample(envelope.payload)
-
+        // The bridge counters are authoritative, so absorb them even for systems we filter out.
         if (envelope.health?.decodeErrorCount !== undefined) {
           decodeErrorCount = envelope.health.decodeErrorCount
         }
@@ -159,6 +222,30 @@ export function createWsTelemetrySource(options: CreateWsTelemetrySourceOptions)
         if (envelope.health?.droppedPacketCount !== undefined) {
           droppedPacketCount = envelope.health.droppedPacketCount
         }
+
+        if (envelope.messageName === 'HEARTBEAT') {
+          lastHeartbeatAtMs = Date.now()
+        }
+
+        const systemFilter = getSystemFilter?.() ?? null
+
+        if (
+          systemFilter !== null
+          && (envelope.sysId !== systemFilter.sysId || envelope.compId !== systemFilter.compId)
+        ) {
+          emitHealth()
+          return
+        }
+
+        activeSysId = envelope.sysId
+        activeCompId = envelope.compId
+
+        const key = toSystemKey(envelope.sysId, envelope.compId)
+        const mergedSample = mergeTelemetrySample(sampleBySystem.get(key) ?? null, envelope.payload)
+        sampleBySystem.set(key, mergedSample)
+        onSample(mergedSample)
+
+        emitHealth()
       }
 
       const connect = () => {
@@ -175,7 +262,7 @@ export function createWsTelemetrySource(options: CreateWsTelemetrySourceOptions)
         socket.addEventListener('message', onMessage)
       }
 
-      healthTimer = setInterval(publishHealth, healthTickMs)
+      healthTimer = setInterval(onHealthTick, healthTickMs)
       onHealthUpdate?.(buildDefaultStreamHealth('connecting'))
       connect()
 

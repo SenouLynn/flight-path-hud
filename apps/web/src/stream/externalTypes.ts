@@ -3,12 +3,27 @@ import { sanitizeTelemetrySample } from '../logic/telemetry'
 
 export type StreamConnectionState = 'connecting' | 'open' | 'closed' | 'error'
 
+export interface ExternalMessageRate {
+  messageName: string
+  rateHz: number
+}
+
+export interface ExternalObservedSystem {
+  sysId: number
+  compId: number
+  lastSeenTimestampMs: number
+}
+
 export interface ExternalStreamHealth {
   connectionState?: StreamConnectionState
   packetRateHz?: number
   decodeErrorCount?: number
   droppedPacketCount?: number
   lastHeartbeatAgeMs?: number
+  activeSysId?: number
+  activeCompId?: number
+  messageRates?: ExternalMessageRate[]
+  systems?: ExternalObservedSystem[]
 }
 
 export interface ExternalTelemetryEnvelope {
@@ -45,6 +60,24 @@ function isKnownConnectionState(value: unknown): value is StreamConnectionState 
   return value === 'connecting' || value === 'open' || value === 'closed' || value === 'error'
 }
 
+function isMessageRate(value: unknown): value is ExternalMessageRate {
+  if (!isObject(value)) {
+    return false
+  }
+
+  return isNonEmptyString(value.messageName) && isFiniteNumber(value.rateHz) && value.rateHz >= 0
+}
+
+function isObservedSystem(value: unknown): value is ExternalObservedSystem {
+  if (!isObject(value)) {
+    return false
+  }
+
+  return isUint8(value.sysId)
+    && isUint8(value.compId)
+    && isNonNegativeInteger(value.lastSeenTimestampMs)
+}
+
 function isTelemetrySampleCandidate(value: unknown): value is TelemetrySample {
   if (!isObject(value)) {
     return false
@@ -75,6 +108,22 @@ function isExternalStreamHealth(value: unknown): value is ExternalStreamHealth {
   }
 
   if (value.lastHeartbeatAgeMs !== undefined && !isNonNegativeInteger(value.lastHeartbeatAgeMs)) {
+    return false
+  }
+
+  if (value.activeSysId !== undefined && !isUint8(value.activeSysId)) {
+    return false
+  }
+
+  if (value.activeCompId !== undefined && !isUint8(value.activeCompId)) {
+    return false
+  }
+
+  if (value.messageRates !== undefined && (!Array.isArray(value.messageRates) || !value.messageRates.every(isMessageRate))) {
+    return false
+  }
+
+  if (value.systems !== undefined && (!Array.isArray(value.systems) || !value.systems.every(isObservedSystem))) {
     return false
   }
 

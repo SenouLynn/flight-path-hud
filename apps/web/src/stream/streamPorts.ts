@@ -1,4 +1,4 @@
-import type { ExternalTelemetryEnvelope } from './externalTypes'
+import type { ExternalMessageRate, ExternalObservedSystem, ExternalTelemetryEnvelope } from './externalTypes'
 
 export type StopSubscription = () => void
 
@@ -17,6 +17,10 @@ export interface StreamHealthSnapshot {
   droppedPacketCount: number
   lastHeartbeatAgeMs: number
   connectionState: 'connecting' | 'open' | 'closed' | 'error'
+  activeSysId?: number
+  activeCompId?: number
+  messageRates: ExternalMessageRate[]
+  systems: ExternalObservedSystem[]
 }
 
 export interface StreamHealthPort {

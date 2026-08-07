@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { HudFlightPathRecorder } from '../components/HudFlightPathRecorder'
 import { HudOrientationIndicator } from '../components/HudOrientationIndicator'
 import { HudPredictiveTrajectory } from '../components/HudPredictiveTrajectory'
@@ -31,9 +31,38 @@ function formatSampleTimestamp(timestampMs: number | undefined): string {
   return String(timestampMs)
 }
 
+function encodeSystemOption(sysId: number, compId: number): string {
+  return `${sysId}:${compId}`
+}
+
+function decodeSystemOption(value: string): { sysId: number, compId: number } | null {
+  const [sysIdText, compIdText] = value.split(':')
+  const sysId = Number.parseInt(sysIdText ?? '', 10)
+  const compId = Number.parseInt(compIdText ?? '', 10)
+
+  if (!Number.isInteger(sysId) || !Number.isInteger(compId)) {
+    return null
+  }
+
+  return { sysId, compId }
+}
+
 function GcsView() {
   const [sourceId, setSourceId] = useState<TelemetrySourceId>('synthetic-replay')
   const [externalWsUrl, setExternalWsUrl] = useState('ws://localhost:8080/telemetry')
+  const [selectedSystemKey, setSelectedSystemKey] = useState('')
+
+  const selectedSystem = useMemo(
+    () => (selectedSystemKey === '' ? null : decodeSystemOption(selectedSystemKey)),
+    [selectedSystemKey],
+  )
+
+  // Read through a ref so changing the selection filters the live socket instead of rebuilding it.
+  const selectedSystemRef = useRef(selectedSystem)
+  useEffect(() => {
+    selectedSystemRef.current = selectedSystem
+  }, [selectedSystem])
+  const getSystemFilter = useCallback(() => selectedSystemRef.current, [])
 
   const streamSamples = useMemo(() => buildSyntheticMissionSamples(60, 180), [])
   const telemetrySources = useMemo<Record<TelemetrySourceId, TelemetrySource>>(() => {
@@ -42,6 +71,7 @@ function GcsView() {
     const wsExternal = createWsTelemetrySource({
       url: externalWsUrl,
       label: 'External stream (ws)',
+      getSystemFilter,
     })
 
     return {
@@ -49,7 +79,7 @@ function GcsView() {
       'live-mock': liveMock,
       'ws-external': wsExternal,
     }
-  }, [externalWsUrl, streamSamples])
+  }, [externalWsUrl, getSystemFilter, streamSamples])
 
   const activeSource = telemetrySources[sourceId]
   const feed = useTelemetryFeed(activeSource)
@@ -71,6 +101,8 @@ function GcsView() {
   const yawDeg = sample?.attitude?.yawRad === undefined
     ? null
     : sample.attitude.yawRad * RAD_TO_DEG
+  const observedSystems = feed.streamHealth.systems
+  const selectedSystemLabel = selectedSystem === null ? 'Auto' : `${selectedSystem.sysId}:${selectedSystem.compId}`
 
   const connectionClass = `connection-state ${feed.streamHealth.connectionState}`
 
@@ -104,6 +136,22 @@ function GcsView() {
           </div>
           {sourceId === 'ws-external' ? (
             <label className="adapter-control source-url-input">
+              <span>Active system</span>
+              <select value={selectedSystemKey} onChange={(event) => setSelectedSystemKey(event.target.value)}>
+                <option value="">Auto (latest)</option>
+                {observedSystems.map((system) => {
+                  const value = encodeSystemOption(system.sysId, system.compId)
+                  return (
+                    <option key={value} value={value}>
+                      {value}
+                    </option>
+                  )
+                })}
+              </select>
+            </label>
+          ) : null}
+          {sourceId === 'ws-external' ? (
+            <label className="adapter-control source-url-input">
               <span>WebSocket URL</span>
               <input
                 type="text"
@@ -125,6 +173,7 @@ function GcsView() {
               <span>Connection</span>
               <strong className={connectionClass}>{feed.streamHealth.connectionState}</strong>
             </div>
+            <div className="adapter-stat"><span>Active system</span><strong>{selectedSystemLabel}</strong></div>
             <div className="adapter-stat"><span>Packet rate</span><strong>{feed.streamHealth.packetRateHz.toFixed(0)} /s</strong></div>
             <div className="adapter-stat"><span>Decode errors</span><strong>{feed.streamHealth.decodeErrorCount}</strong></div>
             <div className="adapter-stat"><span>Dropped packets</span><strong>{feed.streamHealth.droppedPacketCount}</strong></div>
@@ -210,6 +259,33 @@ function GcsView() {
               </div>
             </div>
           </div>
+        </section>
+
+        <section className="panel">
+          <div className="panel-header">
+            <h2>Message Rates</h2>
+            <p className="panel-subtitle">Per-message rates observed at the bridge for the active UDP stream.</p>
+          </div>
+          <table className="mapping-table heading-table">
+            <thead>
+              <tr>
+                <th>Message</th>
+                <th>Rate /s</th>
+              </tr>
+            </thead>
+            <tbody>
+              {feed.streamHealth.messageRates.length === 0 ? (
+                <tr>
+                  <td colSpan={2}>No message-rate data yet.</td>
+                </tr>
+              ) : feed.streamHealth.messageRates.map((entry) => (
+                <tr key={entry.messageName}>
+                  <td>{entry.messageName}</td>
+                  <td>{entry.rateHz.toFixed(0)}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
         </section>
       </div>
     </div>

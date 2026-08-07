@@ -12,6 +12,7 @@
     "test:web": "npm run test --workspace @flight-path-hud/web",
     "start:bridge": "npm run start --workspace @flight-path-hud/mavlink-bridge",
     "sample:bridge": "npm run sample:udp --workspace @flight-path-hud/mavlink-bridge",
+    "test:bridge": "npm run test --workspace @flight-path-hud/mavlink-bridge",
     "test:esp32": "make -C apps/esp32 test",
     "preview:esp32": "make -C apps/esp32 run",
     "bootstrap:desktop": "git clone https://github.com/tmikov/imgui-react-runtime.git apps/desktop/runtime"

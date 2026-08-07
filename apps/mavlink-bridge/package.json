@@ -5,7 +5,8 @@
   "type": "module",
   "scripts": {
     "start": "node src/index.js",
-    "sample:udp": "node src/sampleSender.js"
+    "sample:udp": "node src/sampleSender.js",
+    "test": "node --test src/*.test.js"
   },
   "dependencies": {
     "ws": "^8.18.3"

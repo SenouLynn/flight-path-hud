@@ -24,6 +24,14 @@ function buildValidEnvelope(): ExternalTelemetryEnvelope {
       decodeErrorCount: 0,
       droppedPacketCount: 0,
       lastHeartbeatAgeMs: 120,
+      activeSysId: 1,
+      activeCompId: 1,
+      messageRates: [
+        { messageName: 'ATTITUDE', rateHz: 20 },
+      ],
+      systems: [
+        { sysId: 1, compId: 1, lastSeenTimestampMs: 1000 },
+      ],
     },
   }
 }
@@ -82,8 +90,16 @@ describe('isExternalTelemetryEnvelope', () => {
       },
     }
 
+    const malformedMessageRates = {
+      ...buildValidEnvelope(),
+      health: {
+        messageRates: [{ messageName: '', rateHz: 2 }],
+      },
+    }
+
     expect(isExternalTelemetryEnvelope(malformedState)).toBe(false)
     expect(isExternalTelemetryEnvelope(malformedDecodeCounter)).toBe(false)
+    expect(isExternalTelemetryEnvelope(malformedMessageRates)).toBe(false)
   })
 })
 

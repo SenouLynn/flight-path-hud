@@ -22,6 +22,8 @@ const DEFAULT_STREAM_HEALTH: StreamHealthSnapshot = {
   droppedPacketCount: 0,
   lastHeartbeatAgeMs: 0,
   connectionState: 'closed',
+  messageRates: [],
+  systems: [],
 }
 
 export function useTelemetryFeed(source: TelemetrySource | null): TelemetryFeedState {
