@@ -6,6 +6,9 @@ export interface HudPrimaryFlightDisplayProps {
   pitchDeg: number | null
   rollDeg: number | null
   width?: number
+  height?: number
+  headingHeight?: number
+  attitudeHeight?: number
 }
 
 export function HudPrimaryFlightDisplay({
@@ -13,11 +16,21 @@ export function HudPrimaryFlightDisplay({
   pitchDeg,
   rollDeg,
   width = 820,
+  height,
+  headingHeight = 24,
+  attitudeHeight = 260,
 }: HudPrimaryFlightDisplayProps) {
+  const resolvedHeadingHeight = height === undefined
+    ? headingHeight
+    : Math.max(20, Math.min(height - 40, headingHeight))
+  const resolvedAttitudeHeight = height === undefined
+    ? attitudeHeight
+    : Math.max(40, height - resolvedHeadingHeight)
+
   return (
     <div className="hud-pfd" role="group" aria-label="Primary flight display">
-      <HudHeadingIndicator headingDeg={headingDeg} width={width} height={24} />
-      <HudAttitudeIndicator pitchDeg={pitchDeg} rollDeg={rollDeg} width={width} height={260} />
+      <HudHeadingIndicator headingDeg={headingDeg} width={width} height={resolvedHeadingHeight} />
+      <HudAttitudeIndicator pitchDeg={pitchDeg} rollDeg={rollDeg} width={width} height={resolvedAttitudeHeight} />
     </div>
   )
 }

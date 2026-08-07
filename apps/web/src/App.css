@@ -81,6 +81,8 @@
   display: flex;
   flex-direction: column;
   gap: 8px;
+  width: 100%;
+  min-width: 0;
 }
 
 .hud-main-row {
@@ -597,11 +599,28 @@
   padding: 4px 6px;
 }
 
+.adapter-control input {
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--bg-control);
+  color: var(--text);
+  padding: 4px 6px;
+}
+
 .adapter-control select:hover {
   border-color: var(--border-strong);
 }
 
 .adapter-control select:focus-visible {
+  outline: none;
+  border-color: var(--accent);
+}
+
+.adapter-control input:hover {
+  border-color: var(--border-strong);
+}
+
+.adapter-control input:focus-visible {
   outline: none;
   border-color: var(--accent);
 }
@@ -623,6 +642,43 @@
   font-size: 0.85rem;
   color: var(--accent);
   font-weight: 600;
+}
+
+.source-controls-grid {
+  grid-template-columns: repeat(2, minmax(120px, 1fr));
+}
+
+.stream-health-grid {
+  margin-top: 8px;
+  grid-template-columns: repeat(5, minmax(120px, 1fr));
+}
+
+.source-url-input {
+  margin-top: 6px;
+}
+
+.source-mode-note {
+  margin: 2px;
+  font-size: 0.74rem;
+  color: var(--muted);
+}
+
+.connection-state {
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.connection-state.open {
+  color: #8ddf8a;
+}
+
+.connection-state.connecting {
+  color: #ffd36f;
+}
+
+.connection-state.closed,
+.connection-state.error {
+  color: #ffb36b;
 }
 
 /* ImGui tables lean on horizontal rules and alternating row tint rather than
@@ -932,6 +988,10 @@
   overflow: hidden;
 }
 
+.hud-profile-preview-fluid {
+  max-width: none;
+}
+
 .hud-profile-screen {
   width: 100%;
   height: 100%;
@@ -968,6 +1028,32 @@
   border: none;
   border-radius: 0;
   padding: 0;
+}
+
+.unified-instrument-grid-wrap {
+  margin-top: 8px;
+  overflow-x: auto;
+}
+
+.unified-instrument-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(340px, 1fr));
+  min-width: 1420px;
+  gap: 6px;
+}
+
+.unified-instrument-grid .hud-trajectory-label,
+.unified-instrument-grid .hud-trajectory-stall-label,
+.unified-instrument-grid .hud-trajectory-hint {
+  font-size: 8px;
+}
+
+.unified-instrument-grid .hud-trajectory-hint {
+  display: none;
+}
+
+.unified-instrument-grid .hud-orientation-empty {
+  min-height: 280px;
 }
 
 /* Frame-style control, matching ImGui's FrameBg rectangles: flat fill, thin
@@ -1138,6 +1224,14 @@
     grid-template-columns: 1fr;
   }
 
+  .unified-instrument-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .stream-health-grid {
+    grid-template-columns: repeat(2, minmax(120px, 1fr));
+  }
+
   .hud-orientation,
   .hud-orientation-empty {
     min-height: 280px;
@@ -1159,6 +1253,10 @@
   }
 
   .playground-sidebar .playground-controls {
+    grid-template-columns: 1fr;
+  }
+
+  .unified-instrument-grid {
     grid-template-columns: 1fr;
   }
 }

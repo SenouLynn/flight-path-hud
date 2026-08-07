@@ -24,15 +24,19 @@ const DEFAULT_STREAM_HEALTH: StreamHealthSnapshot = {
   connectionState: 'closed',
 }
 
-export function useTelemetryFeed(source: TelemetrySource): TelemetryFeedState {
+export function useTelemetryFeed(source: TelemetrySource | null): TelemetryFeedState {
   const [state, setState] = useState<TelemetryFeedInternalState>({
-    sourceId: source.id,
+    sourceId: source?.id ?? '',
     latestSample: null,
     packetCount: 0,
     streamHealth: DEFAULT_STREAM_HEALTH,
   })
 
   useEffect(() => {
+    if (source === null) {
+      return () => undefined
+    }
+
     let packetCount = 0
     let streamHealth = DEFAULT_STREAM_HEALTH
 
@@ -60,7 +64,7 @@ export function useTelemetryFeed(source: TelemetrySource): TelemetryFeedState {
     return stop
   }, [source])
 
-  const isCurrentSource = state.sourceId === source.id
+  const isCurrentSource = source !== null && state.sourceId === source.id
 
   return {
     latestSample: isCurrentSource ? state.latestSample : null,
