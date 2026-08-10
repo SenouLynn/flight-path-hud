@@ -17,6 +17,8 @@ import {
   type TelemetrySample,
   type TrackPoint,
 } from '@flight-path-hud/hud-ui'
+import type { LogEntry } from '@flight-path-hud/gcs-core'
+import { LogsPanel } from '../log/LogsPanel'
 
 const RAD_TO_DEG = 180 / Math.PI
 
@@ -32,9 +34,11 @@ interface HudPanelProps {
   sample: TelemetrySample | null
   /** ENU breadcrumb for the recorder — distinct from the map's lat/lon trail. */
   track: TrackPoint[]
+  log: LogEntry[]
 }
 
-export function HudPanel({ sample, track }: HudPanelProps) {  const heading = sample === null ? null : resolveHeading(sample)
+export function HudPanel({ sample, track, log }: HudPanelProps) {
+  const heading = sample === null ? null : resolveHeading(sample)
   const attitude = sample === null ? null : resolveAttitude(sample)
   const yawDeg = sample?.attitude?.yawRad === undefined ? null : sample.attitude.yawRad * RAD_TO_DEG
 
@@ -80,11 +84,12 @@ export function HudPanel({ sample, track }: HudPanelProps) {  const heading = sa
       </div>
 
       {/*
-        Reserved full-width row beneath the instruments. The instrument row is
-        content-sized, so leftover height collects here rather than padding out
-        each pane — which is what centred the instruments before.
+        Full-width row beneath the instruments. The instrument row is content-sized,
+        so leftover height collects here rather than padding out each pane.
       */}
-      <div className="hud-shadow" aria-hidden="true" />
+      <div className="hud-shadow">
+        <LogsPanel sample={sample} log={log} />
+      </div>
     </div>
   )
 }

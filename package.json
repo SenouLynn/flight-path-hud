@@ -5,12 +5,13 @@
     "apps/web",
     "apps/gcs",
     "apps/mavlink-bridge",
+    "apps/video-bridge",
     "packages/gcs-core",
     "packages/hud-ui"
   ],
   "scripts": {
-    "dev:instruments": "npm run dev:web & npm run start:bridge & npm run sample:bridge & npm run dev:gcs",
-    "dev:gcs": "npm run dev --workspace @flight-path-hud/gcs & npm run start:bridge & npm run sample:bridge ",
+    "dev:instruments": "npm run dev:web & npm run dev:gcs",
+    "dev:gcs": "npm run dev --workspace @flight-path-hud/gcs & npm run start:bridge & npm run sample:bridge & npm run mock:video",
     "dev:web": "npm run dev --workspace @flight-path-hud/web",
     "build:web": "npm run build --workspace @flight-path-hud/web",
     "lint:web": "npm run lint --workspace @flight-path-hud/web",
@@ -23,7 +24,9 @@
     "replay:bridge": "npm run replay --workspace @flight-path-hud/mavlink-bridge",
     "test:esp32": "make -C apps/esp32 test",
     "preview:esp32": "make -C apps/esp32 run",
-    "bootstrap:desktop": "git clone https://github.com/tmikov/imgui-react-runtime.git apps/desktop/runtime",
-    "test:hud-ui": "npm run test --workspace @flight-path-hud/hud-ui"
+    "test:hud-ui": "npm run test --workspace @flight-path-hud/hud-ui",
+    "mock:video": "npm run mock --workspace @flight-path-hud/video-bridge",
+    "clean:recordings": "node apps/mavlink-bridge/src/cleanRecordings.js",
+    "test:gcs": "npm run test --workspace @flight-path-hud/gcs"
   }
 }

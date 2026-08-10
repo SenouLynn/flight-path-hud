@@ -67,3 +67,16 @@ export {
   readParameters,
   type ParameterRow,
 } from './parameters'
+
+export {
+  DEFAULT_VIDEO_HEALTH_CONFIG,
+  EMPTY_VIDEO_HEALTH_STATE,
+  IDLE_VIDEO_HEALTH,
+  foldVideoHealth,
+  setVideoConnectionState,
+  type VideoConnectionState,
+  type VideoHealth,
+  type VideoHealthConfig,
+  type VideoHealthState,
+  type VideoStatsSample,
+} from './video'

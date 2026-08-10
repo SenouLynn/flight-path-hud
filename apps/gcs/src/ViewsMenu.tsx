@@ -8,7 +8,7 @@
 
 import { useEffect, useRef, useState } from 'react'
 
-export type ViewId = 'instruments' | 'map' | 'logs'
+export type ViewId = 'instruments' | 'map' | 'video'
 
 export interface ViewOption {
   id: ViewId
@@ -21,9 +21,9 @@ export interface ViewOption {
  * weights cannot drift apart.
  */
 export const VIEW_OPTIONS: ViewOption[] = [
-  { id: 'logs', label: 'Parameters & logs' },
   { id: 'instruments', label: 'Instruments' },
   { id: 'map', label: 'Map' },
+  { id: 'video', label: 'Video' },
 ]
 
 interface ViewsMenuProps {

@@ -8,7 +8,8 @@
     "sample:udp": "node src/sampleSender.js",
     "replay": "node src/index.js",
     "test": "node --test src/*.test.js",
-    "start:norecord": "MAVLINK_BRIDGE_RECORD=0 node src/index.js"
+    "start:norecord": "MAVLINK_BRIDGE_RECORD=0 node src/index.js",
+    "clean": "node src/cleanRecordings.js"
   },
   "dependencies": {
     "ws": "^8.18.3"

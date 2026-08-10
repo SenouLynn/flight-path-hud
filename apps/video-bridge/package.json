@@ -1,0 +1,9 @@
+{
+  "name": "@flight-path-hud/video-bridge",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "scripts": {
+    "mock": "node src/mockCamera.js"
+  }
+}
