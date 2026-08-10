@@ -50,3 +50,20 @@ export {
   type StreamHandlers,
   type StreamOptions,
 } from './stream'
+
+export {
+  appendLogEntry,
+  describeSample,
+  logMessageNames,
+  toDecodeErrorEntry,
+  toLogEntry,
+  type LogEntry,
+  type LogKind,
+} from './log'
+
+export {
+  formatParameterValue,
+  parameterMessages,
+  readParameters,
+  type ParameterRow,
+} from './parameters'

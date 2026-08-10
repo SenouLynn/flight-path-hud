@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react'
 import { ATTITUDE_VALIDATION_FRAMES, FLIGHT_PATH_VALIDATION_FRAMES, HEADING_VALIDATION_FRAMES, HudFlightPathRecorder, HudOrientationIndicator, HudPredictiveTrajectory, HudPrimaryFlightDisplay, resolveAttitude, resolveFlightPath2d, resolveFlightPath3d, resolveHeading, resolvePredictivePath, resolveScalarTelemetry, runAttitudeReplay, runFlightPathReplay, runHeadingReplay } from '@flight-path-hud/hud-ui'
-import { MAVLINK_FIELDS, MAVLINK_FIELD_KEYS } from '../constants/mavlinkInputs'
+import { MAVLINK_FIELDS, MAVLINK_FIELD_KEYS } from '@flight-path-hud/hud-ui'
 import {
   buildSyntheticMissionSamples,
   createLiveMockSource,

@@ -50,6 +50,23 @@ test('distinct systems on distinct sources are not a conflict', () => {
   assert.deepEqual(core.takeSourceConflicts(), [])
 })
 
+test('forgets a stale system\'s sources, so the map cannot grow unbounded', () => {
+  const core = createBridgeCore({ systemTtlMs: 5000, now: () => 0 })
+
+  core.ingestDatagram(jsonDatagram(1), 1000, 'a')
+  core.ingestDatagram(jsonDatagram(1), 1000, 'b')
+  core.takeSourceConflicts()
+
+  core.tick(9000)
+  assert.equal(core.systemCount(), 0)
+
+  // Same system reappearing from the same two sources is a fresh conflict, which
+  // only holds if the previous source set was dropped with the system.
+  core.ingestDatagram(jsonDatagram(1), 9000, 'a')
+  core.ingestDatagram(jsonDatagram(1), 9000, 'b')
+  assert.equal(core.takeSourceConflicts().length, 1)
+})
+
 test('evicts a system that stops transmitting', () => {
   const core = createBridgeCore({ systemTtlMs: 5000, now: () => 0 })
 

@@ -34,8 +34,7 @@ interface HudPanelProps {
   track: TrackPoint[]
 }
 
-export function HudPanel({ sample, track }: HudPanelProps) {
-  const heading = sample === null ? null : resolveHeading(sample)
+export function HudPanel({ sample, track }: HudPanelProps) {  const heading = sample === null ? null : resolveHeading(sample)
   const attitude = sample === null ? null : resolveAttitude(sample)
   const yawDeg = sample?.attitude?.yawRad === undefined ? null : sample.attitude.yawRad * RAD_TO_DEG
 
@@ -82,8 +81,8 @@ export function HudPanel({ sample, track }: HudPanelProps) {
 
       {/*
         Reserved full-width row beneath the instruments. The instrument row is
-        content-sized, so whatever height is left over collects here instead of
-        stretching the panes around empty space.
+        content-sized, so leftover height collects here rather than padding out
+        each pane — which is what centred the instruments before.
       */}
       <div className="hud-shadow" aria-hidden="true" />
     </div>

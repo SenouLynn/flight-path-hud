@@ -105,6 +105,9 @@ export function createBridgeCore({ systemTtlMs = DEFAULT_SYSTEM_TTL_MS, now = Da
       systems.forEach((system, key) => {
         if (system.lastSeenTimestampMs < staleBeforeMs) {
           systems.delete(key)
+          // Drop the source set too, or it accumulates an entry per system the
+          // bridge has ever heard from for the life of the process.
+          sourcesBySystem.delete(key)
         }
       })
     },

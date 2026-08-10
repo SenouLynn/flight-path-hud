@@ -9,12 +9,16 @@
 import {
   DEFAULT_TRACK_CONFIG,
   EMPTY_TRACK,
+  appendLogEntry,
   appendTrackPoint,
   hasFix,
   mergeVehicleState,
   startTelemetryStream,
   systemKey,
+  toDecodeErrorEntry,
+  toLogEntry,
   type ConnectionState,
+  type LogEntry,
   type SocketLike,
   type TrackConfig,
   type TrackPoint,
@@ -59,9 +63,14 @@ export interface VehicleFeedState {
   decodeErrorCount: number
   /** Every system seen on the link, so a multi-vehicle stream is visible. */
   knownSystems: string[]
+  /** Recent raw messages, newest last. Published on a timer, not per frame. */
+  log: LogEntry[]
 }
 
-const INITIAL: VehicleFeedState = {
+/** The log is published on its own timer, so it is held as separate state. */
+type FeedSnapshot = Omit<VehicleFeedState, 'log'>
+
+const INITIAL: FeedSnapshot = {
   vehicle: null,
   track: [],
   enuTrack: [],
@@ -74,6 +83,22 @@ const INITIAL: VehicleFeedState = {
 
 /** Matches the web harness's live-source window. */
 const ENU_TRACK_MAX_POINTS = 600
+const LOG_MAX_ENTRIES = 500
+/**
+ * The log publishes on a timer rather than per frame. Frames arrive at ~33 Hz and
+ * the list is hundreds of rows, so appending per frame would re-diff the whole
+ * table faster than anyone can read it.
+ */
+const LOG_PUBLISH_MS = 150
+/**
+ * Per-system state is bounded per system (600 ENU points, a capped trail, one
+ * sample) but the number of *systems* was not. Anything cycling sysIds — a
+ * misconfigured relay, a replay of several flights — would accumulate buffers
+ * forever on a long-running kiosk. Drop a system's state once it goes quiet;
+ * the bridge already does the same for its own roster.
+ */
+const SYSTEM_TTL_MS = 60000
+const SYSTEM_SWEEP_MS = 5000
 
 export interface VehicleFeedOptions {
   url: string
@@ -87,7 +112,8 @@ export function useVehicleFeed({
   selectedSystem = null,
   trackConfig = DEFAULT_TRACK_CONFIG,
 }: VehicleFeedOptions): VehicleFeedState {
-  const [snapshot, setSnapshot] = useState<VehicleFeedState>(INITIAL)
+  const [snapshot, setSnapshot] = useState<FeedSnapshot>(INITIAL)
+  const [log, setLog] = useState<LogEntry[]>([])
 
   // Read the selection per frame so changing it never tears down the socket.
   const selectedRef = useRef(selectedSystem)
@@ -106,6 +132,9 @@ export function useVehicleFeed({
     let frameCount = 0
     let decodeErrorCount = 0
     let connectionState: ConnectionState = 'connecting'
+    let logEntries: LogEntry[] = []
+    let logDirty = false
+    let nextLogId = 1
 
     const publish = (activeKey: string) => {
       const vehicle = vehicles.get(activeKey) ?? null
@@ -126,6 +155,8 @@ export function useVehicleFeed({
       {
         onFrame: (frame) => {
           frameCount += 1
+          logEntries = appendLogEntry(logEntries, toLogEntry(nextLogId++, frame), LOG_MAX_ENTRIES)
+          logDirty = true
 
           const key = systemKey(frame.sysId, frame.compId)
           const vehicle = mergeVehicleState(vehicles.get(key) ?? null, frame)
@@ -170,15 +201,45 @@ export function useVehicleFeed({
         },
         onDecodeError: () => {
           decodeErrorCount += 1
+          logEntries = appendLogEntry(logEntries, toDecodeErrorEntry(nextLogId++, Date.now()), LOG_MAX_ENTRIES)
+          logDirty = true
         },
       },
     )
 
+    const logTimer = setInterval(() => {
+      if (!logDirty) {
+        return
+      }
+
+      logDirty = false
+      setLog(logEntries)
+    }, LOG_PUBLISH_MS)
+
+    const sweepTimer = setInterval(() => {
+      const staleBeforeMs = Date.now() - SYSTEM_TTL_MS
+
+      vehicles.forEach((vehicle, key) => {
+        if (vehicle.lastUpdateMs >= staleBeforeMs) {
+          return
+        }
+
+        vehicles.delete(key)
+        tracks.delete(key)
+        origins.delete(key)
+        positions.delete(key)
+        enuTracks.delete(key)
+      })
+    }, SYSTEM_SWEEP_MS)
+
     return () => {
+      clearInterval(logTimer)
+      clearInterval(sweepTimer)
       stop()
       setSnapshot(INITIAL)
+      setLog([])
     }
   }, [url, trackConfig])
 
-  return snapshot
+  return { ...snapshot, log }
 }

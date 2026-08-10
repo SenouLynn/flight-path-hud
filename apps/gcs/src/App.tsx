@@ -1,9 +1,26 @@
 import { trackLengthM } from '@flight-path-hud/gcs-core'
 import { useMemo, useState } from 'react'
 import { HudPanel } from './hud/HudPanel'
+import { LogsPanel } from './log/LogsPanel'
+import { MapControls } from './map/MapControls'
 import { MapPanel } from './map/MapPanel'
 import { BASEMAPS, DEFAULT_BASEMAP, findBasemap } from './map/tileSource'
 import { useVehicleFeed } from './useVehicleFeed'
+import { VIEW_OPTIONS, ViewsMenu, type ViewId } from './ViewsMenu'
+
+/**
+ * Column weights. Instruments match the map; parameters get half, since a table
+ * of short values needs far less room than either.
+ *
+ * minmax(0, …) rather than a bare fr: an `fr` track floors at its content's
+ * min-content width, and the raw-stream rows are wide and `nowrap`. Without this
+ * the logs column expands to fit them and squeezes the other panels to nothing.
+ */
+const VIEW_WEIGHTS: Record<ViewId, string> = {
+  instruments: 'minmax(0, 1fr)',
+  map: 'minmax(0, 1fr)',
+  logs: 'minmax(0, 0.5fr)',
+}
 
 const DEFAULT_URL = 'ws://localhost:8080/telemetry'
 
@@ -20,10 +37,21 @@ function App() {
   const [selectedSystem, setSelectedSystem] = useState<string | null>(null)
   const [follow, setFollow] = useState(true)
   const [basemapId, setBasemapId] = useState(DEFAULT_BASEMAP.id)
-  const [showHud, setShowHud] = useState(false)
+  const [visibleViews, setVisibleViews] = useState<Record<ViewId, boolean>>({
+    instruments: true,
+    map: true,
+    logs: true,
+  })
 
   const feed = useVehicleFeed({ url, selectedSystem })
   const tileSource = useMemo(() => findBasemap(basemapId), [basemapId])
+
+  const shownViews = VIEW_OPTIONS.filter((option) => visibleViews[option.id])
+  const gridTemplateColumns = shownViews.map((option) => VIEW_WEIGHTS[option.id]).join(' ')
+
+  const toggleView = (id: ViewId) => {
+    setVisibleViews((previous) => ({ ...previous, [id]: !previous[id] }))
+  }
 
   const trackKm = useMemo(
     () => trackLengthM({ points: feed.track }) / 1000,
@@ -35,43 +63,8 @@ function App() {
   return (
     <div className="gcs-layout">
       <header className="gcs-topbar">
-        <div className="brand">
-          <span className="eyebrow">Ground control</span>
-          <span className="brand-title">Map</span>
-        </div>
-
-        <div className="topbar-controls">
-          <label className="topbar-field">
-            <span>Basemap</span>
-            <select value={basemapId} onChange={(event) => setBasemapId(event.target.value)}>
-              {BASEMAPS.map((basemap) => (
-                <option key={basemap.id} value={basemap.id}>{basemap.label}</option>
-              ))}
-            </select>
-          </label>
-
-          <span className="topbar-meta">max z{tileSource.maxZoom}</span>
-
-          <button
-            type="button"
-            title="Keep the map centred on the vehicle"
-            className={follow ? 'segment active' : 'segment'}
-            onClick={() => setFollow((previous) => !previous)}
-            aria-pressed={follow}
-          >
-            Follow
-          </button>
-
-          <button
-            type="button"
-            title="Show the unified HUD instruments over the map"
-            className={showHud ? 'segment active' : 'segment'}
-            onClick={() => setShowHud((previous) => !previous)}
-            aria-pressed={showHud}
-          >
-            HUD
-          </button>
-        </div>
+        <ViewsMenu visible={visibleViews} onToggle={toggleView} />
+        <span className="eyebrow">Ground control</span>
       </header>
 
       <aside className="gcs-sidebar">
@@ -129,16 +122,33 @@ function App() {
         </section>
       </aside>
 
-      {/* The map is always mounted; the instruments are an optional column beside it. */}
-      <main className={showHud ? 'gcs-main with-hud' : 'gcs-main'}>
-        {showHud ? (
-          <div className="hud-pane">
-            <HudPanel sample={feed.sample} track={feed.enuTrack} />
+      {/*
+        Panels render by mapping VIEW_OPTIONS, so DOM order always matches the
+        column weights built from the same list.
+      */}
+      <main className="gcs-main" style={{ gridTemplateColumns }}>
+        {shownViews.map((option) => (
+          <div key={option.id} className={option.id === 'map' ? 'view-pane map-pane' : 'view-pane'}>
+            {option.id === 'logs' ? <LogsPanel sample={feed.sample} log={feed.log} /> : null}
+            {option.id === 'instruments' ? <HudPanel sample={feed.sample} track={feed.enuTrack} /> : null}
+            {option.id === 'map' ? (
+              <>
+                <MapPanel vehicle={vehicle} track={feed.track} tileSource={tileSource} follow={follow} />
+                <MapControls
+                  basemaps={BASEMAPS}
+                  basemapId={basemapId}
+                  onBasemapChange={setBasemapId}
+                  follow={follow}
+                  onFollowChange={setFollow}
+                  maxZoom={tileSource.maxZoom}
+                />
+              </>
+            ) : null}
           </div>
+        ))}
+        {shownViews.length === 0 ? (
+          <p className="views-empty">No views selected. Pick one from Views above.</p>
         ) : null}
-        <div className="map-pane">
-          <MapPanel vehicle={vehicle} track={feed.track} tileSource={tileSource} follow={follow} />
-        </div>
       </main>
     </div>
   )

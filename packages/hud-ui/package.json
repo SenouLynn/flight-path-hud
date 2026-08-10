@@ -6,7 +6,8 @@
   "exports": {
     ".": "./src/index.ts",
     "./logic/*": "./src/logic/*.ts",
-    "./hud.css": "./src/hud.css"
+    "./hud.css": "./src/hud.css",
+    "./constants/*": "./src/constants/*.ts"
   },
   "scripts": {
     "test": "vitest run",
