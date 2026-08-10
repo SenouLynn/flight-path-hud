@@ -28,19 +28,30 @@ interface MapPanelProps {
 
 const TRACK_STYLE = { color: '#74d7ff', weight: 2.5, opacity: 0.9 }
 
-/** Nose-up triangle so the marker shows heading, rotated by CSS. */
-function vehicleIcon(headingDeg: number | null): L.DivIcon {
-  const rotation = headingDeg ?? 0
-  const dimmed = headingDeg === null ? 0.45 : 1
-
+/**
+ * Built once. Heading is applied by writing a transform onto the live element,
+ * not by rebuilding the icon — `setIcon` replaces the marker's DOM, and doing
+ * that on every telemetry frame is both costly and visibly flickery.
+ */
+function createVehicleIcon(): L.DivIcon {
   return L.divIcon({
     className: 'vehicle-marker',
     iconSize: [28, 28],
     iconAnchor: [14, 14],
-    html: `<svg width="28" height="28" viewBox="0 0 28 28" style="transform: rotate(${rotation}deg); opacity: ${dimmed}">
+    html: `<svg width="28" height="28" viewBox="0 0 28 28">
       <polygon points="14,3 21,24 14,19 7,24" fill="#ffb454" stroke="#1b1b1b" stroke-width="1.5" stroke-linejoin="round" />
     </svg>`,
   })
+}
+
+function applyHeading(marker: L.Marker, headingDeg: number | null): void {
+  const svg = marker.getElement()?.firstElementChild as SVGElement | undefined
+  if (svg === undefined) {
+    return
+  }
+
+  svg.style.transform = `rotate(${headingDeg ?? 0}deg)`
+  svg.style.opacity = headingDeg === null ? '0.45' : '1'
 }
 
 export function MapPanel({ vehicle, track, tileSource, follow = true, initialZoom = 16 }: MapPanelProps) {
@@ -62,10 +73,19 @@ export function MapPanel({ vehicle, track, tileSource, follow = true, initialZoo
     trackRef.current = L.polyline([], TRACK_STYLE).addTo(map)
 
     // Leaflet caches its container size and only re-reads it on window resize.
-    // Toggling the HUD column changes our width without one, which would leave
-    // the map rendering into stale bounds (grey gutters, wrong hit-testing).
+    // Toggling a column changes our width without one, which would leave the map
+    // rendering into stale bounds (grey gutters, wrong hit-testing).
+    //
+    // `pan: false` matters: by default invalidateSize pans to preserve the centre,
+    // so a resize and the follow effect end up as two owners of the centre,
+    // fighting. The resize handler only reports the new size; re-centring is the
+    // follow effect's job, replayed here from the last known position.
     const observer = new ResizeObserver(() => {
-      map.invalidateSize()
+      map.invalidateSize({ pan: false, animate: false })
+
+      if (followRef.current && positionRef.current !== null) {
+        map.panTo(positionRef.current, { animate: false })
+      }
     })
     observer.observe(containerRef.current)
 
@@ -113,11 +133,12 @@ export function MapPanel({ vehicle, track, tileSource, follow = true, initialZoo
     const position: L.LatLngExpression = [vehicle.latDeg, vehicle.lonDeg]
 
     if (markerRef.current === null) {
-      markerRef.current = L.marker(position, { icon: vehicleIcon(vehicle.headingDeg) }).addTo(map)
+      markerRef.current = L.marker(position, { icon: createVehicleIcon() }).addTo(map)
     } else {
       markerRef.current.setLatLng(position)
-      markerRef.current.setIcon(vehicleIcon(vehicle.headingDeg))
     }
+
+    applyHeading(markerRef.current, vehicle.headingDeg)
 
     // Zoom in properly on the first real fix, then just follow.
     if (!hasCentredRef.current) {
@@ -125,7 +146,14 @@ export function MapPanel({ vehicle, track, tileSource, follow = true, initialZoo
       map.setView(position, Math.min(initialZoom, map.getMaxZoom()))
       hasCentredRef.current = true
     } else if (follow) {
-      map.panTo(position, { animate: true, duration: 0.25 })
+      /*
+       * No animation. Frames arrive ~33x a second, so an animated pan is torn
+       * down and restarted long before it finishes — the map perpetually starts
+       * moving and never arrives, which reads as a stutter that fights the
+       * centring. Stepping straight to each position is smooth at this rate
+       * because the steps are sub-metre.
+       */
+      map.panTo(position, { animate: false })
     }
   }, [vehicle, follow, initialZoom])
 

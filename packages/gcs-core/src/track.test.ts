@@ -85,6 +85,28 @@ describe('appendTrackPoint', () => {
     expect(later.state.points).toHaveLength(0)
   })
 
+  it('returns the identical state when nothing was added or expired', () => {
+    // Renderers skip redrawing on identity, and at ~33 frames/s with a spacing
+    // guard most frames add nothing — reallocating would redraw the whole
+    // polyline anyway.
+    const first = appendTrackPoint(null, northOf(0, 1000), CONFIG)
+    const rejected = appendTrackPoint(first.state, northOf(0.2, 1050), CONFIG)
+
+    expect(rejected.appended).toBe(false)
+    expect(rejected.state).toBe(first.state)
+  })
+
+  it('still returns fresh state when a rejected fix ages others out', () => {
+    const built = build([
+      { metres: 0, timestampMs: 1000 },
+      { metres: 10, timestampMs: 2000 },
+    ])
+    const later = appendTrackPoint(built, northOf(10, 30000), CONFIG)
+
+    expect(later.state).not.toBe(built)
+    expect(later.state.points).toHaveLength(0)
+  })
+
   it('does not mutate the previous state', () => {
     const first = appendTrackPoint(null, northOf(0, 1000), CONFIG)
     const before = first.state.points.length

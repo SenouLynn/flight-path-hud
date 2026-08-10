@@ -42,11 +42,17 @@ export interface TrackStepResult {
 
 export const EMPTY_TRACK: TrackState = { points: [] }
 
+/**
+ * Returns the *same* array when nothing was dropped. Renderers key off identity
+ * to decide whether to redraw, and a polyline of a thousand points redrawn on
+ * every frame is expensive even when the points are unchanged.
+ */
 function prune(points: TrackPoint[], newestMs: number, config: TrackConfig): TrackPoint[] {
   const cutoffMs = newestMs - config.maxAgeMs
   const fresh = points.filter((point) => point.timestampMs >= cutoffMs)
+  const capped = fresh.length > config.maxPoints ? fresh.slice(fresh.length - config.maxPoints) : fresh
 
-  return fresh.length > config.maxPoints ? fresh.slice(fresh.length - config.maxPoints) : fresh
+  return capped.length === points.length ? points : capped
 }
 
 /**
@@ -63,7 +69,16 @@ export function appendTrackPoint(
 
   if (last !== undefined && distanceM(last, fix) < config.minSpacingM) {
     // Still prune: a stationary vehicle should age its trail out, not freeze it.
-    return { state: { points: prune(points, fix.timestampMs, config) }, appended: false }
+    const pruned = prune(points, fix.timestampMs, config)
+
+    // Nothing added and nothing expired — hand back the very same state so the
+    // renderer can skip. At ~33 frames/s with a 1 m spacing guard, four frames in
+    // five land here.
+    if (pruned === points && previous !== null) {
+      return { state: previous, appended: false }
+    }
+
+    return { state: { points: pruned }, appended: false }
   }
 
   return { state: { points: prune([...points, fix], fix.timestampMs, config) }, appended: true }
