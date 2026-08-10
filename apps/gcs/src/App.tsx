@@ -56,6 +56,54 @@ function App() {
     setVisibleViews((previous) => ({ ...previous, [id]: !previous[id] }))
   }
 
+  /*
+   * 3D is exclusive with the vehicle-anchored modes. A tilted camera is for
+   * looking around, and Follow/Track up re-anchor it on every telemetry frame,
+   * so holding both leaves the perspective view unusable.
+   */
+  const setTiltedExclusive = (next: boolean) => {
+    setTilted(next)
+    if (next) {
+      setFollow(false)
+      setTrackUp(false)
+    }
+  }
+
+  /*
+   * Track up is a modifier on Follow, not a peer. Orienting to a vehicle's heading
+   * around a centre the operator chose — with the vehicle possibly off-screen — is
+   * disorienting and useless, so the two move together.
+   */
+  const setFollowExclusive = (next: boolean) => {
+    setFollow(next)
+    if (next) {
+      setTilted(false)
+    } else {
+      setTrackUp(false)
+    }
+  }
+
+  const setTrackUpExclusive = (next: boolean) => {
+    setTrackUp(next)
+    if (next) {
+      setFollow(true)
+      setTilted(false)
+    }
+  }
+
+  /*
+   * Reaching for the map hands the camera over: the vehicle-anchored modes step
+   * aside so the drag works immediately, rather than being refused or overwritten
+   * on the next telemetry frame.
+   *
+   * Deliberately does NOT force a tilt — a sideways pan that suddenly pitched the
+   * map would be its own surprise. The 3D toggle stays a statement about pitch.
+   */
+  const handOverCamera = () => {
+    setFollow(false)
+    setTrackUp(false)
+  }
+
   const trackKm = useMemo(
     () => trackLengthM({ points: feed.track }) / 1000,
     [feed.track],
@@ -144,20 +192,20 @@ function App() {
                   follow={follow}
                   trackUp={trackUp}
                   pitchDeg={tilted ? TILTED_PITCH_DEG : 0}
+                  onCameraGrab={handOverCamera}
+                  onUserPitch={() => setTilted(false)}
                 />
                 <MapControls
                   basemaps={BASEMAPS}
                   basemapId={basemapId}
                   onBasemapChange={setBasemapId}
                   follow={follow}
-                  onFollowChange={setFollow}
+                  onFollowChange={setFollowExclusive}
                   trackUp={trackUp}
-                  onTrackUpChange={setTrackUp}
+                  onTrackUpChange={setTrackUpExclusive}
                   tilted={tilted}
-                  onTiltedChange={(next) => {
-                    setTilted(next)
-                  }}
-                  onResetNorth={() => {
+                  onTiltedChange={setTiltedExclusive}
+                  onResetView={() => {
                     setTrackUp(false)
                     setTilted(false)
                     mapHandleRef.current?.resetNorth()

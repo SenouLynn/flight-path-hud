@@ -86,10 +86,17 @@ body {
   background: #18202e;
 }
 
+/*
+ * On-state is the same slate, lifted a step, with white bold text. Reads as a
+ * raised key rather than a differently-coloured one.
+ * The font is monospace, so bold does not change advance width and the row
+ * cannot reflow as toggles flip.
+ */
 .segment.active {
-  border-color: var(--accent);
-  background: rgba(116, 215, 255, 0.14);
-  color: var(--accent);
+  border-color: #3a4d6b;
+  background: #2a3a52;
+  color: #fff;
+  font-weight: 600;
 }
 
 .gcs-sidebar {
@@ -544,16 +551,17 @@ body {
   position: absolute;
   top: 10px;
   right: 10px;
-  /* Above Leaflet's own controls, which top out around 1000. */
+  /* Above MapLibre's own controls. */
   z-index: 1100;
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   gap: 6px;
-  padding: 6px;
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  background: rgba(19, 25, 35, 0.92);
-  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.45);
+  /*
+   * The container itself is invisible — the controls float directly on the map.
+   * Each control keeps its own opaque background so it stays legible over
+   * satellite imagery.
+   */
+  background: transparent;
 }
 
 .map-controls select {
@@ -565,6 +573,13 @@ body {
   font: inherit;
   font-size: 11px;
   cursor: pointer;
+}
+
+.map-control-stack {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 3px;
 }
 
 .map-controls-meta {

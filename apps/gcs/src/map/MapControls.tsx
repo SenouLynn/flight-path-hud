@@ -22,7 +22,7 @@ interface MapControlsProps {
   onTrackUpChange: (trackUp: boolean) => void
   tilted: boolean
   onTiltedChange: (tilted: boolean) => void
-  onResetNorth: () => void
+  onResetView: () => void
   maxZoom: number
 }
 
@@ -36,7 +36,7 @@ export function MapControls({
   onTrackUpChange,
   tilted,
   onTiltedChange,
-  onResetNorth,
+  onResetView,
   maxZoom,
 }: MapControlsProps) {
   return (
@@ -53,7 +53,7 @@ export function MapControls({
 
       <button
         type="button"
-        title="Keep the map centred on the vehicle"
+        title="Keep the map centred on the vehicle. Reaching for the map hands the camera back to you."
         className={follow ? 'segment active' : 'segment'}
         onClick={() => onFollowChange(!follow)}
         aria-pressed={follow}
@@ -63,7 +63,7 @@ export function MapControls({
 
       <button
         type="button"
-        title="Rotate the map so the vehicle's heading points up"
+        title="Rotate the map so the vehicle's heading points up. Turns Follow on, since orienting to a vehicle you are not centred on is meaningless."
         className={trackUp ? 'segment active' : 'segment'}
         onClick={() => onTrackUpChange(!trackUp)}
         aria-pressed={trackUp}
@@ -73,7 +73,7 @@ export function MapControls({
 
       <button
         type="button"
-        title="Tilt the camera for a perspective view"
+        title="Tilt the camera to look around. Exclusive with Follow and Track up, which re-anchor the camera every frame."
         className={tilted ? 'segment active' : 'segment'}
         onClick={() => onTiltedChange(!tilted)}
         aria-pressed={tilted}
@@ -81,16 +81,18 @@ export function MapControls({
         3D
       </button>
 
-      <button
-        type="button"
-        title="Reset bearing and tilt to north-up, flat"
-        className="segment"
-        onClick={onResetNorth}
-      >
-        North
-      </button>
-
-      <span className="map-controls-meta">max z{maxZoom}</span>
+      {/* The zoom readout hangs under the last button rather than extending the row. */}
+      <div className="map-control-stack">
+        <button
+          type="button"
+          title="Point the map north and remove tilt"
+          className="segment"
+          onClick={onResetView}
+        >
+          Reset view
+        </button>
+        <span className="map-controls-meta">max z{maxZoom}</span>
+      </div>
     </div>
   )
 }

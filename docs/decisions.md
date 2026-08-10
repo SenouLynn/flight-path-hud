@@ -54,6 +54,150 @@ The entries below were reconstructed from the initial implementation (commits `9
 `355baff`) and documented on 2026-07-23. Dates reflect when each decision was first made in
 the code.
 
+## ADR-0025: One control owns one camera axis; touching it by hand releases it
+
+- **Status:** Accepted
+- **Date:** 2026-08-10
+- **Deciders:** team
+
+### Context
+Follow, track-up and tilt all move the same camera, and the app re-asserts itself
+on every telemetry frame (~33 Hz). Any manual pan, rotate or tilt was overwritten
+within ~30 ms, so dragging simply appeared not to work. Track-up also only applied
+inside the follow branch, so it did nothing with follow off. The dependency was
+right; expressing it as a silent no-op was not.
+
+### Decision
+Each control owns exactly one camera property:
+
+| Control | Owns | Released by |
+| --- | --- | --- |
+| Follow | centre | reaching for the map; its own toggle; enabling 3D |
+| Track up | bearing | reaching for the map; turning Follow off; enabling 3D |
+| 3D | pitch | tilting by hand; enabling Follow or Track up |
+| Reset view | — | one-shot: bearing 0, pitch 0 |
+
+**Track up is a modifier on Follow, not a peer.** Enabling it enables Follow;
+turning Follow off turns it off. Orienting to a vehicle's heading around a centre
+the operator chose — with the vehicle possibly off-screen — is disorienting and
+serves nothing.
+
+**Reaching for the map hands the camera over.** A `mousedown` (or `touchstart`)
+on the canvas drops the vehicle-anchored modes immediately, so the drag that
+follows just works. `mousedown` rather than `dragstart` because the handover has
+to land before MapLibre begins moving anything — otherwise the app's per-frame
+`jumpTo` fights the first few pixels.
+
+The handover deliberately does **not** force a tilt: a sideways pan that suddenly
+pitched the map would be its own surprise. The 3D toggle stays a statement about
+pitch.
+
+**3D is exclusive with the vehicle-anchored modes.** A tilted camera exists to be
+looked around, and Follow/Track up re-anchor it on every telemetry frame, so
+holding both leaves the perspective view unusable in practice. Follow and Track up
+remain compatible with each other — they own different axes and neither fights the
+operator.
+
+Pitch keeps its own release: a hand-tilt clears the 3D toggle via MapLibre's
+`pitchstart`, gated on `event.originalEvent` (present for gestures, absent for our
+own `jumpTo`/`easeTo`), so the toggle never lies about where the camera is.
+
+Follow and track-up write in a single `jumpTo`.
+
+### Consequences
+- ✅ A drag always does something. The operator never has to find and switch off
+  a mode before the map will respond.
+- ✅ Nothing is ever refused, so there is no disabled-cursor state to explain.
+- ⚠️ Any mousedown on the canvas drops Follow, including a bare click with no
+  drag. Treated as acceptable: touching the map is a reasonable statement of
+  intent, and Follow is one click to restore.
+- ✅ Track-up works with follow off — bearing tracks the heading around whatever
+  centre the operator chose.
+- ✅ Zoom deliberately does *not* release follow: zooming while tracking a vehicle
+  is normal and should not drop the mode.
+- ⚠️ A control silently switching itself off is only obvious because the button
+  is a lit toggle; without that affordance the release would be mysterious.
+
+### Alternatives considered
+- Locking the camera while the app owns it, with a `not-allowed` cursor —
+  **tried and rejected in review.** It made the mode legible but told the operator
+  "no" and required finding the toggle first; handing the camera over on the same
+  gesture is strictly better.
+- Fully independent axes, with 3D usable alongside Follow — **tried and rejected
+  in review.** In principle pitch and centre are orthogonal; in practice a camera
+  re-anchored 33 times a second cannot be looked around, so the combination was
+  reachable but useless. Exclusivity is the honest encoding of that.
+- Making every mode mutually exclusive — rejected: Follow and Track up compose,
+  they just compose as base-and-modifier rather than as peers.
+- Track up fully independent of Follow — **tried and rejected in review.** Removing
+  the dependency was over-correcting: the dependency was real, and the fix was to
+  make it visible (enabling Track up enables Follow) rather than to delete it.
+- Keeping the app authoritative and ignoring gestures — rejected: that is the
+  behaviour that made the map feel broken.
+- Re-engaging follow automatically after an idle period — deferred: surprising,
+  and there is a button.
+
+## ADR-0024: MapLibre GL as the map renderer; 3D terrain deferred
+
+- **Status:** Accepted
+- **Date:** 2026-08-10
+- **Deciders:** team
+
+### Context
+Leaflet was adopted as an explicit stand-in behind a single adapter file. It has
+**no rotation support at all** — no bearing, no track-up, no compass — because its
+projection assumes north-up. Track-up is standard in QGroundControl and Mission
+Planner and is the orientation an operator expects, so this was a capability gap
+rather than a preference.
+
+A 3D view was also raised, prompted by
+[QGC issue #10943](https://github.com/mavlink/qgroundcontrol/issues/10943), where
+a contributor's branch imports OSM data and triangulates it with `earcut.hpp`.
+
+### Decision
+Replace Leaflet with MapLibre GL JS. `setBearing`, `setPitch` and `setTerrain` are
+native. Migration touched only [MapPanel.tsx](../apps/gcs/src/map/MapPanel.tsx) and
+the tile catalogue, which is what the stand-in framing was for.
+
+**Earcut is not something we integrate.** It is a polygon triangulator — a GPU
+rendering primitive, not a 3D-maps feature. QGC needs `earcut.hpp` because it is a
+native Qt/C++ app building its own renderer. MapLibre GL JS already depends on
+`earcut` (`^3.2.3` in its `package.json`) and triangulates internally, so we get it
+transitively and never name it.
+
+**3D is split.** Camera *tilt* ships now and works on the existing raster
+basemaps. Terrain relief and extruded buildings are explicitly a **nice-to-have to
+revisit later, not a requirement and not a blocker**, because they are an
+infrastructure decision rather than a rendering one:
+
+- `setTerrain()` needs a **raster-DEM** source. DEM tiles are large and hosted,
+  which collides with the Pi's no-cloud rule until someone self-hosts a DEM for an
+  operating area.
+- `fill-extrusion` buildings need **vector** tiles, in practice an API key
+  (MapTiler, Stadia) or a self-hosted tile server.
+
+Nothing about shipping tilt now forecloses either.
+
+### Consequences
+- ✅ Rotation, track-up and tilt all work, on the six existing raster basemaps,
+  with no new data source, key or hosting.
+- ✅ The terrain path stays open behind one API call once tiles are decided.
+- ⚠️ Bundle grew from ~390 kB to ~1,272 kB (349 kB gzipped), roughly 3x Leaflet.
+  Fine locally; worth measuring on a Pi 5, and code-splitting is the mitigation.
+- ⚠️ MapLibre is `[lng, lat]`, the reverse of Leaflet and of this codebase's
+  naming. All conversion goes through one `toLngLat` helper; scattering the flip
+  would produce a map that silently shows the wrong place.
+- ⚠️ `setStyle` replaces sources and layers, so the track layer is re-added on
+  every basemap change.
+
+### Alternatives considered
+- `leaflet-rotate` plugin — rejected: patches Leaflet internals, tracks upstream
+  loosely, and buys rotation only, leaving tilt and terrain still unreachable.
+- CSS-transforming the Leaflet container — rejected: hit-testing and bounds keep
+  believing the map is north-up, so clicks land in the wrong place.
+- Porting QGC's OSM-import approach with earcut — rejected: that is what you build
+  when your framework cannot do it; MapLibre can.
+
 ## ADR-0023: Recording is on by default, bounded by retention
 
 - **Status:** Accepted

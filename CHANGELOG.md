@@ -23,6 +23,23 @@ tagged release exists.
 ## [Unreleased]
 
 ### Added
+- **MapLibre GL replaces Leaflet as the map renderer** (ADR-0024), unlocking
+  rotation, track-up and camera tilt — none of which Leaflet supports at all. The
+  swap touched only [MapPanel.tsx](apps/gcs/src/map/MapPanel.tsx) and the tile
+  catalogue, which is what the single-adapter constraint was for. All six raster
+  basemaps carry over. 3D *terrain* and extruded buildings are deliberately
+  deferred as a nice-to-have: they need DEM and vector tile sources, which is an
+  infrastructure decision rather than a rendering one.
+- **Map camera controls: Follow, Track up, 3D, Reset view** (ADR-0025). Each owns
+  exactly one camera axis — centre, bearing, pitch — and taking that axis by hand
+  releases the control, so manual interaction always wins instead of being
+  overwritten on the next telemetry frame. Track up is a modifier on Follow —
+  enabling it enables Follow, since orienting to a vehicle you are not centred on
+  serves nothing.
+  3D is exclusive with Follow and Track up: those re-anchor the camera every frame,
+  which leaves a tilted view impossible to look around. Reaching for the map hands
+  the camera over: a mousedown drops the vehicle-anchored modes so the drag that
+  follows just works, rather than being refused or overwritten on the next frame.
 - **Session recording on by default, with retention** (ADR-0023). The bridge writes
   `recordings/session-<timestamp>.jsonl` every run. A per-run byte cap
   (`MAVLINK_BRIDGE_RECORD_MAX_MB`, 256) stops recording rather than rotating, and a

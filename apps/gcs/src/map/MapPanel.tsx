@@ -35,6 +35,14 @@ interface MapPanelProps {
    */
   pitchDeg?: number
   initialZoom?: number
+  /**
+   * Fired the moment the operator reaches for the camera — on mousedown, before
+   * any movement. The app hands the camera over rather than refusing the gesture,
+   * so a drag always does something.
+   */
+  onCameraGrab?: () => void
+  /** Fired when the operator tilts by hand, so the 3D toggle cannot lie. */
+  onUserPitch?: () => void
 }
 
 /** Imperative surface for chrome that lives outside this component. */
@@ -85,7 +93,17 @@ function createMarkerElement(): HTMLElement {
 }
 
 export const MapPanel = forwardRef<MapHandle, MapPanelProps>(function MapPanel(
-  { vehicle, track, tileSource, follow = true, trackUp = false, pitchDeg = 0, initialZoom = 16 },
+  {
+    vehicle,
+    track,
+    tileSource,
+    follow = true,
+    trackUp = false,
+    pitchDeg = 0,
+    initialZoom = 16,
+    onCameraGrab,
+    onUserPitch,
+  },
   handleRef,
 ) {
   const containerRef = useRef<HTMLDivElement | null>(null)
@@ -98,6 +116,10 @@ export const MapPanel = forwardRef<MapHandle, MapPanelProps>(function MapPanel(
   const positionRef = useRef<[number, number] | null>(null)
 
   followRef.current = follow
+
+  // The map outlives any render, so its listeners read handlers through refs.
+  const handlersRef = useRef({ onCameraGrab, onUserPitch })
+  handlersRef.current = { onCameraGrab, onUserPitch }
 
   // Rotation belongs to the map, but the button that resets it lives in the
   // chrome outside. Exposing one method keeps MapLibre from leaking upward.
@@ -129,6 +151,30 @@ export const MapPanel = forwardRef<MapHandle, MapPanelProps>(function MapPanel(
     // which is the control Leaflet could not offer at all.
     map.addControl(new maplibregl.NavigationControl({ visualizePitch: true, showCompass: true }), 'top-left')
 
+    /*
+     * `originalEvent` is present only for gestures, absent for our own jumpTo /
+     * easeTo. That is what separates "the operator grabbed the map" from "we
+     * moved it ourselves", so the release fires on the former only.
+     */
+    /*
+     * mousedown, not dragstart: the handover has to land before MapLibre starts
+     * moving anything, otherwise the app's per-frame jumpTo fights the first few
+     * pixels of the drag. Reaching for the map is enough to mean it.
+     */
+    const grab = () => {
+      handlersRef.current.onCameraGrab?.()
+    }
+
+    const canvas = map.getCanvas()
+    canvas.addEventListener('mousedown', grab)
+    canvas.addEventListener('touchstart', grab, { passive: true })
+
+    map.on('pitchstart', (event) => {
+      if (event.originalEvent) {
+        handlersRef.current.onUserPitch?.()
+      }
+    })
+
     map.on('load', () => {
       loadedRef.current = true
       map.addSource(TRACK_SOURCE, { type: 'geojson', data: emptyTrack() })
@@ -155,6 +201,8 @@ export const MapPanel = forwardRef<MapHandle, MapPanelProps>(function MapPanel(
     observer.observe(containerRef.current)
 
     return () => {
+      canvas.removeEventListener('mousedown', grab)
+      canvas.removeEventListener('touchstart', grab)
       observer.disconnect()
       map.remove()
       mapRef.current = null
@@ -229,23 +277,34 @@ export const MapPanel = forwardRef<MapHandle, MapPanelProps>(function MapPanel(
     if (!hasCentredRef.current) {
       map.jumpTo({ center: position, zoom: Math.min(initialZoom, tileSource.maxZoom) })
       hasCentredRef.current = true
-    } else if (follow) {
-      /*
-       * jumpTo, not easeTo. Frames arrive ~33x a second, so an animated move is
-       * torn down and restarted long before it finishes — the map perpetually
-       * starts moving and never arrives. Stepping straight there is smooth at
-       * this rate because the steps are sub-metre.
-       *
-       * Bearing rides along in the same call: two separate moves per frame would
-       * mean two renders and a visible shear between the pan and the rotation.
-       */
-      map.jumpTo(
-        trackUp && vehicle.headingDeg !== null
-          // Bearing is the compass direction that is "up", so setting it to the
-          // heading puts the nose at the top of the screen.
-          ? { center: position, bearing: vehicle.headingDeg }
-          : { center: position },
-      )
+      return
+    }
+
+    /*
+     * Follow owns the centre; track-up owns the bearing. They are independent —
+     * rotating to the vehicle's heading around a centre the operator chose is a
+     * perfectly reasonable view, and making one depend on the other is what made
+     * track-up look broken with follow off.
+     *
+     * Both ride in one jumpTo: two moves per frame means two renders and a
+     * visible shear between the pan and the rotation. jumpTo, not easeTo, because
+     * frames arrive ~33x a second and an animated move is torn down long before
+     * it finishes.
+     */
+    const move: { center?: [number, number], bearing?: number } = {}
+
+    if (follow) {
+      move.center = position
+    }
+
+    // Bearing is the compass direction that is "up", so setting it to the heading
+    // puts the nose at the top of the screen.
+    if (trackUp && vehicle.headingDeg !== null) {
+      move.bearing = vehicle.headingDeg
+    }
+
+    if (move.center !== undefined || move.bearing !== undefined) {
+      map.jumpTo(move)
     }
   }, [vehicle, follow, trackUp, initialZoom, tileSource.maxZoom])
 
