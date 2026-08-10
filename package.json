@@ -3,14 +3,20 @@
   "private": true,
   "workspaces": [
     "apps/web",
-    "apps/mavlink-bridge"
+    "apps/gcs",
+    "apps/mavlink-bridge",
+    "packages/gcs-core",
+    "packages/hud-ui"
   ],
   "scripts": {
-    "dev:all": "npm run dev:web & npm run start:bridge & npm run sample:bridge & npm run sample:bridge",
+    "dev:all": "npm run dev:web & npm run start:bridge & npm run sample:bridge & npm run dev:gcs",
     "dev:web": "npm run dev --workspace @flight-path-hud/web",
     "build:web": "npm run build --workspace @flight-path-hud/web",
     "lint:web": "npm run lint --workspace @flight-path-hud/web",
     "test:web": "npm run test --workspace @flight-path-hud/web",
+    "dev:gcs": "npm run dev --workspace @flight-path-hud/gcs",
+    "build:gcs": "npm run build --workspace @flight-path-hud/gcs",
+    "test:gcs-core": "npm run test --workspace @flight-path-hud/gcs-core",
     "start:bridge": "npm run start --workspace @flight-path-hud/mavlink-bridge",
     "sample:bridge": "npm run sample:udp --workspace @flight-path-hud/mavlink-bridge",
     "test:bridge": "npm run test --workspace @flight-path-hud/mavlink-bridge",
@@ -18,6 +24,7 @@
     "replay:bridge": "npm run replay --workspace @flight-path-hud/mavlink-bridge",
     "test:esp32": "make -C apps/esp32 test",
     "preview:esp32": "make -C apps/esp32 run",
-    "bootstrap:desktop": "git clone https://github.com/tmikov/imgui-react-runtime.git apps/desktop/runtime"
+    "bootstrap:desktop": "git clone https://github.com/tmikov/imgui-react-runtime.git apps/desktop/runtime",
+    "test:hud-ui": "npm run test --workspace @flight-path-hud/hud-ui"
   }
 }

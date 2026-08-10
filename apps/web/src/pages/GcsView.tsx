@@ -1,11 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { HudFlightPathRecorder } from '../components/HudFlightPathRecorder'
-import { HudOrientationIndicator } from '../components/HudOrientationIndicator'
-import { HudPredictiveTrajectory } from '../components/HudPredictiveTrajectory'
-import { HudPrimaryFlightDisplay } from '../components/HudPrimaryFlightDisplay'
-import { resolveAttitude } from '../logic/attitude'
-import { resolveFlightPath2d, resolveFlightPath3d, resolveScalarTelemetry } from '../logic/flightPath'
-import { resolveHeading } from '../logic/heading'
+import { HudFlightPathRecorder, HudOrientationIndicator, HudPredictiveTrajectory, HudPrimaryFlightDisplay, resolveAttitude, resolveFlightPath2d, resolveFlightPath3d, resolveHeading, resolveScalarTelemetry } from '@flight-path-hud/hud-ui'
 import {
     buildSyntheticMissionSamples,
     createLiveMockSource,
@@ -68,6 +62,11 @@ function GcsView() {
   const telemetrySources = useMemo<Record<TelemetrySourceId, TelemetrySource>>(() => {
     const synthetic = createSyntheticReplaySource(streamSamples, 300)
     const liveMock = createLiveMockSource(100)
+    // getSystemFilter closes over a ref but is only invoked from socket message
+    // handlers, never during render. That indirection is the point: it lets the
+    // selected system filter the live stream instead of tearing the socket down
+    // and reconnecting on every change.
+    // eslint-disable-next-line react-hooks/refs
     const wsExternal = createWsTelemetrySource({
       url: externalWsUrl,
       label: 'External stream (ws)',

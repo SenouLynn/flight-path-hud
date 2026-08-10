@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import type { TelemetrySample } from '../logic/telemetry'
+import type { TelemetrySample } from '@flight-path-hud/hud-ui'
 import type { StreamHealthSnapshot } from './streamPorts'
 import type { TelemetrySource } from './telemetrySource'
 

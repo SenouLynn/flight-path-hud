@@ -5,7 +5,7 @@ import {
   createLiveMockSource,
   createSyntheticReplaySource,
 } from './telemetrySource'
-import { resolveTrack } from '../logic/position'
+import { resolveTrack } from '@flight-path-hud/hud-ui'
 
 describe('buildMockLiveSample', () => {
   it('produces finite telemetry values for all required fields', () => {

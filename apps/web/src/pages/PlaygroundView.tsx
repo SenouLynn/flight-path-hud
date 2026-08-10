@@ -1,14 +1,7 @@
 import { useMemo } from 'react'
 import { AircraftControlsPanel } from '../components/AircraftControlsPanel'
-import { HudFlightState } from '../components/HudFlightState'
-import { HudOrientationIndicator } from '../components/HudOrientationIndicator'
-import { HudPrimaryFlightDisplay } from '../components/HudPrimaryFlightDisplay'
-import { HudPredictiveTrajectory } from '../components/HudPredictiveTrajectory'
+import { DEFAULT_TRAJECTORY_CONFIG, HudFlightState, HudOrientationIndicator, HudPredictiveTrajectory, HudPrimaryFlightDisplay, resolveAttitude, resolveCoordinationLabel, resolveHeading, resolvePredictiveTrajectory, resolveScalarTelemetry } from '@flight-path-hud/hud-ui'
 import { useAircraftControls } from '../hooks/useAircraftControls'
-import { resolveAttitude } from '../logic/attitude'
-import { resolveScalarTelemetry } from '../logic/flightPath'
-import { resolveHeading } from '../logic/heading'
-import { DEFAULT_TRAJECTORY_CONFIG, resolveCoordinationLabel, resolvePredictiveTrajectory } from '../logic/trajectory'
 import { buildStaticSample } from '../stream/staticSample'
 
 const RAD_TO_DEG = 180 / Math.PI

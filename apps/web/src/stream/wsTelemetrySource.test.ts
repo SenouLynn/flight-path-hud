@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import type { TelemetrySample } from '../logic/telemetry'
+import type { TelemetrySample } from '@flight-path-hud/hud-ui'
 import type { StreamHealthSnapshot } from './streamPorts'
 import { createWsTelemetrySource, type WebSocketLike } from './wsTelemetrySource'
 

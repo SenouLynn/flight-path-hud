@@ -1,4 +1,4 @@
-import type { TelemetrySample } from '../logic/telemetry'
+import type { TelemetrySample } from '@flight-path-hud/hud-ui'
 import {
     parseExternalTelemetryEnvelope,
     type ExternalTelemetryEnvelope,
@@ -82,7 +82,7 @@ function mergeSection<T extends object>(previousSection: T | undefined, nextSect
   // Sanitizing sets absent fields to an explicit `undefined`, so a plain spread
   // would erase known-good siblings (e.g. a GLOBAL_POSITION_INT without lat/lon
   // wiping the last fix). Carry the previous value forward for those instead.
-  const merged: Record<string, unknown> = { ...previousSection }
+  const merged = { ...previousSection } as Record<string, unknown>
   for (const [key, value] of Object.entries(nextSection)) {
     if (value !== undefined) {
       merged[key] = value

@@ -6,7 +6,7 @@ import {
   type PositionSource,
   type PositionState,
   type TrackPoint,
-} from '../logic/position'
+} from '@flight-path-hud/hud-ui'
 import type { TelemetryFeedState } from './useTelemetryFeed'
 
 export interface FlightTrackConfig {

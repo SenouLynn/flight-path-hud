@@ -1,4 +1,5 @@
 import { NavLink, Navigate, Route, Routes } from 'react-router-dom'
+import '@flight-path-hud/hud-ui/hud.css'
 import './App.css'
 import GcsView from './pages/GcsView'
 import UnifiedView from './pages/UnifiedView'

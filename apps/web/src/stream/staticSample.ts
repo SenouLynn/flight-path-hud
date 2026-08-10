@@ -1,4 +1,4 @@
-import { sanitizeTelemetrySample, type TelemetrySample } from '../logic/telemetry'
+import { sanitizeTelemetrySample, type TelemetrySample } from '@flight-path-hud/hud-ui'
 
 /**
  * Parameters an operator dials in the static playground. This is a single

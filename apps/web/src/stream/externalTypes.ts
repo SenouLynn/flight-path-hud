@@ -1,5 +1,4 @@
-import type { TelemetrySample } from '../logic/telemetry'
-import { sanitizeTelemetrySample } from '../logic/telemetry'
+import { sanitizeTelemetrySample, type TelemetrySample } from '@flight-path-hud/hud-ui'
 
 export type StreamConnectionState = 'connecting' | 'open' | 'closed' | 'error'
 

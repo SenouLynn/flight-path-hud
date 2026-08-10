@@ -1,5 +1,4 @@
-import { normalizeHeadingDegrees } from '../logic/heading'
-import { type TelemetrySample } from '../logic/telemetry'
+import { normalizeHeadingDegrees, type TelemetrySample } from '@flight-path-hud/hud-ui'
 import type { StreamHealthSnapshot } from './streamPorts'
 
 export type TelemetrySourceId = 'synthetic-replay' | 'live-mock' | 'ws-external'
