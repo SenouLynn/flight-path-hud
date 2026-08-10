@@ -60,6 +60,11 @@ export function MapPanel({ vehicle, track, tileSource, follow = true, initialZoo
   const markerRef = useRef<L.Marker | null>(null)
   const trackRef = useRef<L.Polyline | null>(null)
   const hasCentredRef = useRef(false)
+  // Read by the ResizeObserver, which outlives any single render.
+  const followRef = useRef(follow)
+  const positionRef = useRef<L.LatLngExpression | null>(null)
+
+  followRef.current = follow
 
   // Create the map once. Leaflet manages this subtree; React must not touch it.
   useEffect(() => {
@@ -131,6 +136,7 @@ export function MapPanel({ vehicle, track, tileSource, follow = true, initialZoo
     }
 
     const position: L.LatLngExpression = [vehicle.latDeg, vehicle.lonDeg]
+    positionRef.current = position
 
     if (markerRef.current === null) {
       markerRef.current = L.marker(position, { icon: createVehicleIcon() }).addTo(map)

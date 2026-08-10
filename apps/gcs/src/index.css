@@ -45,19 +45,32 @@ body {
   height: 100vh;
 }
 
-/* Views sits leftmost; map chrome lives on the map itself. */
+/* Title leads, Views is secondary chrome; map chrome lives on the map itself. */
 .gcs-topbar {
   grid-area: topbar;
   display: flex;
   align-items: center;
-  gap: 16px;
-  padding: 10px 16px;
+  gap: 14px;
+  padding: 5px 10px;
   border-bottom: 1px solid var(--border);
   background: var(--panel);
 }
 
+.app-title {
+  color: var(--text);
+  font-size: 11px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+/* Subordinate to the title. */
+.views-menu .segment {
+  padding: 2px 7px;
+  font-size: 10px;
+}
+
 .segment {
-  padding: 6px 12px;
+  padding: 3px 9px;
   border: 1px solid var(--border);
   border-radius: var(--radius);
   background: var(--bg);
@@ -82,30 +95,30 @@ body {
 .gcs-sidebar {
   grid-area: sidebar;
   overflow-y: auto;
-  padding: 16px;
+  padding: 8px 10px;
   border-right: 1px solid var(--border);
   background: var(--panel);
 }
 
-.eyebrow {
-  margin: 0;
-  color: var(--muted);
-  font-size: 11px;
-  letter-spacing: 0.14em;
-  text-transform: uppercase;
+/*
+ * Sections are separated by a hairline, not boxed. Boxes inside a panel inside a
+ * column is three nested frames for one list of numbers.
+ */
+.panel {
+  margin-bottom: 10px;
+  padding-bottom: 9px;
+  border-bottom: 1px solid var(--border);
 }
 
-.panel {
-  margin-bottom: 18px;
-  padding: 12px;
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
+.panel:last-child {
+  border-bottom: none;
 }
 
 .panel h2 {
-  margin: 0 0 10px;
-  color: var(--muted);
-  font-size: 11px;
+  margin: 0 0 5px;
+  color: #55708f;
+  font-size: 10px;
+  font-weight: 400;
   letter-spacing: 0.12em;
   text-transform: uppercase;
 }
@@ -113,28 +126,30 @@ body {
 .stat {
   display: flex;
   justify-content: space-between;
-  gap: 12px;
-  padding: 3px 0;
-  font-size: 12px;
+  gap: 10px;
+  padding: 1px 0;
+  font-size: 11px;
 }
 
 .stat span {
   color: var(--muted);
 }
 
+/* Weight is not what distinguishes a value here — alignment and colour are. */
 .stat strong {
-  font-weight: 600;
+  color: var(--text);
+  font-weight: 400;
   font-variant-numeric: tabular-nums;
 }
 
 .control {
   display: block;
-  margin-bottom: 10px;
+  margin-bottom: 6px;
 }
 
 .control > span {
   display: block;
-  margin-bottom: 4px;
+  margin-bottom: 2px;
   color: var(--muted);
   font-size: 11px;
 }
@@ -143,13 +158,13 @@ body {
 .control input:not([type]),
 .control select {
   width: 100%;
-  padding: 6px 8px;
+  padding: 3px 5px;
   border: 1px solid var(--border);
   border-radius: var(--radius);
   background: var(--bg);
   color: var(--text);
   font: inherit;
-  font-size: 12px;
+  font-size: 11px;
 }
 
 .warn {
@@ -298,8 +313,8 @@ body {
 
 .bottom-tabs {
   display: flex;
-  gap: 6px;
-  padding: 6px 8px;
+  gap: 5px;
+  padding: 4px 6px;
   border-bottom: 1px solid var(--border);
 }
 
@@ -377,7 +392,7 @@ body {
   display: flex;
   align-items: center;
   gap: 8px;
-  padding: 6px 8px;
+  padding: 4px 6px;
   border-bottom: 1px solid var(--border);
 }
 

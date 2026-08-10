@@ -1,6 +1,8 @@
+import fs from 'node:fs'
+import path from 'node:path'
 import { WebSocketServer } from 'ws'
 import { createBridgeCore } from './bridgeCore.js'
-import { createJsonlRecorder } from './recording.js'
+import { createJsonlRecorder, pruneRecordings } from './recording.js'
 import { createReplayIngress } from './replayIngress.js'
 import { createUdpIngress } from './udpIngress.js'
 
@@ -11,8 +13,30 @@ const WS_PATH = process.env.MAVLINK_BRIDGE_WS_PATH ?? '/telemetry'
 // Drop a system from the roster after this long without a packet (~10 missed 1Hz heartbeats).
 const SYSTEM_TTL_MS = Number.parseInt(process.env.MAVLINK_BRIDGE_SYSTEM_TTL_MS ?? '10000', 10)
 
-const RECORD_FILE = process.env.MAVLINK_BRIDGE_RECORD_FILE ?? null
+/*
+ * Recording is on by default. It is only safe as a default because the retention
+ * policy below bounds it: a per-run byte cap plus an age/size sweep at startup.
+ * Set MAVLINK_BRIDGE_RECORD=0 to turn it off.
+ */
+const RECORD_ENABLED = process.env.MAVLINK_BRIDGE_RECORD !== '0'
+const RECORD_DIR = process.env.MAVLINK_BRIDGE_RECORD_DIR ?? 'recordings'
+const RECORD_MAX_MB = Number.parseFloat(process.env.MAVLINK_BRIDGE_RECORD_MAX_MB ?? '256')
+const RECORD_RETAIN_DAYS = Number.parseFloat(process.env.MAVLINK_BRIDGE_RECORD_RETAIN_DAYS ?? '7')
+const RECORD_TOTAL_MAX_MB = Number.parseFloat(process.env.MAVLINK_BRIDGE_RECORD_TOTAL_MAX_MB ?? '1024')
+
+/** Timestamped per run: overwriting one file would make retention meaningless. */
+function defaultRecordPath() {
+  const stamp = new Date().toISOString().replace(/[:.]/g, '-').replace('Z', '')
+  return path.join(RECORD_DIR, `session-${stamp}.jsonl`)
+}
+
 const REPLAY_FILE = process.env.MAVLINK_BRIDGE_REPLAY_FILE ?? null
+
+// Never record a replay: it would duplicate an existing recording under a new
+// name and quietly double what retention has to manage.
+const RECORD_FILE = RECORD_ENABLED && REPLAY_FILE === null
+  ? (process.env.MAVLINK_BRIDGE_RECORD_FILE ?? defaultRecordPath())
+  : null
 const REPLAY_SPEED = Number.parseFloat(process.env.MAVLINK_BRIDGE_REPLAY_SPEED ?? '1')
 const REPLAY_LOOP = process.env.MAVLINK_BRIDGE_REPLAY_LOOP === '1'
 
@@ -25,7 +49,30 @@ const ingress = REPLAY_FILE === null
   ? createUdpIngress({ host: UDP_HOST, port: UDP_PORT })
   : createReplayIngress(REPLAY_FILE, { speed: REPLAY_SPEED, loop: REPLAY_LOOP })
 
-const recorder = RECORD_FILE === null ? null : createJsonlRecorder(RECORD_FILE)
+function startRecording() {
+  if (RECORD_FILE === null) {
+    return null
+  }
+
+  const directory = path.dirname(RECORD_FILE)
+  fs.mkdirSync(directory, { recursive: true })
+
+  const { removed, keptBytes } = pruneRecordings(directory, {
+    maxAgeMs: RECORD_RETAIN_DAYS * 24 * 60 * 60 * 1000,
+    maxTotalBytes: RECORD_TOTAL_MAX_MB * 1e6,
+    excludePath: RECORD_FILE,
+  })
+
+  // Say what was deleted; quietly discarding flight data is not acceptable.
+  removed.forEach(({ name, sizeBytes, reason }) => {
+    console.log(`[mavlink-bridge] pruned recording ${name} (${(sizeBytes / 1e6).toFixed(1)} MB, ${reason})`)
+  })
+  console.log(`[mavlink-bridge] recordings retained: ${(keptBytes / 1e6).toFixed(1)} MB in ${directory}`)
+
+  return createJsonlRecorder(RECORD_FILE, { maxBytes: RECORD_MAX_MB * 1e6 })
+}
+
+const recorder = startRecording()
 
 function publish(frame) {
   const payload = JSON.stringify(frame)

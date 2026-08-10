@@ -63,8 +63,8 @@ function App() {
   return (
     <div className="gcs-layout">
       <header className="gcs-topbar">
+        <span className="app-title">Ground control</span>
         <ViewsMenu visible={visibleViews} onToggle={toggleView} />
-        <span className="eyebrow">Ground control</span>
       </header>
 
       <aside className="gcs-sidebar">

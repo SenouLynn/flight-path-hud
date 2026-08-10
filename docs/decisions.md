@@ -54,6 +54,52 @@ The entries below were reconstructed from the initial implementation (commits `9
 `355baff`) and documented on 2026-07-23. Dates reflect when each decision was first made in
 the code.
 
+## ADR-0023: Recording is on by default, bounded by retention
+
+- **Status:** Accepted
+- **Date:** 2026-08-10
+- **Deciders:** team
+
+### Context
+[ADR-0022](#adr-0022-recordreplay-is-the-bridges-second-ingress-adapter) made
+recording possible but opt-in, because an uncapped JSONL sink writes ~15 MB/hour
+forever. On a field Raspberry Pi that eventually fills the disk, and the process
+holds no other unbounded state — every in-memory buffer is capped or TTL-evicted,
+so recordings were the only thing that could grow without limit.
+
+Leaving it opt-in meant the useful case (a session you can replay after something
+goes wrong) required predicting the problem beforehand.
+
+### Decision
+Record by default, and bound it in two places:
+
+- **Per run**: a byte cap (`MAVLINK_BRIDGE_RECORD_MAX_MB`, 256). At the cap the
+  recorder *stops* and says so.
+- **Across runs**: a startup sweep of the recordings directory by age
+  (`_RETAIN_DAYS`, 7) then by total size (`_TOTAL_MAX_MB`, 1024), oldest first.
+
+Each run writes `session-<timestamp>.jsonl`. Recording is skipped while replaying.
+`MAVLINK_BRIDGE_RECORD=0` disables it.
+
+### Consequences
+- ✅ A session is always available to replay without having predicted the need.
+- ✅ Disk use has a stated ceiling instead of growing until something breaks.
+- ✅ Deleted files are logged by name, size and reason — flight data never
+  disappears silently.
+- ⚠️ Stopping at the cap means a long session is incomplete rather than rotated.
+  Chosen deliberately: a recording truncated mid-stream is harder to trust than
+  one that plainly ends.
+- ⚠️ Replay still reads a whole recording into memory, so the per-run cap doubles
+  as the replay memory ceiling. Raising it needs streaming reads first.
+
+### Alternatives considered
+- Size-based rotation into segments — rejected for now: replay would need to
+  stitch segments, and the contract test's byte-for-byte guarantee gets murkier.
+- Leaving it opt-in — rejected: the data is most wanted exactly when nobody
+  thought to enable it.
+- Capping in-memory buffers harder instead — not applicable; they are already
+  bounded, and the disk was the only unbounded surface.
+
 ## ADR-0022: Record/replay is the bridge's second ingress adapter
 
 - **Status:** Accepted

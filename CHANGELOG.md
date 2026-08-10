@@ -23,14 +23,23 @@ tagged release exists.
 ## [Unreleased]
 
 ### Added
+- **Session recording on by default, with retention** (ADR-0023). The bridge writes
+  `recordings/session-<timestamp>.jsonl` every run. A per-run byte cap
+  (`MAVLINK_BRIDGE_RECORD_MAX_MB`, 256) stops recording rather than rotating, and a
+  startup sweep prunes the directory by age (`_RETAIN_DAYS`, 7) then total size
+  (`_TOTAL_MAX_MB`, 1024), oldest first. Pruned files are logged by name, size and
+  reason; the sweep never touches the active file or non-`.jsonl` files. Disable with
+  `MAVLINK_BRIDGE_RECORD=0`; recording is skipped automatically while replaying.
+  [apps/mavlink-bridge/README.md](apps/mavlink-bridge/README.md) documents the full
+  configuration surface.
 - **Record and replay for the MAVLink bridge** (ADR-0022). The bridge is now a
   transport-agnostic [core](apps/mavlink-bridge/src/bridgeCore.js) plus swappable adapters:
   [UDP](apps/mavlink-bridge/src/udpIngress.js) and
   [replay](apps/mavlink-bridge/src/replayIngress.js) ingress share one
   `start(onDatagram) => stop` shape, with a JSONL `RecordingPort` in
   [recording.js](apps/mavlink-bridge/src/recording.js). Recordings hold raw wire bytes, so a
-  replay re-runs the decoder. `npm run record:bridge` captures a session and
-  `npm run replay:bridge` reproduces it with no vehicle, sender, or UDP socket attached — a
+  replay re-runs the decoder. `npm run replay:bridge` reproduces a recorded session
+  with no vehicle, sender, or UDP socket attached — a
   contract test asserts the replayed envelope stream matches the live one exactly.
 - **Duplicate-transmitter detection.** The bridge warns when one `sysId:compId` arrives from
   more than one source endpoint, and the sample sender now binds a fixed source port as a
