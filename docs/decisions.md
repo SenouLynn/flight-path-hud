@@ -54,6 +54,58 @@ The entries below were reconstructed from the initial implementation (commits `9
 `355baff`) and documented on 2026-07-23. Dates reflect when each decision was first made in
 the code.
 
+## ADR-0022: Record/replay is the bridge's second ingress adapter
+
+- **Status:** Accepted
+- **Date:** 2026-08-10
+- **Deciders:** team
+
+### Context
+[ADR-0020](#adr-0020-multi-target-gcs-via-ports-and-adapters) commits to transport-agnostic
+ingest, but the bridge had exactly one inbound adapter (UDP) and one outbound (WebSocket),
+so the claim was never exercised. The web-side ports in
+[streamPorts.ts](../apps/web/src/stream/streamPorts.ts) were referenced only by their own
+tests — defined, not load-bearing.
+
+The [consume plan](./mavlink_gcs_consume_plan.md) makes a second adapter a phase-exit
+guardrail, and Phase 6 wants deterministic replay. Live-stream debugging had no reproduction
+path: diagnosing a duplicate-sender fault meant rebuilding throwaway capture harnesses.
+
+### Decision
+Split the bridge into a transport-agnostic core plus swappable adapters:
+[bridgeCore.js](../apps/mavlink-bridge/src/bridgeCore.js) takes datagrams and emits
+broadcast frames; [udpIngress.js](../apps/mavlink-bridge/src/udpIngress.js) and
+[replayIngress.js](../apps/mavlink-bridge/src/replayIngress.js) share one
+`start(onDatagram) => stop` shape; [recording.js](../apps/mavlink-bridge/src/recording.js)
+is the `RecordingPort`.
+
+Recordings capture **raw wire bytes** as JSONL, not decoded envelopes, so replay re-runs the
+parser and catches decoder regressions. Each entry stores a relative `tMs` for pacing and an
+absolute `atMs`, and `parseIncomingDatagram` takes an injected clock — without that seam,
+MAVLink frames stamp `recvTimestampMs` from `Date.now()` and "deterministic replay" would not
+be deterministic.
+
+### Consequences
+- ✅ A contract test asserts replay reproduces the live envelope stream *exactly*
+  (`deepEqual`, health included), so the port abstraction is enforced rather than asserted.
+- ✅ Deterministic reproduction for debugging; a captured session replays with no vehicle,
+  no sender, and no UDP socket.
+- ✅ The serial/Pi adapter in ADR-0020 now has a proven shape to implement against.
+- ⚠️ The running bridge deliberately does **not** feed recorded timestamps to the core: the
+  TTL sweep runs on the wall clock and recorded times would evict every system instantly.
+  Determinism is guaranteed at the core/test level, not for the live replay process.
+- ⚠️ Recordings are raw captures with no schema version; a wire-format change silently
+  invalidates old files.
+
+### Alternatives considered
+- Record decoded envelopes — rejected: replay would bypass the parser, so the decoder bugs
+  most worth catching (offsets, CRC, framing) would be invisible.
+- Replay in the browser as a third `TelemetrySource` — deferred: it would exercise the UI
+  path but not the bridge's decode path, and needs the file served to the page.
+- Leave `Date.now()` in the decoder and compare loosely in tests — rejected: a test that
+  ignores timestamps cannot claim determinism, and this repo has already been bitten by
+  tests written to match the behavior rather than the spec.
+
 ## ADR-0021: Video streaming is a first-class sidecar with adapter ports
 
 - **Status:** Accepted

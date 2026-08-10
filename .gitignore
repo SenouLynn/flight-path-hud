@@ -24,3 +24,4 @@ apps/esp32/build/
 *.njsproj
 *.sln
 *.sw?
+apps/mavlink-bridge/recordings/

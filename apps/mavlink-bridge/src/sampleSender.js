@@ -2,6 +2,8 @@ import dgram from 'node:dgram'
 
 const UDP_HOST = process.env.MAVLINK_BRIDGE_UDP_HOST ?? '127.0.0.1'
 const UDP_PORT = Number.parseInt(process.env.MAVLINK_BRIDGE_UDP_PORT ?? '14550', 10)
+// Fixed source port, used as a single-instance lock (see socket.bind below).
+const LOCK_PORT = Number.parseInt(process.env.MAVLINK_BRIDGE_SAMPLE_PORT ?? '14549', 10)
 
 const socket = dgram.createSocket('udp4')
 
@@ -39,7 +41,7 @@ function send(messageName, payload) {
   socket.send(body, UDP_PORT, UDP_HOST)
 }
 
-const timer = setInterval(() => {
+function sendTick() {
   const now = Date.now()
   const t = now / 1000
   const turnPhase = t * TURN_FREQ_RAD_PER_SEC
@@ -111,12 +113,34 @@ const timer = setInterval(() => {
       velCms: groundSpeedMps * 100,
     },
   })
-}, 150)
+}
 
-console.log(`[mavlink-bridge sample] sending UDP envelopes to ${UDP_HOST}:${UDP_PORT}`)
+let timer = null
+
+// Binding a fixed source port doubles as a single-instance lock. Two senders both
+// claim sysId 1, so the client merges them into one aircraft flying two tracks at
+// once — a sawtooth that looks like a rendering bug. Fail loudly instead.
+socket.on('error', (err) => {
+  if (err.code === 'EADDRINUSE') {
+    console.error(`[mavlink-bridge sample] a sample sender is already running (lock port ${LOCK_PORT} is taken).`)
+    console.error('[mavlink-bridge sample] Two senders would merge into one contradictory vehicle. Refusing to start.')
+    console.error('[mavlink-bridge sample] Stop the other one first:  pkill -f sampleSender.js')
+  } else {
+    console.error(`[mavlink-bridge sample] socket error: ${err.message}`)
+  }
+
+  process.exit(1)
+})
+
+socket.bind(LOCK_PORT, () => {
+  console.log(`[mavlink-bridge sample] sending UDP envelopes to ${UDP_HOST}:${UDP_PORT} (from :${LOCK_PORT})`)
+  timer = setInterval(sendTick, 150)
+})
 
 process.on('SIGINT', () => {
-  clearInterval(timer)
+  if (timer !== null) {
+    clearInterval(timer)
+  }
   socket.close()
   process.exit(0)
 })

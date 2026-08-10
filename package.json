@@ -6,6 +6,7 @@
     "apps/mavlink-bridge"
   ],
   "scripts": {
+    "dev:all": "npm run dev:web & npm run start:bridge & npm run sample:bridge & npm run sample:bridge",
     "dev:web": "npm run dev --workspace @flight-path-hud/web",
     "build:web": "npm run build --workspace @flight-path-hud/web",
     "lint:web": "npm run lint --workspace @flight-path-hud/web",
@@ -13,6 +14,8 @@
     "start:bridge": "npm run start --workspace @flight-path-hud/mavlink-bridge",
     "sample:bridge": "npm run sample:udp --workspace @flight-path-hud/mavlink-bridge",
     "test:bridge": "npm run test --workspace @flight-path-hud/mavlink-bridge",
+    "record:bridge": "npm run record --workspace @flight-path-hud/mavlink-bridge",
+    "replay:bridge": "npm run replay --workspace @flight-path-hud/mavlink-bridge",
     "test:esp32": "make -C apps/esp32 test",
     "preview:esp32": "make -C apps/esp32 run",
     "bootstrap:desktop": "git clone https://github.com/tmikov/imgui-react-runtime.git apps/desktop/runtime"

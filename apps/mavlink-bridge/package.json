@@ -6,6 +6,8 @@
   "scripts": {
     "start": "node src/index.js",
     "sample:udp": "node src/sampleSender.js",
+    "record": "MAVLINK_BRIDGE_RECORD_FILE=${MAVLINK_BRIDGE_RECORD_FILE:-recordings/session.jsonl} node src/index.js",
+    "replay": "MAVLINK_BRIDGE_REPLAY_FILE=${MAVLINK_BRIDGE_REPLAY_FILE:-recordings/session.jsonl} node src/index.js",
     "test": "node --test src/*.test.js"
   },
   "dependencies": {

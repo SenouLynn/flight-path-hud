@@ -1,6 +1,8 @@
-import dgram from 'node:dgram'
 import { WebSocketServer } from 'ws'
-import { parseIncomingDatagram } from './normalize.js'
+import { createBridgeCore } from './bridgeCore.js'
+import { createJsonlRecorder } from './recording.js'
+import { createReplayIngress } from './replayIngress.js'
+import { createUdpIngress } from './udpIngress.js'
 
 const UDP_HOST = process.env.MAVLINK_BRIDGE_UDP_HOST ?? '0.0.0.0'
 const UDP_PORT = Number.parseInt(process.env.MAVLINK_BRIDGE_UDP_PORT ?? '14550', 10)
@@ -9,120 +11,73 @@ const WS_PATH = process.env.MAVLINK_BRIDGE_WS_PATH ?? '/telemetry'
 // Drop a system from the roster after this long without a packet (~10 missed 1Hz heartbeats).
 const SYSTEM_TTL_MS = Number.parseInt(process.env.MAVLINK_BRIDGE_SYSTEM_TTL_MS ?? '10000', 10)
 
-const udpSocket = dgram.createSocket('udp4')
+const RECORD_FILE = process.env.MAVLINK_BRIDGE_RECORD_FILE ?? null
+const REPLAY_FILE = process.env.MAVLINK_BRIDGE_REPLAY_FILE ?? null
+const REPLAY_SPEED = Number.parseFloat(process.env.MAVLINK_BRIDGE_REPLAY_SPEED ?? '1')
+const REPLAY_LOOP = process.env.MAVLINK_BRIDGE_REPLAY_LOOP === '1'
+
 const wsServer = new WebSocketServer({ port: WS_PORT, path: WS_PATH })
+const core = createBridgeCore({ systemTtlMs: SYSTEM_TTL_MS })
 
-let packetCount = 0
-let decodeErrorCount = 0
-let droppedPacketCount = 0
-let packetsSinceTick = 0
-let packetRateHz = 0
-let messageRates = []
+// Ingress is chosen here and nowhere else: the core and the publish path are
+// identical whether frames arrive from a socket or a recording.
+const ingress = REPLAY_FILE === null
+  ? createUdpIngress({ host: UDP_HOST, port: UDP_PORT })
+  : createReplayIngress(REPLAY_FILE, { speed: REPLAY_SPEED, loop: REPLAY_LOOP })
 
-const messageCounts = new Map()
-const systems = new Map()
+const recorder = RECORD_FILE === null ? null : createJsonlRecorder(RECORD_FILE)
 
-setInterval(() => {
-  packetRateHz = packetsSinceTick
-  packetsSinceTick = 0
-
-  messageRates = [...messageCounts.entries()]
-    .map(([messageName, rateHz]) => ({ messageName, rateHz }))
-    .sort((left, right) => right.rateHz - left.rateHz || left.messageName.localeCompare(right.messageName))
-
-  messageCounts.clear()
-
-  const staleBeforeMs = Date.now() - SYSTEM_TTL_MS
-  systems.forEach((system, key) => {
-    if (system.lastSeenTimestampMs < staleBeforeMs) {
-      systems.delete(key)
-    }
-  })
-}, 1000)
-
-function systemKey(sysId, compId) {
-  return `${sysId}:${compId}`
-}
-
-function observeSystem(envelope) {
-  systems.set(systemKey(envelope.sysId, envelope.compId), {
-    sysId: envelope.sysId,
-    compId: envelope.compId,
-    // Bridge-local clock: a JSON sender's recvTimestampMs is self-reported and
-    // would make TTL eviction hostage to its clock skew.
-    lastSeenTimestampMs: Date.now(),
-  })
-}
-
-function buildSystemsSnapshot() {
-  return [...systems.values()].sort((left, right) => {
-    if (left.sysId !== right.sysId) {
-      return left.sysId - right.sysId
-    }
-
-    return left.compId - right.compId
-  })
-}
-
-function broadcastEnvelope(envelope) {
-  const frame = JSON.stringify({
-    ...envelope,
-    health: {
-      packetRateHz,
-      decodeErrorCount,
-      droppedPacketCount,
-      messageRates,
-      systems: buildSystemsSnapshot(),
-    },
-  })
+function publish(frame) {
+  const payload = JSON.stringify(frame)
 
   wsServer.clients.forEach((client) => {
     if (client.readyState === client.OPEN) {
-      client.send(frame)
+      client.send(payload)
     }
   })
 }
 
-udpSocket.on('message', (msg) => {
-  const result = parseIncomingDatagram(msg)
+const tickTimer = setInterval(() => {
+  core.tick()
+}, 1000)
 
-  if (result.decodeErrors > 0) {
-    decodeErrorCount += result.decodeErrors
-    droppedPacketCount += result.decodeErrors
-  }
-
-  if (result.envelopes.length === 0) {
-    return
-  }
-
-  result.envelopes.forEach((envelope) => {
-    packetCount += 1
-    packetsSinceTick += 1
-    messageCounts.set(envelope.messageName, (messageCounts.get(envelope.messageName) ?? 0) + 1)
-    observeSystem(envelope)
-
-    // Consumers validate sequence as a uint8, so the synthesised fallback has to wrap like the wire field.
-    const sequence = envelope.sequence > 0 ? envelope.sequence : packetCount % 256
-
-    broadcastEnvelope({
-      ...envelope,
-      sequence,
-    })
+function reportSourceConflicts() {
+  core.takeSourceConflicts().forEach(({ system, sources }) => {
+    console.warn(`[mavlink-bridge] WARNING: system ${system} is transmitting from ${sources.length} sources: ${sources.join(', ')}`)
+    console.warn('[mavlink-bridge] They merge into one aircraft with contradictory telemetry (expect a sawtooth track).')
+    console.warn('[mavlink-bridge] If these are duplicate senders, stop the extras:  pkill -f sampleSender.js')
   })
-})
+}
 
-udpSocket.on('error', (err) => {
-  console.error(`[mavlink-bridge] UDP error: ${err.message}`)
+const stopIngress = ingress.start((datagram, meta) => {
+  recorder?.record(datagram)
+
+  // Deliberately not forwarding the replay adapter's recorded timestamp: the TTL
+  // sweep runs on the wall clock, so recorded times would age every system out
+  // instantly. Determinism is exercised at the core level in the contract test.
+  core.ingestDatagram(datagram, undefined, meta?.source).forEach(publish)
+  reportSourceConflicts()
 })
 
 wsServer.on('listening', () => {
   console.log(`[mavlink-bridge] websocket listening at ws://localhost:${WS_PORT}${WS_PATH}`)
+  console.log(`[mavlink-bridge] ingress: ${ingress.describe()}`)
+  if (recorder !== null) {
+    console.log(`[mavlink-bridge] recording to ${RECORD_FILE}`)
+  }
 })
 
 wsServer.on('connection', () => {
-  console.log(`[mavlink-bridge] websocket client connected (${wsServer.clients.size} clients, ${systems.size} systems seen)`)
+  console.log(`[mavlink-bridge] websocket client connected (${wsServer.clients.size} clients, ${core.systemCount()} systems seen)`)
 })
 
-udpSocket.bind(UDP_PORT, UDP_HOST, () => {
-  console.log(`[mavlink-bridge] udp listening on ${UDP_HOST}:${UDP_PORT}`)
-})
+async function shutdown() {
+  clearInterval(tickTimer)
+  stopIngress()
+  await recorder?.close()
+  wsServer.close()
+  process.exit(0)
+}
+
+process.on('SIGINT', shutdown)
+process.on('SIGTERM', shutdown)

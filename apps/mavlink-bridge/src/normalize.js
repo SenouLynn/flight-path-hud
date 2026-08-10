@@ -55,7 +55,7 @@ function maybeObject(value) {
   return value !== null && typeof value === 'object' ? value : null
 }
 
-function normalizeEnvelopeCandidate(candidate) {
+function normalizeEnvelopeCandidate(candidate, nowMs) {
   const envelopeCandidate = maybeObject(candidate)
   if (envelopeCandidate === null) {
     return null
@@ -78,7 +78,7 @@ function normalizeEnvelopeCandidate(candidate) {
 
   const recvTimestampMs = isFiniteNumber(envelopeCandidate.recvTimestampMs)
     ? envelopeCandidate.recvTimestampMs
-    : Date.now()
+    : nowMs
 
   return {
     recvTimestampMs,
@@ -90,7 +90,7 @@ function normalizeEnvelopeCandidate(candidate) {
   }
 }
 
-function tryParseJsonEnvelope(rawBuffer) {
+function tryParseJsonEnvelope(rawBuffer, nowMs) {
   let parsed
 
   try {
@@ -99,7 +99,7 @@ function tryParseJsonEnvelope(rawBuffer) {
     return null
   }
 
-  return normalizeEnvelopeCandidate(parsed)
+  return normalizeEnvelopeCandidate(parsed, nowMs)
 }
 
 function readFloatLE(payload, offset) {
@@ -233,7 +233,7 @@ export function computeFrameCrc(buffer, startOffset, endOffset, crcExtra) {
   return crcAccumulate(crcExtra, crc)
 }
 
-function parseMavlinkFrames(rawBuffer) {
+function parseMavlinkFrames(rawBuffer, nowMs) {
   const envelopes = []
   let decodeErrors = 0
   let sawFramePrefix = false
@@ -301,7 +301,7 @@ function parseMavlinkFrames(rawBuffer) {
     }
 
     const frame = {
-      recvTimestampMs: Date.now(),
+      recvTimestampMs: nowMs,
       sequence: rawBuffer[sequenceOffset] ?? 0,
       sysId: clampUint8(rawBuffer[sysIdOffset], 1),
       compId: clampUint8(rawBuffer[compIdOffset], 1),
@@ -324,11 +324,15 @@ function parseMavlinkFrames(rawBuffer) {
   return { envelopes, decodeErrors }
 }
 
-export function parseIncomingDatagram(rawBuffer) {
-  const jsonEnvelope = tryParseJsonEnvelope(rawBuffer)
+/**
+ * `nowMs` is injected so a replayed recording decodes to byte-identical envelopes
+ * rather than picking up the wall clock of the replay run.
+ */
+export function parseIncomingDatagram(rawBuffer, nowMs = Date.now()) {
+  const jsonEnvelope = tryParseJsonEnvelope(rawBuffer, nowMs)
   if (jsonEnvelope !== null) {
     return { envelopes: [jsonEnvelope], decodeErrors: 0 }
   }
 
-  return parseMavlinkFrames(rawBuffer)
+  return parseMavlinkFrames(rawBuffer, nowMs)
 }

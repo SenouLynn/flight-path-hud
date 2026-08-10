@@ -23,6 +23,26 @@ tagged release exists.
 ## [Unreleased]
 
 ### Added
+- **Record and replay for the MAVLink bridge** (ADR-0022). The bridge is now a
+  transport-agnostic [core](apps/mavlink-bridge/src/bridgeCore.js) plus swappable adapters:
+  [UDP](apps/mavlink-bridge/src/udpIngress.js) and
+  [replay](apps/mavlink-bridge/src/replayIngress.js) ingress share one
+  `start(onDatagram) => stop` shape, with a JSONL `RecordingPort` in
+  [recording.js](apps/mavlink-bridge/src/recording.js). Recordings hold raw wire bytes, so a
+  replay re-runs the decoder. `npm run record:bridge` captures a session and
+  `npm run replay:bridge` reproduces it with no vehicle, sender, or UDP socket attached — a
+  contract test asserts the replayed envelope stream matches the live one exactly.
+- **Duplicate-transmitter detection.** The bridge warns when one `sysId:compId` arrives from
+  more than one source endpoint, and the sample sender now binds a fixed source port as a
+  single-instance lock and refuses to start twice. Two senders claiming one vehicle merge
+  into a single aircraft with contradictory telemetry, which presents as a sawtooth track
+  rather than as an obvious configuration fault.
+- **MAVLink frame checksums.** Binary frames are validated with the X.25 CRC and per-message
+  `CRC_EXTRA`; a failed checksum resyncs one byte at a time rather than trusting the length
+  field of a frame that may not be real. The CRC primitive is pinned to the published
+  CRC-16/MCRF4XX check vector.
+- Stale systems are evicted from the bridge roster after
+  `MAVLINK_BRIDGE_SYSTEM_TTL_MS` (default 10s) so vehicles that go quiet leave the selector.
 - [ESP32 firmware project](apps/esp32) with a PlatformIO `esp32dev` target and a portable C++
   HUD core. The same heading resolver and primary-flight-display scene composition compile on
   the host via `npm run test:esp32`; `npm run preview:esp32` writes an SVG frame for local visual
@@ -129,6 +149,28 @@ tagged release exists.
   as the drawn path lengthens; the centerline fades from near to far.
 
 ### Fixed
+- **External stream froze after ~8 seconds.** The bridge forwarded an unbounded `sequence`,
+  but the browser validates it as a uint8, so once the sample sender's counter passed 255
+  every envelope was rejected as malformed. Sequence now wraps at the bridge boundary, as the
+  wire field does.
+- **VFR_HUD decoded from the wrong payload offsets.** MAVLink orders payload fields by size
+  rather than by XML declaration, so heading was read from the low bytes of `alt` and climb
+  reinterpreted heading+throttle as a float. The accompanying test had been written to match
+  the broken layout, so it passed; both are corrected.
+- **Selecting a system in the GCS view reconnect-looped the WebSocket.** The filter object was
+  rebuilt every render and fed a `useMemo` that `useTelemetryFeed` keys its effect on, so each
+  health tick tore down the socket. The filter is now read through a stable getter, so changing
+  vehicles filters the live stream instead of rebuilding it.
+- **Partial messages no longer clobber each other.** Samples merge per source system, so a
+  `VFR_HUD` frame can't blank the attitude and two vehicles can't fuse into one aircraft.
+  Sanitizing writes absent fields as explicit `undefined`, so the merge skips those rather than
+  erasing a known-good value (e.g. a `GLOBAL_POSITION_INT` without lat/lon wiping the last fix).
+- **Stream health reported a running packet count as a rate**, producing a sawtooth readout;
+  the rate is now sampled per tick.
+- **Sample sender ignored heading**, emitting velocity as due-north with a zero east component,
+  so the GPS track ran straight regardless of the turn. Ground speed is now projected onto the
+  heading, the sender emits absolute lat/lon, and bank is derived from the turn rate so the
+  profile stays coordinated.
 - Predictive trajectory vertical axis was inverted (SVG y-down vs the model's y-up), so a
   climb pointed the marker down and a descent up. Corrected the projection sign in
   [HudPredictiveTrajectory.tsx](apps/web/src/components/HudPredictiveTrajectory.tsx).
