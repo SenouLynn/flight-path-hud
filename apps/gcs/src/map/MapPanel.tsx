@@ -1,19 +1,23 @@
 /**
- * THE ONLY FILE THAT IMPORTS LEAFLET.
+ * THE ONLY FILE THAT IMPORTS THE MAP RENDERER.
  *
- * Leaflet is a stand-in renderer. Everything it needs arrives as plain data —
- * vehicle state, an array of lat/lon points, a tile config — so replacing it
- * (MapLibre, a canvas renderer, whatever a Pi build wants) means rewriting this
- * component and nothing else. No Leaflet type may appear in any prop.
+ * Everything it needs arrives as plain data — vehicle state, an array of lat/lon
+ * points, a tile config — so replacing the renderer means rewriting this component
+ * and nothing else. No MapLibre type may appear in any prop.
  *
- * The adapter is imperative on purpose: Leaflet owns its own DOM and mutates
- * layers in place, so React renders an empty container once and layer updates
- * happen in effects against refs.
+ * Imperative on purpose: MapLibre owns a WebGL canvas and mutates sources in
+ * place, so React renders an empty container once and updates happen in effects
+ * against refs.
+ *
+ * COORDINATE ORDER: MapLibre is [lng, lat] — the reverse of Leaflet and of how
+ * the rest of this codebase names things. Every conversion goes through
+ * `toLngLat` so the flip happens in exactly one place.
  */
 
-import L from 'leaflet'
-import 'leaflet/dist/leaflet.css'
-import { useEffect, useRef } from 'react'
+import maplibregl from 'maplibre-gl'
+import 'maplibre-gl/dist/maplibre-gl.css'
+import { forwardRef, useEffect, useImperativeHandle, useRef } from 'react'
+import type { Feature, LineString } from 'geojson'
 import type { TrackPoint, VehicleState } from '@flight-path-hud/gcs-core'
 import type { TileSource } from './tileSource'
 
@@ -23,73 +27,129 @@ interface MapPanelProps {
   tileSource: TileSource
   /** Keep the map centred on the vehicle as it moves. */
   follow?: boolean
+  /** Rotate the map so the vehicle's heading points up, rather than north. */
+  trackUp?: boolean
+  /**
+   * Camera tilt. Works on the raster basemaps as a perspective view; real 3D
+   * terrain additionally needs a raster-DEM source (not wired up).
+   */
+  pitchDeg?: number
   initialZoom?: number
 }
 
-const TRACK_STYLE = { color: '#74d7ff', weight: 2.5, opacity: 0.9 }
-
-/**
- * Built once. Heading is applied by writing a transform onto the live element,
- * not by rebuilding the icon — `setIcon` replaces the marker's DOM, and doing
- * that on every telemetry frame is both costly and visibly flickery.
- */
-function createVehicleIcon(): L.DivIcon {
-  return L.divIcon({
-    className: 'vehicle-marker',
-    iconSize: [28, 28],
-    iconAnchor: [14, 14],
-    html: `<svg width="28" height="28" viewBox="0 0 28 28">
-      <polygon points="14,3 21,24 14,19 7,24" fill="#ffb454" stroke="#1b1b1b" stroke-width="1.5" stroke-linejoin="round" />
-    </svg>`,
-  })
+/** Imperative surface for chrome that lives outside this component. */
+export interface MapHandle {
+  resetNorth: () => void
 }
 
-function applyHeading(marker: L.Marker, headingDeg: number | null): void {
-  const svg = marker.getElement()?.firstElementChild as SVGElement | undefined
-  if (svg === undefined) {
-    return
+const BASEMAP_SOURCE = 'basemap'
+const TRACK_SOURCE = 'track'
+const TRACK_LAYER = 'track-line'
+
+/** The single point where lat/lon becomes MapLibre's lng/lat. */
+function toLngLat(latDeg: number, lonDeg: number): [number, number] {
+  return [lonDeg, latDeg]
+}
+
+function buildStyle(tileSource: TileSource): maplibregl.StyleSpecification {
+  return {
+    version: 8,
+    sources: {
+      [BASEMAP_SOURCE]: {
+        type: 'raster',
+        tiles: tileSource.tiles,
+        tileSize: tileSource.tileSize,
+        maxzoom: tileSource.maxZoom,
+        attribution: tileSource.attribution,
+      },
+    },
+    layers: [
+      { id: 'background', type: 'background', paint: { 'background-color': '#0a0e14' } },
+      { id: 'basemap', type: 'raster', source: BASEMAP_SOURCE },
+    ],
   }
-
-  svg.style.transform = `rotate(${headingDeg ?? 0}deg)`
-  svg.style.opacity = headingDeg === null ? '0.45' : '1'
 }
 
-export function MapPanel({ vehicle, track, tileSource, follow = true, initialZoom = 16 }: MapPanelProps) {
+function emptyTrack(): Feature<LineString> {
+  return { type: 'Feature', properties: {}, geometry: { type: 'LineString', coordinates: [] } }
+}
+
+/** Nose-up triangle; heading is applied as a marker rotation, not a redraw. */
+function createMarkerElement(): HTMLElement {
+  const element = document.createElement('div')
+  element.className = 'vehicle-marker'
+  element.innerHTML = `<svg width="28" height="28" viewBox="0 0 28 28">
+    <polygon points="14,3 21,24 14,19 7,24" fill="#ffb454" stroke="#1b1b1b" stroke-width="1.5" stroke-linejoin="round" />
+  </svg>`
+  return element
+}
+
+export const MapPanel = forwardRef<MapHandle, MapPanelProps>(function MapPanel(
+  { vehicle, track, tileSource, follow = true, trackUp = false, pitchDeg = 0, initialZoom = 16 },
+  handleRef,
+) {
   const containerRef = useRef<HTMLDivElement | null>(null)
-  const mapRef = useRef<L.Map | null>(null)
-  const markerRef = useRef<L.Marker | null>(null)
-  const trackRef = useRef<L.Polyline | null>(null)
+  const mapRef = useRef<maplibregl.Map | null>(null)
+  const markerRef = useRef<maplibregl.Marker | null>(null)
+  const loadedRef = useRef(false)
   const hasCentredRef = useRef(false)
   // Read by the ResizeObserver, which outlives any single render.
   const followRef = useRef(follow)
-  const positionRef = useRef<L.LatLngExpression | null>(null)
+  const positionRef = useRef<[number, number] | null>(null)
 
   followRef.current = follow
 
-  // Create the map once. Leaflet manages this subtree; React must not touch it.
+  // Rotation belongs to the map, but the button that resets it lives in the
+  // chrome outside. Exposing one method keeps MapLibre from leaking upward.
+  useImperativeHandle(handleRef, () => ({
+    resetNorth: () => {
+      mapRef.current?.easeTo({ bearing: 0, pitch: 0, duration: 300 })
+    },
+  }), [])
+
+  // Create the map once. MapLibre owns this subtree; React must not touch it.
   useEffect(() => {
     if (containerRef.current === null) {
       return
     }
 
-    const map = L.map(containerRef.current, { zoomControl: true, attributionControl: true })
-    map.setView([0, 0], 2)
+    const map = new maplibregl.Map({
+      container: containerRef.current,
+      style: buildStyle(tileSource),
+      center: [0, 0],
+      zoom: 1,
+      attributionControl: { compact: true },
+      // Rotation is the reason we are on MapLibre; make sure every input can do it.
+      dragRotate: true,
+      pitchWithRotate: true,
+    })
     mapRef.current = map
-    trackRef.current = L.polyline([], TRACK_STYLE).addTo(map)
 
-    // Leaflet caches its container size and only re-reads it on window resize.
-    // Toggling a column changes our width without one, which would leave the map
-    // rendering into stale bounds (grey gutters, wrong hit-testing).
-    //
-    // `pan: false` matters: by default invalidateSize pans to preserve the centre,
-    // so a resize and the follow effect end up as two owners of the centre,
-    // fighting. The resize handler only reports the new size; re-centring is the
-    // follow effect's job, replayed here from the last known position.
+    // Zoom + compass. The compass rotates by dragging and resets north on click,
+    // which is the control Leaflet could not offer at all.
+    map.addControl(new maplibregl.NavigationControl({ visualizePitch: true, showCompass: true }), 'top-left')
+
+    map.on('load', () => {
+      loadedRef.current = true
+      map.addSource(TRACK_SOURCE, { type: 'geojson', data: emptyTrack() })
+      map.addLayer({
+        id: TRACK_LAYER,
+        type: 'line',
+        source: TRACK_SOURCE,
+        layout: { 'line-cap': 'round', 'line-join': 'round' },
+        paint: { 'line-color': '#74d7ff', 'line-width': 2.5, 'line-opacity': 0.9 },
+      })
+    })
+
+    // MapLibre reads its container size on creation and on window resize only.
+    // Toggling a column changes our width without one.
     const observer = new ResizeObserver(() => {
-      map.invalidateSize({ pan: false, animate: false })
+      map.resize()
 
+      // Re-centring is the follow effect's job; replay it here so a resize and
+      // follow never end up as two owners of the centre.
       if (followRef.current && positionRef.current !== null) {
-        map.panTo(positionRef.current, { animate: false })
+        map.jumpTo({ center: positionRef.current })
       }
     })
     observer.observe(containerRef.current)
@@ -99,34 +159,48 @@ export function MapPanel({ vehicle, track, tileSource, follow = true, initialZoo
       map.remove()
       mapRef.current = null
       markerRef.current = null
-      trackRef.current = null
+      loadedRef.current = false
       hasCentredRef.current = false
     }
+    // Style is swapped in its own effect; this must run exactly once.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
-  // Swap the basemap whenever the tile source changes.
+  // Swap the basemap. setStyle replaces sources and layers, so the track is re-added.
   useEffect(() => {
     const map = mapRef.current
-    if (map === null) {
+    if (map === null || !loadedRef.current) {
       return
     }
 
-    // Layers cap out at different zooms (relief at 16, topo at 17, CARTO at 20).
-    // Staying zoomed past the new layer's max leaves the map blank.
-    if (map.getZoom() > tileSource.maxZoom) {
-      map.setZoom(tileSource.maxZoom)
-    }
+    map.setStyle(buildStyle(tileSource))
+    map.once('styledata', () => {
+      if (map.getSource(TRACK_SOURCE) !== undefined) {
+        return
+      }
 
-    const layer = L.tileLayer(tileSource.urlTemplate, {
-      attribution: tileSource.attribution,
-      maxZoom: tileSource.maxZoom,
-      subdomains: tileSource.subdomains ?? 'abc',
-    }).addTo(map)
-
-    return () => {
-      layer.remove()
-    }
+      map.addSource(TRACK_SOURCE, { type: 'geojson', data: emptyTrack() })
+      map.addLayer({
+        id: TRACK_LAYER,
+        type: 'line',
+        source: TRACK_SOURCE,
+        layout: { 'line-cap': 'round', 'line-join': 'round' },
+        paint: { 'line-color': '#74d7ff', 'line-width': 2.5, 'line-opacity': 0.9 },
+      })
+    })
   }, [tileSource])
+
+  // Camera tilt.
+  useEffect(() => {
+    const map = mapRef.current
+    if (map === null || Math.abs(map.getPitch() - pitchDeg) < 0.5) {
+      return
+    }
+
+    // Animated here, unlike the per-frame follow: this is a one-off the operator
+    // asked for, so it should read as a move rather than a jump.
+    map.easeTo({ pitch: pitchDeg, duration: 350 })
+  }, [pitchDeg])
 
   // Vehicle marker: position and heading.
   useEffect(() => {
@@ -135,38 +209,63 @@ export function MapPanel({ vehicle, track, tileSource, follow = true, initialZoo
       return
     }
 
-    const position: L.LatLngExpression = [vehicle.latDeg, vehicle.lonDeg]
+    const position = toLngLat(vehicle.latDeg, vehicle.lonDeg)
     positionRef.current = position
 
     if (markerRef.current === null) {
-      markerRef.current = L.marker(position, { icon: createVehicleIcon() }).addTo(map)
+      markerRef.current = new maplibregl.Marker({ element: createMarkerElement() })
+        .setLngLat(position)
+        .addTo(map)
     } else {
-      markerRef.current.setLatLng(position)
+      markerRef.current.setLngLat(position)
     }
 
-    applyHeading(markerRef.current, vehicle.headingDeg)
+    // Rotate with the map so the nose points at the true heading even when the
+    // view is rotated away from north.
+    markerRef.current.setRotationAlignment('map')
+    markerRef.current.setRotation(vehicle.headingDeg ?? 0)
+    markerRef.current.getElement().style.opacity = vehicle.headingDeg === null ? '0.45' : '1'
 
-    // Zoom in properly on the first real fix, then just follow.
     if (!hasCentredRef.current) {
-      // getMaxZoom() reflects the active layer, so this can't overshoot it.
-      map.setView(position, Math.min(initialZoom, map.getMaxZoom()))
+      map.jumpTo({ center: position, zoom: Math.min(initialZoom, tileSource.maxZoom) })
       hasCentredRef.current = true
     } else if (follow) {
       /*
-       * No animation. Frames arrive ~33x a second, so an animated pan is torn
-       * down and restarted long before it finishes — the map perpetually starts
-       * moving and never arrives, which reads as a stutter that fights the
-       * centring. Stepping straight to each position is smooth at this rate
-       * because the steps are sub-metre.
+       * jumpTo, not easeTo. Frames arrive ~33x a second, so an animated move is
+       * torn down and restarted long before it finishes — the map perpetually
+       * starts moving and never arrives. Stepping straight there is smooth at
+       * this rate because the steps are sub-metre.
+       *
+       * Bearing rides along in the same call: two separate moves per frame would
+       * mean two renders and a visible shear between the pan and the rotation.
        */
-      map.panTo(position, { animate: false })
+      map.jumpTo(
+        trackUp && vehicle.headingDeg !== null
+          // Bearing is the compass direction that is "up", so setting it to the
+          // heading puts the nose at the top of the screen.
+          ? { center: position, bearing: vehicle.headingDeg }
+          : { center: position },
+      )
     }
-  }, [vehicle, follow, initialZoom])
+  }, [vehicle, follow, trackUp, initialZoom, tileSource.maxZoom])
 
   // Breadcrumb trail.
   useEffect(() => {
-    trackRef.current?.setLatLngs(track.map((point) => [point.latDeg, point.lonDeg] as L.LatLngExpression))
+    const map = mapRef.current
+    const source = map?.getSource(TRACK_SOURCE) as maplibregl.GeoJSONSource | undefined
+    if (source === undefined) {
+      return
+    }
+
+    source.setData({
+      type: 'Feature',
+      properties: {},
+      geometry: {
+        type: 'LineString',
+        coordinates: track.map((point) => toLngLat(point.latDeg, point.lonDeg)),
+      },
+    })
   }, [track])
 
   return <div ref={containerRef} className="map-panel" />
-}
+})

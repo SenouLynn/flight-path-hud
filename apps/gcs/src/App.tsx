@@ -1,9 +1,9 @@
 import { trackLengthM } from '@flight-path-hud/gcs-core'
-import { useMemo, useState } from 'react'
+import { useMemo, useRef, useState } from 'react'
 import { HudPanel } from './hud/HudPanel'
 import { LogsPanel } from './log/LogsPanel'
-import { MapControls } from './map/MapControls'
-import { MapPanel } from './map/MapPanel'
+import { MapControls, TILTED_PITCH_DEG } from './map/MapControls'
+import { MapPanel, type MapHandle } from './map/MapPanel'
 import { BASEMAPS, DEFAULT_BASEMAP, findBasemap } from './map/tileSource'
 import { useVehicleFeed } from './useVehicleFeed'
 import { VIEW_OPTIONS, ViewsMenu, type ViewId } from './ViewsMenu'
@@ -37,6 +37,9 @@ function App() {
   const [selectedSystem, setSelectedSystem] = useState<string | null>(null)
   const [follow, setFollow] = useState(true)
   const [basemapId, setBasemapId] = useState(DEFAULT_BASEMAP.id)
+  const [trackUp, setTrackUp] = useState(false)
+  const [tilted, setTilted] = useState(false)
+  const mapHandleRef = useRef<MapHandle | null>(null)
   const [visibleViews, setVisibleViews] = useState<Record<ViewId, boolean>>({
     instruments: true,
     map: true,
@@ -133,13 +136,32 @@ function App() {
             {option.id === 'instruments' ? <HudPanel sample={feed.sample} track={feed.enuTrack} /> : null}
             {option.id === 'map' ? (
               <>
-                <MapPanel vehicle={vehicle} track={feed.track} tileSource={tileSource} follow={follow} />
+                <MapPanel
+                  ref={mapHandleRef}
+                  vehicle={vehicle}
+                  track={feed.track}
+                  tileSource={tileSource}
+                  follow={follow}
+                  trackUp={trackUp}
+                  pitchDeg={tilted ? TILTED_PITCH_DEG : 0}
+                />
                 <MapControls
                   basemaps={BASEMAPS}
                   basemapId={basemapId}
                   onBasemapChange={setBasemapId}
                   follow={follow}
                   onFollowChange={setFollow}
+                  trackUp={trackUp}
+                  onTrackUpChange={setTrackUp}
+                  tilted={tilted}
+                  onTiltedChange={(next) => {
+                    setTilted(next)
+                  }}
+                  onResetNorth={() => {
+                    setTrackUp(false)
+                    setTilted(false)
+                    mapHandleRef.current?.resetNorth()
+                  }}
                   maxZoom={tileSource.maxZoom}
                 />
               </>

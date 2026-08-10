@@ -2,26 +2,35 @@
  * Basemap catalogue and tile configuration.
  *
  * This is the seam that keeps the Pi target's "no cloud dependency" rule
- * satisfiable by configuration rather than a rewrite: point `urlTemplate` at a
- * locally served tile tree and nothing else changes.
+ * satisfiable by configuration rather than a rewrite: point `tiles` at a locally
+ * served tile tree and nothing else changes.
  *
- * Plain data, no Leaflet types — the renderer translates it, so the picker
- * survives swapping Leaflet out.
+ * Plain data, no renderer types — the map adapter translates it, so swapping the
+ * renderer does not take the catalogue with it.
  */
 
 export interface TileSource {
   id: string
   label: string
-  urlTemplate: string
+  /**
+   * Fully-expanded tile URLs. One entry per subdomain: unlike Leaflet, MapLibre
+   * has no `{s}` placeholder and instead round-robins across the array.
+   */
+  tiles: string[]
   attribution: string
   maxZoom: number
-  subdomains?: string
+  tileSize: number
   /** Hint for the UI; imagery basemaps want light text drawn over them. */
   dark?: boolean
 }
 
 const OSM_ATTRIBUTION = '&copy; OpenStreetMap contributors'
 const ESRI_ATTRIBUTION = 'Tiles &copy; Esri'
+
+/** `https://{s}.host/...` with subdomains "abc" becomes three concrete URLs. */
+function expandSubdomains(template: string, subdomains: string): string[] {
+  return [...subdomains].map((subdomain) => template.replace('{s}', subdomain))
+}
 
 /**
  * All verified against a live tile fetch. Esri's REST services order the path
@@ -32,50 +41,52 @@ export const BASEMAPS: TileSource[] = [
   {
     id: 'streets',
     label: 'Streets (OSM)',
-    urlTemplate: 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
+    tiles: expandSubdomains('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', 'abc'),
     attribution: OSM_ATTRIBUTION,
     maxZoom: 19,
-    subdomains: 'abc',
+    tileSize: 256,
   },
   {
     id: 'satellite',
     label: 'Satellite',
-    urlTemplate: 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
+    tiles: ['https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}'],
     attribution: ESRI_ATTRIBUTION,
     maxZoom: 19,
+    tileSize: 256,
     dark: true,
   },
   {
     id: 'topo',
     label: 'Topographic',
-    urlTemplate: 'https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png',
+    tiles: expandSubdomains('https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png', 'abc'),
     attribution: `&copy; OpenTopoMap (CC-BY-SA), ${OSM_ATTRIBUTION}`,
     maxZoom: 17,
-    subdomains: 'abc',
+    tileSize: 256,
   },
   {
     id: 'relief',
     label: 'Terrain relief',
-    urlTemplate: 'https://server.arcgisonline.com/ArcGIS/rest/services/Elevation/World_Hillshade/MapServer/tile/{z}/{y}/{x}',
+    tiles: ['https://server.arcgisonline.com/ArcGIS/rest/services/Elevation/World_Hillshade/MapServer/tile/{z}/{y}/{x}'],
     attribution: ESRI_ATTRIBUTION,
     maxZoom: 16,
+    tileSize: 256,
   },
   {
     id: 'dark',
     label: 'Dark',
-    urlTemplate: 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}.png',
+    tiles: expandSubdomains('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}.png', 'abcd'),
     attribution: `${OSM_ATTRIBUTION}, &copy; CARTO`,
     maxZoom: 20,
-    subdomains: 'abcd',
+    tileSize: 256,
     dark: true,
   },
   {
     id: 'light',
     label: 'Light',
-    urlTemplate: 'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}.png',
+    tiles: expandSubdomains('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}.png', 'abcd'),
     attribution: `${OSM_ATTRIBUTION}, &copy; CARTO`,
     maxZoom: 20,
-    subdomains: 'abcd',
+    tileSize: 256,
   },
 ]
 
@@ -97,8 +108,9 @@ export function localTileSource(basePath = '/tiles', maxZoom = 16): TileSource {
   return {
     id: 'local',
     label: 'Local tiles',
-    urlTemplate: `${basePath}/{z}/{x}/{y}.png`,
+    tiles: [`${basePath}/{z}/{x}/{y}.png`],
     attribution: 'Local tiles',
     maxZoom,
+    tileSize: 256,
   }
 }

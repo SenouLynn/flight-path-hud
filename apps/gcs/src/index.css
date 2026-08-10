@@ -486,39 +486,48 @@ body {
   height: auto;
 }
 
-/* Leaflet's default light chrome fights the dark shell. */
-.leaflet-container {
-  background: #0a0e14;
+/* MapLibre's default light chrome fights the dark shell. */
+.maplibregl-canvas-container,
+.maplibregl-canvas {
+  outline: none;
 }
 
-/* Leaflet hard-codes 4-5px radii on its controls, past our ceiling. */
-.leaflet-bar,
-.leaflet-bar a,
-.leaflet-bar a:first-child,
-.leaflet-bar a:last-child,
-.leaflet-control-layers,
-.leaflet-popup-content-wrapper,
-.leaflet-popup-tip {
+/* MapLibre hard-codes 4px radii on its controls, past our ceiling. */
+.maplibregl-ctrl-group,
+.maplibregl-ctrl-group button:first-child,
+.maplibregl-ctrl-group button:last-child,
+.maplibregl-popup-content {
   border-radius: var(--radius) !important;
 }
 
-.leaflet-bar a {
+.maplibregl-ctrl-group {
   background: var(--panel);
-  color: var(--text);
-  border-bottom-color: var(--border);
+  box-shadow: 0 1px 6px rgba(0, 0, 0, 0.5);
 }
 
-.leaflet-bar a:hover {
+.maplibregl-ctrl-group button + button {
+  border-top: 1px solid var(--border);
+}
+
+.maplibregl-ctrl-group button .maplibregl-ctrl-icon {
+  /* The stock icons are dark glyphs meant for a light control. */
+  filter: invert(0.85);
+}
+
+.maplibregl-ctrl-group button:hover {
   background: #18202e;
-  color: var(--accent);
 }
 
-.leaflet-control-attribution {
+.maplibregl-ctrl-attrib {
   background: rgba(13, 17, 23, 0.8) !important;
+}
+
+.maplibregl-ctrl-attrib,
+.maplibregl-ctrl-attrib a {
   color: var(--muted) !important;
 }
 
-.leaflet-control-attribution a {
+.maplibregl-ctrl-attrib a {
   color: var(--accent) !important;
 }
 
