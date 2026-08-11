@@ -1,3 +1,5 @@
+import { buildMavlinkV1Frame, computeFrameCrc } from './mavlinkFrame.js'
+
 const UINT8_MAX = 255
 const MAVLINK_V1_MAGIC = 0xFE
 const MAVLINK_V2_MAGIC = 0xFD
@@ -7,7 +9,12 @@ const SUPPORTED_MESSAGE_DECODERS = {
   24: decodeGpsRawInt,
   30: decodeAttitude,
   33: decodeGlobalPositionInt,
+  42: decodeMissionCurrent,
+  44: decodeMissionCount,
+  47: decodeMissionAck,
+  73: decodeMissionItemInt,
   74: decodeVfrHud,
+  242: decodeHomePosition,
 }
 
 // Per-message CRC_EXTRA seed from the MAVLink dialect, mixed in after the frame
@@ -17,7 +24,12 @@ const MESSAGE_CRC_EXTRA = {
   24: 24,
   30: 39,
   33: 104,
+  42: 28,
+  44: 221,
+  47: 153,
+  73: 38,
   74: 20,
+  242: 104,
 }
 
 function isFiniteNumber(value) {
@@ -104,6 +116,35 @@ function tryParseJsonEnvelope(rawBuffer, nowMs) {
 
 function readFloatLE(payload, offset) {
   return payload.readFloatLE(offset)
+}
+
+/**
+ * MAVLink 2 (the default for ArduPilot and PX4) trims trailing zero bytes off a
+ * payload before transmitting it, so a perfectly valid frame routinely arrives
+ * shorter than its documented v1 length — e.g. a MISSION_ITEM_INT whose
+ * current/autocontinue are both 0 lands as 35 bytes rather than 37. Rejecting
+ * those on a bare length check silently stalls a whole mission pull.
+ *
+ * Copy the payload into a zero-filled buffer of the documented length instead:
+ * the bytes MAVLink 2 removed were zero by definition, so truncated and
+ * full-length payloads then decode identically. An empty payload is still
+ * rejected — MAVLink 2 never trims below one byte, so that is corrupt input.
+ *
+ * Only the mission/home decoders use this; the pre-existing telemetry decoders
+ * keep their established strict length guards.
+ */
+function payloadPaddedTo(payload, length) {
+  if (payload.length === 0) {
+    return null
+  }
+
+  if (payload.length >= length) {
+    return payload
+  }
+
+  const padded = Buffer.alloc(length)
+  payload.copy(padded)
+  return padded
 }
 
 function decodeHeartbeat(frame) {
@@ -195,6 +236,107 @@ function decodeVfrHud(frame) {
   }
 }
 
+function decodeMissionCount(frame) {
+  const payload = payloadPaddedTo(frame.payload, 4)
+  if (payload === null) {
+    return null
+  }
+
+  return {
+    messageName: 'MISSION_COUNT',
+    payload: {
+      timestampMs: frame.recvTimestampMs,
+      missionCount: {
+        count: payload.readUInt16LE(0),
+      },
+    },
+  }
+}
+
+function decodeMissionItemInt(frame) {
+  const payload = payloadPaddedTo(frame.payload, 37)
+  if (payload === null) {
+    return null
+  }
+
+  return {
+    messageName: 'MISSION_ITEM_INT',
+    payload: {
+      timestampMs: frame.recvTimestampMs,
+      // Wire order is size-sorted: the four floats and two ints come before the
+      // seq/command pair, which comes before the single bytes — see the CRC/offset
+      // table in this plan's Global Constraints, verified against c_library_v2.
+      missionItemInt: {
+        seq: payload.readUInt16LE(28),
+        command: payload.readUInt16LE(30),
+        frameId: payload.readUInt8(34),
+        current: payload.readUInt8(35) !== 0,
+        autocontinue: payload.readUInt8(36) !== 0,
+        param1: readFloatLE(payload, 0),
+        param2: readFloatLE(payload, 4),
+        param3: readFloatLE(payload, 8),
+        param4: readFloatLE(payload, 12),
+        latDegE7: payload.readInt32LE(16),
+        lonDegE7: payload.readInt32LE(20),
+        altM: readFloatLE(payload, 24),
+      },
+    },
+  }
+}
+
+function decodeMissionCurrent(frame) {
+  const payload = payloadPaddedTo(frame.payload, 2)
+  if (payload === null) {
+    return null
+  }
+
+  return {
+    messageName: 'MISSION_CURRENT',
+    payload: {
+      timestampMs: frame.recvTimestampMs,
+      missionCurrent: {
+        seq: payload.readUInt16LE(0),
+      },
+    },
+  }
+}
+
+function decodeMissionAck(frame) {
+  const payload = payloadPaddedTo(frame.payload, 3)
+  if (payload === null) {
+    return null
+  }
+
+  return {
+    messageName: 'MISSION_ACK',
+    payload: {
+      timestampMs: frame.recvTimestampMs,
+      missionAck: {
+        type: payload.readUInt8(2),
+      },
+    },
+  }
+}
+
+function decodeHomePosition(frame) {
+  const payload = payloadPaddedTo(frame.payload, 12)
+  if (payload === null) {
+    return null
+  }
+
+  return {
+    messageName: 'HOME_POSITION',
+    payload: {
+      timestampMs: frame.recvTimestampMs,
+      homePosition: {
+        latDegE7: payload.readInt32LE(0),
+        lonDegE7: payload.readInt32LE(4),
+        altMm: payload.readInt32LE(8),
+      },
+    },
+  }
+}
+
 function decodeSupportedFrame(frame) {
   const decoder = SUPPORTED_MESSAGE_DECODERS[frame.msgId]
   if (decoder === undefined) {
@@ -215,23 +357,7 @@ function decodeSupportedFrame(frame) {
   }
 }
 
-/** MAVLink X.25 checksum (CRC-16/MCRF4XX): reflected poly 0x1021, init 0xFFFF. */
-export function crcAccumulate(byte, crc) {
-  let tmp = byte ^ (crc & 0xFF)
-  tmp = (tmp ^ (tmp << 4)) & 0xFF
-  return ((crc >> 8) ^ (tmp << 8) ^ (tmp << 3) ^ (tmp >> 4)) & 0xFFFF
-}
-
-/** Checksum over [startOffset, endOffset) — len byte through payload — plus CRC_EXTRA. */
-export function computeFrameCrc(buffer, startOffset, endOffset, crcExtra) {
-  let crc = 0xFFFF
-
-  for (let index = startOffset; index < endOffset; index += 1) {
-    crc = crcAccumulate(buffer[index], crc)
-  }
-
-  return crcAccumulate(crcExtra, crc)
-}
+export { computeFrameCrc, crcAccumulate } from './mavlinkFrame.js'
 
 function parseMavlinkFrames(rawBuffer, nowMs) {
   const envelopes = []
@@ -335,4 +461,43 @@ export function parseIncomingDatagram(rawBuffer, nowMs = Date.now()) {
   }
 
   return parseMavlinkFrames(rawBuffer, nowMs)
+}
+
+let mockOutboundSequence = 0
+
+/**
+ * Encode a MISSION_COUNT reply — used only by the mission mock (sampleSender.js),
+ * which plays the vehicle's side of the handshake this bridge initiates. Not used
+ * by the bridge's own runtime, which only ever decodes this message.
+ */
+export function encodeMissionCount({ sysId, compId, count }) {
+  const payload = Buffer.alloc(4)
+  payload.writeUInt16LE(count, 0)
+  payload.writeUInt8(sysId, 2)
+  payload.writeUInt8(compId, 3)
+
+  mockOutboundSequence = (mockOutboundSequence + 1) % 256
+  return buildMavlinkV1Frame(44, payload, { sequence: mockOutboundSequence, sysId, compId, crcExtra: 221 })
+}
+
+/** Encode a MISSION_ITEM_INT reply. `item` matches decodeMissionItemInt's payload shape. */
+export function encodeMissionItemInt({ sysId, compId, item }) {
+  const payload = Buffer.alloc(37)
+  payload.writeFloatLE(item.param1 ?? 0, 0)
+  payload.writeFloatLE(item.param2 ?? 0, 4)
+  payload.writeFloatLE(item.param3 ?? 0, 8)
+  payload.writeFloatLE(item.param4 ?? 0, 12)
+  payload.writeInt32LE(item.latDegE7, 16)
+  payload.writeInt32LE(item.lonDegE7, 20)
+  payload.writeFloatLE(item.altM, 24)
+  payload.writeUInt16LE(item.seq, 28)
+  payload.writeUInt16LE(item.command, 30)
+  payload.writeUInt8(sysId, 32)
+  payload.writeUInt8(compId, 33)
+  payload.writeUInt8(item.frameId ?? 3, 34)
+  payload.writeUInt8(item.current ? 1 : 0, 35)
+  payload.writeUInt8(item.autocontinue ? 1 : 0, 36)
+
+  mockOutboundSequence = (mockOutboundSequence + 1) % 256
+  return buildMavlinkV1Frame(73, payload, { sequence: mockOutboundSequence, sysId, compId, crcExtra: 38 })
 }

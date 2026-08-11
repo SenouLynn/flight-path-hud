@@ -1,4 +1,6 @@
 import dgram from 'node:dgram'
+import { decodeMissionRequest } from './encode.js'
+import { encodeMissionCount, encodeMissionItemInt } from './normalize.js'
 
 const UDP_HOST = process.env.MAVLINK_BRIDGE_UDP_HOST ?? '127.0.0.1'
 const UDP_PORT = Number.parseInt(process.env.MAVLINK_BRIDGE_UDP_PORT ?? '14550', 10)
@@ -13,6 +15,43 @@ const METERS_PER_DEG_LAT = 111319.49
 const DEG_E7 = 1e7
 const ORIGIN = { latDegE7: 473977420, lonDegE7: 85455940, altMm: 500000 }
 const METERS_PER_DEG_LON = METERS_PER_DEG_LAT * Math.cos((ORIGIN.latDegE7 / DEG_E7) * Math.PI / 180)
+
+// A fixed 3-waypoint mission near ORIGIN, offset a few hundred metres each way so
+// it's visually distinct from the flight path on the map.
+const MOCK_MISSION = [
+  { seq: 0, command: 16, current: true, autocontinue: true, frameId: 3, latDegE7: ORIGIN.latDegE7 + 2000, lonDegE7: ORIGIN.lonDegE7 + 2000, altM: 80 },
+  { seq: 1, command: 16, current: false, autocontinue: true, frameId: 3, latDegE7: ORIGIN.latDegE7 + 4000, lonDegE7: ORIGIN.lonDegE7 - 1000, altM: 100 },
+  { seq: 2, command: 16, current: false, autocontinue: true, frameId: 3, latDegE7: ORIGIN.latDegE7 + 1000, lonDegE7: ORIGIN.lonDegE7 - 3000, altM: 60 },
+]
+
+const MOCK_VEHICLE_SYS_ID = 1
+const MOCK_VEHICLE_COMP_ID = 1
+
+/** Plays the vehicle's side of the mission handshake: decode what the bridge just
+ * sent, reply with a real, CRC'd response. No state kept across calls — every
+ * request gets answered from MOCK_MISSION fresh, matching how a real autopilot
+ * would answer the same request twice identically. */
+function handleMissionRequest(datagram, rinfo) {
+  const request = decodeMissionRequest(datagram)
+  if (request === null) {
+    return
+  }
+
+  if (request.messageName === 'MISSION_REQUEST_LIST') {
+    const frame = encodeMissionCount({ sysId: MOCK_VEHICLE_SYS_ID, compId: MOCK_VEHICLE_COMP_ID, count: MOCK_MISSION.length })
+    socket.send(frame, rinfo.port, rinfo.address)
+    return
+  }
+
+  if (request.messageName === 'MISSION_REQUEST_INT') {
+    const item = MOCK_MISSION[request.seq]
+    if (item === undefined) {
+      return
+    }
+    const frame = encodeMissionItemInt({ sysId: MOCK_VEHICLE_SYS_ID, compId: MOCK_VEHICLE_COMP_ID, item })
+    socket.send(frame, rinfo.port, rinfo.address)
+  }
+}
 
 // Flight profile: a gentle S-turn cruise. Amplitude/frequency are the only knobs;
 // bank is derived from the resulting turn rate below so the two stay consistent.
@@ -130,6 +169,10 @@ socket.on('error', (err) => {
   }
 
   process.exit(1)
+})
+
+socket.on('message', (datagram, rinfo) => {
+  handleMissionRequest(datagram, rinfo)
 })
 
 socket.bind(LOCK_PORT, () => {

@@ -1,7 +1,7 @@
 /**
  * The Unified HUD display panel, driven by the same fold that feeds the map.
  *
- * Instruments come from @flight-path-hud/hud-ui — the package the web harness
+ * Instruments come from @flight-path-hud/hud-ui — the package the hud harness
  * also renders — so the GCS and the validation harness can never drift. The
  * sample arrives already merged by gcs-core; nothing is resolved here beyond
  * what the instruments' own props require.
@@ -46,7 +46,7 @@ export function HudPanel({ sample, track, log }: HudPanelProps) {
     <div className="hud-overlay">
       {/*
         The heading tape is a separate instrument stacked above the unified one —
-        the fused-shell wrapper is what pairs them, matching the web harness.
+        the fused-shell wrapper is what pairs them, matching the hud harness.
       */}
       <div className="hud-primary">
         <div className="hud-fused-shell hud-fused-shell-screen">

@@ -5,6 +5,7 @@ import { createBridgeCore } from './bridgeCore.js'
 import { createJsonlRecorder, pruneRecordings } from './recording.js'
 import { createReplayIngress } from './replayIngress.js'
 import { createUdpIngress } from './udpIngress.js'
+import { createMissionRouter } from './missionRouter.js'
 
 const UDP_HOST = process.env.MAVLINK_BRIDGE_UDP_HOST ?? '0.0.0.0'
 const UDP_PORT = Number.parseInt(process.env.MAVLINK_BRIDGE_UDP_PORT ?? '14550', 10)
@@ -48,6 +49,13 @@ const core = createBridgeCore({ systemTtlMs: SYSTEM_TTL_MS })
 const ingress = REPLAY_FILE === null
   ? createUdpIngress({ host: UDP_HOST, port: UDP_PORT })
   : createReplayIngress(REPLAY_FILE, { speed: REPLAY_SPEED, loop: REPLAY_LOOP })
+
+const missionRouter = createMissionRouter({
+  send: (buffer) => ingress.send?.(buffer),
+  canSend: () => typeof ingress.send === 'function',
+})
+
+const MISSION_MESSAGE_NAMES = new Set(['MISSION_COUNT', 'MISSION_ITEM_INT', 'MISSION_CURRENT', 'MISSION_ACK'])
 
 function startRecording() {
   if (RECORD_FILE === null) {
@@ -102,7 +110,17 @@ const stopIngress = ingress.start((datagram, meta) => {
   // Deliberately not forwarding the replay adapter's recorded timestamp: the TTL
   // sweep runs on the wall clock, so recorded times would age every system out
   // instantly. Determinism is exercised at the core level in the contract test.
-  core.ingestDatagram(datagram, undefined, meta?.source).forEach(publish)
+  core.ingestDatagram(datagram, undefined, meta?.source).forEach((envelope) => {
+    if (envelope.messageName === 'HOME_POSITION' || MISSION_MESSAGE_NAMES.has(envelope.messageName)) {
+      const frame = missionRouter.ingestEnvelope(envelope)
+      if (frame !== null) {
+        publish(frame)
+      }
+      return
+    }
+
+    publish(envelope)
+  })
   reportSourceConflicts()
 })
 
@@ -114,12 +132,41 @@ wsServer.on('listening', () => {
   }
 })
 
-wsServer.on('connection', () => {
+wsServer.on('connection', (ws) => {
   console.log(`[mavlink-bridge] websocket client connected (${wsServer.clients.size} clients, ${core.systemCount()} systems seen)`)
+
+  ws.send(JSON.stringify({ type: 'linkMode', replayMode: REPLAY_FILE !== null }))
+  missionRouter.snapshotForNewClient().forEach((frame) => ws.send(JSON.stringify(frame)))
+
+  ws.on('message', (raw) => {
+    let message = null
+    try {
+      message = JSON.parse(raw.toString())
+    } catch {
+      return
+    }
+
+    // Belt and braces alongside missionRouter's own input validation: this
+    // handler runs on unauthenticated input, and an uncaught throw here takes
+    // the whole bridge down for every connected client.
+    try {
+      const frame = missionRouter.handleClientMessage(message)
+      if (frame !== null) {
+        publish(frame)
+      }
+    } catch (error) {
+      console.error(`[mavlink-bridge] client message rejected: ${error?.message ?? error}`)
+    }
+  })
 })
+
+const missionTickTimer = setInterval(() => {
+  missionRouter.tick().forEach(publish)
+}, 100)
 
 async function shutdown() {
   clearInterval(tickTimer)
+  clearInterval(missionTickTimer)
   stopIngress()
   await recorder?.close()
   wsServer.close()

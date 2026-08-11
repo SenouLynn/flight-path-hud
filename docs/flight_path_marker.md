@@ -6,9 +6,9 @@ circle-with-wings symbol that floats above/below the horizon in real HUDs.
 
 Two logic modules back this:
 
-- [src/logic/flightPath.ts](../apps/web/src/logic/flightPath.ts) — instantaneous vectors + a
+- [src/logic/flightPath.ts](../apps/hud/src/logic/flightPath.ts) — instantaneous vectors + a
   kinematic predictive path (linear vs turn-aware).
-- [src/logic/trajectory.ts](../apps/web/src/logic/trajectory.ts) — a richer integrated trajectory
+- [src/logic/trajectory.ts](../apps/hud/src/logic/trajectory.ts) — a richer integrated trajectory
   that blends heading/track/bank/pitch, used by the on-screen predictive view.
 
 ## MAVLink sources
@@ -70,7 +70,7 @@ Projects the ground track forward over a horizon (default 5 s, 0.5 s steps) two 
 ## Integrated trajectory (`trajectory.ts`)
 
 `resolvePredictiveTrajectory` produces the richer path drawn by
-[HudPredictiveTrajectory](../apps/web/src/components/HudPredictiveTrajectory.tsx). It pulls scalar,
+[HudPredictiveTrajectory](../apps/hud/src/components/HudPredictiveTrajectory.tsx). It pulls scalar,
 attitude, heading, and 2D-track resolutions together and **step-integrates** a path in
 screen-relative (lateral, forward, climb) space. Key model pieces:
 
@@ -103,8 +103,8 @@ Output includes the integrated `points[]`, plus `turnRateRadPerSec`, `verticalRa
 
 ## Validation
 
-`FLIGHT_PATH_VALIDATION_FRAMES` in [replay.ts](../apps/web/src/logic/replay.ts) pins expected track,
+`FLIGHT_PATH_VALIDATION_FRAMES` in [replay.ts](../apps/hud/src/logic/replay.ts) pins expected track,
 speed, climb, FPA, and both linear and turn-aware 5 s endpoints — including a GPS-only
 fallback frame and a stationary frame that must invalidate the track. Unit tests:
-[flightPath.test.ts](../apps/web/src/logic/flightPath.test.ts) and
-[trajectory.test.ts](../apps/web/src/logic/trajectory.test.ts).
+[flightPath.test.ts](../apps/hud/src/logic/flightPath.test.ts) and
+[trajectory.test.ts](../apps/hud/src/logic/trajectory.test.ts).

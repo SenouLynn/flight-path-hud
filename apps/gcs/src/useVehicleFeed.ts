@@ -81,7 +81,7 @@ const INITIAL: FeedSnapshot = {
   knownSystems: [],
 }
 
-/** Matches the web harness's live-source window. */
+/** Matches the hud harness's live-source window. */
 const ENU_TRACK_MAX_POINTS = 600
 const LOG_MAX_ENTRIES = 500
 /**

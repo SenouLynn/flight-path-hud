@@ -17,7 +17,7 @@ All attitude angles arrive in **radians** and are converted to degrees for displ
 
 ## Algorithm (logic): `resolveAttitude` + `computeHorizonTransform`
 
-Implemented in [src/logic/attitude.ts](../apps/web/src/logic/attitude.ts). This is the *canonical*
+Implemented in [src/logic/attitude.ts](../apps/hud/src/logic/attitude.ts). This is the *canonical*
 transform used by the replay-preview horizon.
 
 ### `resolveAttitude(sample) → { pitchDeg, rollDeg, hasAttitude }`
@@ -49,7 +49,7 @@ rotation of the horizon about screen center.
 
 ## Rendering (component): `HudAttitudeIndicator`
 
-[HudAttitudeIndicator.tsx](../apps/web/src/components/HudAttitudeIndicator.tsx) renders the live HUD
+[HudAttitudeIndicator.tsx](../apps/hud/src/components/HudAttitudeIndicator.tsx) renders the live HUD
 independently of the logic transform above:
 
 - Sky/ground rects + horizon line inside a clipped window.
@@ -67,7 +67,7 @@ independently of the logic transform above:
 
 ## 3D orientation view: `HudOrientationIndicator`
 
-[HudOrientationIndicator.tsx](../apps/web/src/components/HudOrientationIndicator.tsx) draws a
+[HudOrientationIndicator.tsx](../apps/hud/src/components/HudOrientationIndicator.tsx) draws a
 wireframe vehicle model in a perspective projection:
 
 - Applies the **aircraft Euler rotation sequence** roll→pitch→yaw as intrinsic rotations
@@ -79,6 +79,6 @@ wireframe vehicle model in a perspective projection:
 
 ## Validation
 
-`ATTITUDE_VALIDATION_FRAMES` in [replay.ts](../apps/web/src/logic/replay.ts): level flight,
+`ATTITUDE_VALIDATION_FRAMES` in [replay.ts](../apps/hud/src/logic/replay.ts): level flight,
 +10° pitch (→ 60 px), +30° roll, combined down-pitch/left-roll, and a missing-roll frame
-that must resolve to `null`. Unit tests: [attitude.test.ts](../apps/web/src/logic/attitude.test.ts).
+that must resolve to `null`. Unit tests: [attitude.test.ts](../apps/hud/src/logic/attitude.test.ts).

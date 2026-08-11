@@ -1,8 +1,8 @@
 import assert from 'node:assert/strict'
 import test from 'node:test'
-import { computeFrameCrc, crcAccumulate, parseIncomingDatagram } from './normalize.js'
+import { computeFrameCrc, crcAccumulate, parseIncomingDatagram, encodeMissionCount, encodeMissionItemInt } from './normalize.js'
 
-const CRC_EXTRA = { 0: 50, 24: 24, 30: 39, 33: 104, 74: 20 }
+const CRC_EXTRA = { 0: 50, 24: 24, 30: 39, 33: 104, 42: 28, 44: 221, 47: 153, 73: 38, 74: 20, 242: 104 }
 
 function buildMavlinkV1Frame(messageId, payload, { sequence = 7, sysId = 1, compId = 1, corruptCrc = false } = {}) {
   const frame = Buffer.alloc(6 + payload.length + 2)
@@ -17,6 +17,31 @@ function buildMavlinkV1Frame(messageId, payload, { sequence = 7, sysId = 1, comp
   const crcExtra = CRC_EXTRA[messageId]
   const crc = crcExtra === undefined ? 0 : computeFrameCrc(frame, 1, 6 + payload.length, crcExtra)
   frame.writeUInt16LE(corruptCrc ? crc ^ 0xFFFF : crc, 6 + payload.length)
+
+  return frame
+}
+
+/**
+ * MAVLink 2 framing, used here because only v2 performs the trailing-zero
+ * payload trimming the truncation tests below depend on.
+ */
+function buildMavlinkV2Frame(messageId, payload, { sequence = 7, sysId = 1, compId = 1 } = {}) {
+  const frame = Buffer.alloc(10 + payload.length + 2)
+  frame[0] = 0xFD
+  frame[1] = payload.length
+  frame[2] = 0 // incompat flags: unsigned
+  frame[3] = 0 // compat flags
+  frame[4] = sequence
+  frame[5] = sysId
+  frame[6] = compId
+  frame[7] = messageId & 0xFF
+  frame[8] = (messageId >> 8) & 0xFF
+  frame[9] = (messageId >> 16) & 0xFF
+  payload.copy(frame, 10)
+
+  const crcExtra = CRC_EXTRA[messageId]
+  const crc = crcExtra === undefined ? 0 : computeFrameCrc(frame, 1, 10 + payload.length, crcExtra)
+  frame.writeUInt16LE(crc, 10 + payload.length)
 
   return frame
 }
@@ -120,4 +145,153 @@ test('parses multiple MAVLink frames from one datagram and ignores unsupported m
   assert.equal(result.envelopes[1].payload.vfrHud.airSpeedMps.toFixed(2), '22.50')
   assert.equal(result.envelopes[1].payload.vfrHud.groundSpeedMps.toFixed(2), '20.25')
   assert.equal(result.envelopes[1].payload.vfrHud.climbMps.toFixed(2), '1.75')
+})
+
+test('parses MISSION_COUNT', () => {
+  const payload = Buffer.alloc(4)
+  payload.writeUInt16LE(3, 0)
+  payload.writeUInt8(1, 2)
+  payload.writeUInt8(1, 3)
+
+  const result = parseIncomingDatagram(buildMavlinkV1Frame(44, payload))
+  assert.equal(result.decodeErrors, 0)
+  assert.equal(result.envelopes[0].messageName, 'MISSION_COUNT')
+  assert.equal(result.envelopes[0].payload.missionCount.count, 3)
+})
+
+test('parses MISSION_ITEM_INT', () => {
+  const payload = Buffer.alloc(37)
+  payload.writeFloatLE(0, 0)
+  payload.writeFloatLE(0, 4)
+  payload.writeFloatLE(0, 8)
+  payload.writeFloatLE(0, 12)
+  payload.writeInt32LE(473977420, 16)
+  payload.writeInt32LE(85455940, 20)
+  payload.writeFloatLE(120.5, 24)
+  payload.writeUInt16LE(2, 28)
+  payload.writeUInt16LE(16, 30) // MAV_CMD_WAYPOINT
+  payload.writeUInt8(1, 32)
+  payload.writeUInt8(1, 33)
+  payload.writeUInt8(3, 34) // MAV_FRAME_GLOBAL_RELATIVE_ALT
+  payload.writeUInt8(1, 35)
+  payload.writeUInt8(1, 36)
+
+  const result = parseIncomingDatagram(buildMavlinkV1Frame(73, payload))
+  assert.equal(result.decodeErrors, 0)
+  const item = result.envelopes[0].payload.missionItemInt
+  assert.equal(item.seq, 2)
+  assert.equal(item.command, 16)
+  assert.equal(item.current, true)
+  assert.equal(item.autocontinue, true)
+  assert.equal(item.latDegE7, 473977420)
+  assert.equal(item.lonDegE7, 85455940)
+  assert.equal(item.altM.toFixed(1), '120.5')
+})
+
+test('parses MISSION_CURRENT', () => {
+  const payload = Buffer.alloc(2)
+  payload.writeUInt16LE(5, 0)
+
+  const result = parseIncomingDatagram(buildMavlinkV1Frame(42, payload))
+  assert.equal(result.envelopes[0].payload.missionCurrent.seq, 5)
+})
+
+test('parses MISSION_ACK', () => {
+  const payload = Buffer.alloc(3)
+  payload.writeUInt8(1, 0)
+  payload.writeUInt8(1, 1)
+  payload.writeUInt8(13, 2) // MAV_MISSION_INVALID_SEQUENCE
+
+  const result = parseIncomingDatagram(buildMavlinkV1Frame(47, payload))
+  assert.equal(result.envelopes[0].payload.missionAck.type, 13)
+})
+
+test('parses HOME_POSITION', () => {
+  const payload = Buffer.alloc(12)
+  payload.writeInt32LE(473977420, 0)
+  payload.writeInt32LE(85455940, 4)
+  payload.writeInt32LE(500000, 8)
+
+  const result = parseIncomingDatagram(buildMavlinkV1Frame(242, payload))
+  const home = result.envelopes[0].payload.homePosition
+  assert.equal(home.latDegE7, 473977420)
+  assert.equal(home.lonDegE7, 85455940)
+  assert.equal(home.altMm, 500000)
+})
+
+test('decodes a MAVLink 2 MISSION_ITEM_INT whose trailing zero bytes were trimmed off the wire', () => {
+  // Real ArduPilot/PX4 traffic: current=0 and autocontinue=0 are the last two
+  // bytes, so v2 sends 35 bytes rather than the documented 37. A strict length
+  // guard dropped these silently and stalled the whole mission pull.
+  const full = Buffer.alloc(37)
+  full.writeInt32LE(473977420, 16)
+  full.writeInt32LE(85455940, 20)
+  full.writeFloatLE(120.5, 24)
+  full.writeUInt16LE(2, 28)
+  full.writeUInt16LE(16, 30) // MAV_CMD_WAYPOINT
+  full.writeUInt8(3, 34) // MAV_FRAME_GLOBAL_RELATIVE_ALT
+  // Offsets 35 (current) and 36 (autocontinue) stay 0 and are what v2 trims.
+  const trimmed = full.subarray(0, 35)
+
+  const result = parseIncomingDatagram(buildMavlinkV2Frame(73, trimmed))
+  assert.equal(result.decodeErrors, 0)
+  assert.equal(result.envelopes.length, 1)
+
+  const item = result.envelopes[0].payload.missionItemInt
+  assert.equal(item.seq, 2)
+  assert.equal(item.command, 16)
+  assert.equal(item.frameId, 3)
+  assert.equal(item.current, false, 'implied by the trimmed zero byte')
+  assert.equal(item.autocontinue, false, 'implied by the trimmed zero byte')
+  assert.equal(item.latDegE7, 473977420)
+  assert.equal(item.lonDegE7, 85455940)
+  assert.equal(item.altM.toFixed(1), '120.5')
+})
+
+test('decodes a MAVLink 2 MISSION_CURRENT trimmed down to a single byte', () => {
+  // seq 0 is entirely zero bytes, so v2 trims the 2-byte payload to 1.
+  const result = parseIncomingDatagram(buildMavlinkV2Frame(42, Buffer.alloc(1)))
+
+  assert.equal(result.decodeErrors, 0)
+  assert.equal(result.envelopes[0].messageName, 'MISSION_CURRENT')
+  assert.equal(result.envelopes[0].payload.missionCurrent.seq, 0)
+})
+
+test('decodes a MAVLink 2 MISSION_COUNT and HOME_POSITION with trimmed trailing zeroes', () => {
+  const count = parseIncomingDatagram(buildMavlinkV2Frame(44, Buffer.from([3])))
+  assert.equal(count.envelopes[0].payload.missionCount.count, 3)
+
+  const home = Buffer.alloc(12)
+  home.writeInt32LE(473977420, 0)
+  home.writeInt32LE(85455940, 4)
+  // altMm 0 (sea level) is the trimmed tail.
+  const homeResult = parseIncomingDatagram(buildMavlinkV2Frame(242, home.subarray(0, 8)))
+  assert.equal(homeResult.envelopes[0].payload.homePosition.latDegE7, 473977420)
+  assert.equal(homeResult.envelopes[0].payload.homePosition.altMm, 0)
+})
+
+test('a zero-length mission payload is still rejected — MAVLink 2 never trims below one byte', () => {
+  const result = parseIncomingDatagram(buildMavlinkV2Frame(73, Buffer.alloc(0)))
+  assert.equal(result.envelopes.length, 0)
+})
+
+test('encodeMissionCount round-trips through this file\'s own decoder', () => {
+  const frame = encodeMissionCount({ sysId: 1, compId: 1, count: 3 })
+  const result = parseIncomingDatagram(frame)
+  assert.equal(result.decodeErrors, 0)
+  assert.equal(result.envelopes[0].payload.missionCount.count, 3)
+})
+
+test('encodeMissionItemInt round-trips through this file\'s own decoder', () => {
+  const item = {
+    seq: 1, command: 16, current: false, autocontinue: true,
+    latDegE7: 473977420, lonDegE7: 85455940, altM: 100, frameId: 3,
+  }
+  const frame = encodeMissionItemInt({ sysId: 1, compId: 1, item })
+  const result = parseIncomingDatagram(frame)
+  const decoded = result.envelopes[0].payload.missionItemInt
+  assert.equal(decoded.seq, 1)
+  assert.equal(decoded.current, false)
+  assert.equal(decoded.autocontinue, true)
+  assert.equal(decoded.latDegE7, 473977420)
 })

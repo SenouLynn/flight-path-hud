@@ -54,6 +54,55 @@ The entries below were reconstructed from the initial implementation (commits `9
 `355baff`) and documented on 2026-07-23. Dates reflect when each decision was first made in
 the code.
 
+## ADR-0027: One narrow outbound capability — a read-only mission request
+
+- **Status:** Accepted
+- **Date:** 2026-08-11
+- **Deciders:** team
+
+### Context
+The GCS has been receive-only from the start: the bridge has never had a send
+socket, and the [consume plan](./mavlink_gcs_consume_plan.md)'s Scope section lists
+"sending commands (arm, mode, mission upload, parameter writes)" as explicitly out
+of scope. Reading a mission requires the GCS to ask for it — `MISSION_REQUEST_LIST`
+and `MISSION_REQUEST_INT` are outbound messages to the vehicle. This is the
+bridge's first outbound byte, ever, and needed an explicit line drawn around it
+before writing any code, not after.
+
+### Decision
+The bridge gains exactly one outbound capability: a read-only mission request,
+fired only when the operator explicitly clicks "Load mission" in the GCS. No
+automatic requests on connect, no polling, no other outbound message type. Home
+position stays passive-only — observed, never requested (fetching it on demand
+would need `COMMAND_LONG`/`MAV_CMD_GET_HOME_POSITION`, a structurally separate
+protocol; deferred, see `docs/mission_overlay_design.md` §2). The vehicle's state
+is queried; its behavior is never changed. Arm, mode change, mission upload/write,
+and parameter write remain entirely out of scope — nothing here is a step toward
+them.
+
+The outbound send path is one narrowly named function per message
+(`encodeMissionRequestList`/`encodeMissionRequestInt`/`encodeMissionAck` in
+`apps/mavlink-bridge/src/encode.js`), not a generic "send to vehicle" capability —
+nothing about its shape invites widening later.
+
+### Consequences
+- ✅ The line between "query" and "command" has one recorded decision to point to,
+  instead of being re-argued the next time someone proposes an outbound message.
+- ✅ `encode.js` staying a closed set of three functions makes a future widening
+  (e.g. mission upload) a visible, reviewable diff rather than an incremental
+  extension of an already-generic sender.
+- ⚠️ Home position has no analogous "load now" button; an operator on a vehicle
+  that doesn't broadcast `HOME_POSITION` periodically simply never sees one. Judged
+  acceptable for v1 — see the design doc's "Deferred, on purpose" section.
+
+### Alternatives considered
+- A generic `sendCommand(buffer)` outbound API — rejected: it would make every
+  future MAVLink message one config flag away from being sendable, defeating the
+  point of the boundary.
+- Requesting the mission automatically on connect — rejected: an operator who
+  never intends to view the mission would still trigger outbound traffic to the
+  vehicle with no action on their part.
+
 ## ADR-0026: Multi-node awareness is a separate phase, gated on single-node validation
 
 - **Status:** Accepted
@@ -321,7 +370,7 @@ Each run writes `session-<timestamp>.jsonl`. Recording is skipped while replayin
 [ADR-0020](#adr-0020-multi-target-gcs-via-ports-and-adapters) commits to transport-agnostic
 ingest, but the bridge had exactly one inbound adapter (UDP) and one outbound (WebSocket),
 so the claim was never exercised. The web-side ports in
-[streamPorts.ts](../apps/web/src/stream/streamPorts.ts) were referenced only by their own
+[streamPorts.ts](../apps/hud/src/stream/streamPorts.ts) were referenced only by their own
 tests — defined, not load-bearing.
 
 The [consume plan](./mavlink_gcs_consume_plan.md) makes a second adapter a phase-exit
@@ -454,13 +503,13 @@ toolchain harder to run independently.
 
 ### Decision
 Make the repository an npm workspace monorepo. Move the current application unchanged to
-[apps/web](../apps/web) and reserve [apps/desktop](../apps/desktop)
+[apps/hud](../apps/hud) and reserve [apps/desktop](../apps/desktop)
 for a separately bootstrapped upstream runtime checkout. The projects have independent build
 commands and no shared runtime dependency.
 
 ### Consequences
 - ✅ Both rendering approaches can be tried independently from their own directories.
-- ✅ The web harness remains the canonical home of the existing TypeScript logic and tests.
+- ✅ The hud harness remains the canonical home of the existing TypeScript logic and tests.
 - ⚠️ The ImGui experiment is intentionally not version-pinned or vendored until the spike
   proves worthwhile.
 
@@ -509,7 +558,7 @@ to iterate on the math quickly in a rich UI, but the math must not get entangled
 or the browser or it won't be portable.
 
 ### Decision
-All HUD math lives in pure functions under [src/logic/](../apps/web/src/logic/), each of the form
+All HUD math lives in pure functions under [src/logic/](../apps/hud/src/logic/), each of the form
 `resolveX(sample) → resolution`. No React, I/O, or globals. Components and the replay
 harness are the only callers.
 
@@ -533,7 +582,7 @@ Real MAVLink streams carry missing fields, `NaN`, and `Infinity`. Every resolver
 has to re-check validity, and a stray `NaN` silently poisons trig math.
 
 ### Decision
-`sanitizeTelemetrySample` in [telemetry.ts](../apps/web/src/logic/telemetry.ts) coerces any
+`sanitizeTelemetrySample` in [telemetry.ts](../apps/hud/src/logic/telemetry.ts) coerces any
 non-finite/non-number to `undefined` and drops all-empty sub-objects, run once at the top of
 every resolver. Downstream code branches only on "present and finite" vs "absent".
 
@@ -574,7 +623,7 @@ most display-ready, magnetic-corrected source first.
 ### Decision
 Resolve in order: `VFR_HUD.heading` (deg, primary) → `ATTITUDE.yaw` (rad→deg fallback) →
 `GLOBAL_POSITION_INT.hdg` (centideg, rejecting the `65535` unknown sentinel). See
-[heading.ts](../apps/web/src/logic/heading.ts) and [heading_indicator.md](./heading_indicator.md).
+[heading.ts](../apps/hud/src/logic/heading.ts) and [heading_indicator.md](./heading_indicator.md).
 
 ### Consequences
 - ✅ Avoids radian conversion in the common case; degrades gracefully.
@@ -592,7 +641,7 @@ angle are conventionally positive **up**. Getting this wrong inverts vertical cu
 
 ### Decision
 Derive vertical speed as `-vz`; compute track as `atan2(vy, vx)` and FPA as
-`atan2(-vz, √(vx²+vy²))`. Centralized in [flightPath.ts](../apps/web/src/logic/flightPath.ts).
+`atan2(-vz, √(vx²+vy²))`. Centralized in [flightPath.ts](../apps/hud/src/logic/flightPath.ts).
 
 ### Consequences
 - ✅ One documented place for the NED→display sign convention.
@@ -611,7 +660,7 @@ turn. We have turn rate available (`ATTITUDE.yawspeed`).
 ### Decision
 Project the path with a **Constant Turn Rate and Velocity (CTRV)** arc, degrading to the
 linear model when `|yawspeed|` is negligible. A richer integrated variant in
-[trajectory.ts](../apps/web/src/logic/trajectory.ts) additionally blends heading/track and adds a
+[trajectory.ts](../apps/hud/src/logic/trajectory.ts) additionally blends heading/track and adds a
 coordinated-turn bank term `ω = g·tan(φ)/V`. See
 [flight_path_marker.md](./flight_path_marker.md).
 
@@ -631,7 +680,7 @@ We need confidence the math is right before firmware translation, and a way to e
 regressions.
 
 ### Decision
-[replay.ts](../apps/web/src/logic/replay.ts) holds hand-derived expected values for synthetic
+[replay.ts](../apps/hud/src/logic/replay.ts) holds hand-derived expected values for synthetic
 frames; `App.tsx` renders expected-vs-resolved-vs-error tables, and Vitest suites assert the
 same properties. Errors should read `0.000000` or `N/A`.
 
@@ -647,9 +696,9 @@ same properties. Errors should read `0.000000` or `N/A`.
 - **Deciders:** team
 
 ### Context
-[HudAttitudeIndicator.tsx](../apps/web/src/components/HudAttitudeIndicator.tsx) re-implements the
+[HudAttitudeIndicator.tsx](../apps/hud/src/components/HudAttitudeIndicator.tsx) re-implements the
 pitch/roll→screen transform instead of consuming `computeHorizonTransform` from
-[attitude.ts](../apps/web/src/logic/attitude.ts). The two define sign conventions independently, so
+[attitude.ts](../apps/hud/src/logic/attitude.ts). The two define sign conventions independently, so
 the live HUD and the replay preview can invert relative to each other — the "rendering is
 inverted in some places" issue from commit `355baff`. This violates the single-source
 principle of ADR-0001.
@@ -670,7 +719,7 @@ one sign convention. Not yet implemented.
 - **Deciders:** team
 
 ### Context
-The 3D orientation panel ([HudOrientationIndicator.tsx](../apps/web/src/components/HudOrientationIndicator.tsx))
+The 3D orientation panel ([HudOrientationIndicator.tsx](../apps/hud/src/components/HudOrientationIndicator.tsx))
 cross-wired roll and pitch: its vehicle vertices were authored with the nose along **+Y**,
 but the rotation code applied roll about **X** and pitch about **Y** as if the nose were
 along **+X** (standard aerospace). A `roll` input therefore drove a pitch-looking motion and
@@ -693,7 +742,7 @@ sorting. Drop the compass ring and axis triad in favor of a static ground grid.
 
 ### Alternatives considered
 - Patch only the axis swap — corrects the math but leaves the unreadable wireframe/triad.
-- Extract a shared 3D transform into `apps/web/src/logic` — no such helper exists yet; deferred.
+- Extract a shared 3D transform into `apps/hud/src/logic` — no such helper exists yet; deferred.
 
 ## ADR-0010: Nose-relative `forwardPoints` for the perspective corridor
 
@@ -708,7 +757,7 @@ heading/track/climb blend for the old 2D plot), which cannot be projected in tru
 
 ### Decision
 Add `ForwardPathPoint { forwardM, lateralM, verticalM, tSec }` and a `forwardPoints[]` array
-to the resolution, integrated in [trajectory.ts](../apps/web/src/logic/trajectory.ts) in a
+to the resolution, integrated in [trajectory.ts](../apps/hud/src/logic/trajectory.ts) in a
 **nose-relative frame** (relative heading starts at 0; `+forward` ahead, `+lateral` right,
 `+vertical` up). Purely additive — the original `points[]` and its tests are unchanged.
 
@@ -732,7 +781,7 @@ rolled it opposite to the attitude indicator, so the two horizons disagreed.
 ### Decision
 Render two decoupled SVG layers that rotate about a **fixed boresight cross** at center:
 - **World** (ground grid + horizon) rolls with `rotate(-roll)` and pitch-translates, matching
-  [HudAttitudeIndicator](../apps/web/src/components/HudAttitudeIndicator.tsx) exactly so the horizons
+  [HudAttitudeIndicator](../apps/hud/src/components/HudAttitudeIndicator.tsx) exactly so the horizons
   agree.
 - **Flight path** (the corridor) banks the **opposite** way, `rotate(+roll)`, so a right bank
   starts it left of the boresight and sweeps it out to the right — mirroring the felt motion.
@@ -786,12 +835,12 @@ modeled only velocities — no absolute position. Real `GLOBAL_POSITION_INT` car
 live feed may momentarily lack a fix, and the existing mocks emit velocity only.
 
 ### Decision
-Add [position.ts](../apps/web/src/logic/position.ts) with a `source`-tagged fallback chain
+Add [position.ts](../apps/hud/src/logic/position.ts) with a `source`-tagged fallback chain
 (upholding ADR-0003): prefer absolute `GLOBAL_POSITION_INT.lat/lon/alt` projected to local
 ENU (`'GLOBAL_POSITION_INT.lla_enu'`), else dead-reckon NED velocity over dt
 (`'GLOBAL_POSITION_INT.vxvy_vz_integrated'`), else `'none'`. Extend `GlobalPositionIntSample`
 with `latDegE7`/`lonDegE7`/`altMm`/`relativeAltMm` (sanitized per ADR-0002) and register the
-four fields in [mavlinkInputs.ts](../apps/web/src/constants/mavlinkInputs.ts). The synthetic-replay
+four fields in [mavlinkInputs.ts](../apps/hud/src/constants/mavlinkInputs.ts). The synthetic-replay
 source carries the absolute track; live-mock stays velocity-only, so switching sources in the
 UI visibly flips the `source`.
 
@@ -813,7 +862,7 @@ UI visibly flips the `source`.
 - **Deciders:** team
 
 ### Context
-A trajectory *recording* needs history, but every `apps/web/src/logic` resolver is stateless
+A trajectory *recording* needs history, but every `apps/hud/src/logic` resolver is stateless
 (ADR-0001) and `useTelemetryFeed` keeps only the latest sample. Position integration
 fundamentally needs the previous point + dt — genuine mutable state, the first such need in
 the harness.
@@ -821,7 +870,7 @@ the harness.
 ### Decision
 Keep the math pure: `resolvePositionStep(prev, sample, origin)` takes prior state as an
 argument, and `resolveTrack(samples[])` folds it for batch/log/replay use — both portable to
-C++. Quarantine mutability in [useFlightTrack.ts](../apps/web/src/stream/useFlightTrack.ts), a React
+C++. Quarantine mutability in [useFlightTrack.ts](../apps/hud/src/stream/useFlightTrack.ts), a React
 hook owning the ring buffer, captured origin, and integrator state in refs. It bounds the
 track (`maxPoints` + optional `maxAgeSec`): full track for finite/replay sources, rolling
 window for the open-ended live feed. Appends are gated on the feed's monotonic `packetCount`
@@ -884,10 +933,10 @@ in time" where dynamism comes from tweaking parametrized inputs, complementing t
 suite with a human-in-the-loop visual check.
 
 ### Decision
-Add a second route, `/playground` ([src/pages/PlaygroundView.tsx](../apps/web/src/pages/PlaygroundView.tsx)),
+Add a second route, `/playground` ([src/pages/PlaygroundView.tsx](../apps/hud/src/pages/PlaygroundView.tsx)),
 alongside the existing dashboard (`/validator`). Sliders for roll, pitch, heading, airspeed,
 and stall speed are packed into a **real, sanitized `TelemetrySample`** by
-[buildStaticSample](../apps/web/src/stream/staticSample.ts) and run through the identical production
+[buildStaticSample](../apps/hud/src/stream/staticSample.ts) and run through the identical production
 resolver stack (`resolveAttitude` / `resolveHeading` / `resolveScalarTelemetry` /
 `resolvePredictiveTrajectory`) that drives the live feed. A derived-values panel surfaces the
 resolver outputs beside the instruments — a live mirror of a single test case. Global
@@ -897,7 +946,7 @@ served statically), the first non-React runtime dependency.
 
 As part of this, **airspeed becomes a first-class telemetry field**: `airSpeedMps` is added to
 `VfrHudSample` and resolved by `resolveScalarTelemetry`, and the air-relative physics in
-[trajectory.ts](../apps/web/src/logic/trajectory.ts) (stall flag, forward reach, climb geometry, bank-turn
+[trajectory.ts](../apps/hud/src/logic/trajectory.ts) (stall flag, forward reach, climb geometry, bank-turn
 denominator) now key off airspeed — falling back to groundspeed when airspeed is absent. Stall
 is fundamentally an airspeed phenomenon; the previous code compared it against groundspeed,
 which only holds in still air.
@@ -926,7 +975,7 @@ which only holds in still air.
 - **Deciders:** team
 
 ### Context
-The predictive trajectory ([trajectory.ts](../apps/web/src/logic/trajectory.ts)) derived its path geometry
+The predictive trajectory ([trajectory.ts](../apps/hud/src/logic/trajectory.ts)) derived its path geometry
 from the static Euler *angles*: turn rate as `yawspeed + g·tan(roll)/V` and vertical rate as
 `V·sin(pitch)`. Three defects surfaced when validating on the playground (ADR-0016):
 1. **Turn double-count.** In coordinated flight the measured body yaw rate `r` already ≈
@@ -955,7 +1004,7 @@ MAVLink and staying a pure single-sample function (no history):
   below-stall corridor collapse and the tuned camera scale; only the velocity vector's
   *direction* (γ, ψ) carries the corrected geometry.
 
-The static playground ([PlaygroundView.tsx](../apps/web/src/pages/PlaygroundView.tsx)) splits inputs into
+The static playground ([PlaygroundView.tsx](../apps/hud/src/pages/PlaygroundView.tsx)) splits inputs into
 **airframe** (roll, pitch, pitch-rate, yaw-rate) and **velocity vector** (airspeed, flight-path
 angle, heading) groups; FPA is entered as a `climbMps = V·sin γ` so pitch drives only the display.
 
@@ -967,7 +1016,7 @@ angle, heading) groups; FPA is entered as a `climbMps = V·sin γ` so pitch driv
 - ✅ Coordination (slip/skid) is readable from `actual vs coordinated` turn rate, with zero
   non-standard MAVLink.
 - ✅ The Euler transform is shared (`headingRateFromBodyRates` / `climbAngleRateFromBodyRates` in
-  [attitude.ts](../apps/web/src/logic/attitude.ts)) so both the trajectory corridor and the CTRV
+  [attitude.ts](../apps/hud/src/logic/attitude.ts)) so both the trajectory corridor and the CTRV
   `resolvePredictivePath` rotate on the same earth-frame heading rate — `yawspeed` means body `r`
   everywhere. A no-op for wings-level frames, so the replay fixtures are unchanged.
 - ⚠️ Attitude-only samples still can't separate climb from turn (the AoA wall); full fidelity

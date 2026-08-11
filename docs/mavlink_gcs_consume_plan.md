@@ -56,13 +56,15 @@ Non-goal for early phases:
   - Visualize live telemetry, stream health, map track, and mission overlays.
   - Add video as a sidecar stream (analog capture and digital camera paths) with shared operator context in GCS views.
 - Out of scope (for now):
-  - Sending commands (arm, mode, mission upload, parameter writes).
+  - Sending commands (arm, mode, mission upload, parameter writes) — **except** a
+    single read-only mission request (`MISSION_REQUEST_LIST`/`MISSION_REQUEST_INT`),
+    fired only on explicit operator action. See [ADR-0027](./decisions.md).
   - Flight control authority.
   - Autopilot configuration tooling.
 
 ## End State (Phase 1)
 
-A browser GCS page in `apps/web` that can:
+A browser GCS page in `apps/hud` that can:
 
 - Switch between synthetic stream and external MAVLink stream.
 - Show packet rate, heartbeat age, active system/component, and decode errors.
@@ -96,10 +98,10 @@ A browser GCS page in `apps/web` that can:
 ## Phase 0: Baseline and Guardrails (0.5 day)
 
 Tasks:
-- Confirm clean baseline in web app:
-  - `npm run test:web`
-  - `npm run build:web`
-  - `npm run lint:web`
+- Confirm clean baseline in hud app:
+  - `npm run test:hud`
+  - `npm run build:hud`
+  - `npm run lint:hud`
 - Snapshot current synthetic behavior with a short screen capture.
 - Decide a canonical external stream input for initial integration:
   - UDP stream from SITL.
@@ -118,8 +120,8 @@ Tasks:
 - Define explicit port interfaces for ingress and publish paths before implementing adapters.
 
 Proposed file additions:
-- `apps/web/src/stream/externalTypes.ts`
-- `apps/web/src/stream/externalTypes.test.ts`
+- `apps/hud/src/stream/externalTypes.ts`
+- `apps/hud/src/stream/externalTypes.test.ts`
 
 Definition of done:
 - Packet contracts validated by tests; malformed packets are rejected safely.
@@ -137,11 +139,11 @@ Tasks:
   - last heartbeat age
 
 Proposed file additions:
-- `apps/web/src/stream/wsTelemetrySource.ts`
-- `apps/web/src/stream/wsTelemetrySource.test.ts`
+- `apps/hud/src/stream/wsTelemetrySource.ts`
+- `apps/hud/src/stream/wsTelemetrySource.test.ts`
 
 Proposed file edits:
-- `apps/web/src/stream/useTelemetryFeed.ts` (optional shape extension for health)
+- `apps/hud/src/stream/useTelemetryFeed.ts` (optional shape extension for health)
 
 Definition of done:
 - UI can consume synthetic stream and WebSocket stream interchangeably.
@@ -152,7 +154,7 @@ Tasks:
 - Create a small bridge app (Node) in this repo:
   - Listen to UDP MAVLink from simulator.
   - Decode messages.
-  - Broadcast normalized JSON frames via WebSocket to `apps/web`.
+  - Broadcast normalized JSON frames via WebSocket to `apps/hud`.
 - Map first message set:
   - `HEARTBEAT`
   - `ATTITUDE`
@@ -187,12 +189,12 @@ Tasks:
 - Reuse existing resolver-powered components for core telemetry display.
 
 Proposed file additions:
-- `apps/web/src/pages/GcsView.tsx`
-- `apps/web/src/components/StreamHealthPanel.tsx`
-- `apps/web/src/components/MessageRatePanel.tsx`
+- `apps/hud/src/pages/GcsView.tsx`
+- `apps/hud/src/components/StreamHealthPanel.tsx`
+- `apps/hud/src/components/MessageRatePanel.tsx`
 
 Proposed file edits:
-- `apps/web/src/App.tsx` (add route and nav)
+- `apps/hud/src/App.tsx` (add route and nav)
 
 Definition of done:
 - One page acts as the first operational receive-only GCS panel.
@@ -212,9 +214,9 @@ Tasks:
 - Feed mission overlay from bridge output (simulated if needed first).
 
 Proposed file additions:
-- `apps/web/src/components/GcsMapPanel.tsx`
-- `apps/web/src/logic/mission.ts`
-- `apps/web/src/logic/mission.test.ts`
+- `apps/hud/src/components/GcsMapPanel.tsx`
+- `apps/hud/src/logic/mission.ts`
+- `apps/hud/src/logic/mission.test.ts`
 
 Definition of done:
 - Live aircraft track and mission route are visible and coherent on map.
@@ -274,10 +276,10 @@ the current MAVLink `sysId:compId`.
 
 ## Near-Term Next Steps (Start Here)
 
-1. Create `externalTypes.ts` and test fixtures in web app.
+1. Create `externalTypes.ts` and test fixtures in hud app.
 2. Implement `wsTelemetrySource.ts` with reconnect + health metrics.
 3. Scaffold `apps/mavlink-bridge` with UDP input and WebSocket output.
-4. Connect bridge output to web app and verify HUD updates.
+4. Connect bridge output to hud app and verify HUD updates.
 5. Add `GcsView` with stream health cards.
 6. Define video sidecar contracts and pick first adapter path (analog USB capture or Firefly PC-CAM UVC).
 
@@ -288,7 +290,7 @@ the current MAVLink `sysId:compId`.
 - Manual test with bridge disconnected/reconnected.
 - Verify heading, climb, and altitude signs against known expected motion.
 - Verify video stream reconnect behavior and latency indicator sanity.
-- Keep `npm run test:web`, `npm run build:web`, and `npm run lint:web` passing.
+- Keep `npm run test:hud`, `npm run build:hud`, and `npm run lint:hud` passing.
 
 ## Risks and Mitigations
 
@@ -307,7 +309,7 @@ the current MAVLink `sysId:compId`.
 
 ## Success Criteria
 
-- You can run one command for the bridge and one for the web app.
+- You can run one command for the bridge and one for the hud app.
 - A SITL UDP stream appears as live resolver-driven HUD telemetry.
 - Stream health can clearly indicate stale/disconnected feed.
 - Map trail and mission overlay make positional behavior intuitive.

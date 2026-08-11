@@ -8,7 +8,7 @@ This blueprint defines a portable runtime shape for the receive-only MAVLink GCS
 ## Recommended Baseline
 
 Primary stack:
-- Frontend: React (existing `apps/web`)
+- Frontend: React (existing `apps/hud`)
 - Realtime/server hub: Phoenix (Channels)
 - MAVLink ingest: adapter process (Node or Go; swappable)
 
@@ -212,7 +212,7 @@ Failure-mode tests:
 Near-term additions:
 - `apps/mavlink-bridge/` (initial ingest adapter process)
 - `apps/stream-hub/` (Phoenix app, when started)
-- `apps/web/src/stream/wsTelemetrySource.ts` (UI adapter)
+- `apps/hud/src/stream/wsTelemetrySource.ts` (UI adapter)
 - `apps/video-bridge/` (capture/transcode adapter process)
 
 Domain contracts should remain in shared, framework-neutral modules.
