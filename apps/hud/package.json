@@ -1,5 +1,5 @@
 {
-  "name": "@flight-path-hud/web",
+  "name": "@flight-path-hud/hud",
   "private": true,
   "version": "0.0.0",
   "type": "module",

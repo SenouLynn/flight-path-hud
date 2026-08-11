@@ -2,7 +2,7 @@
  * The mavlink-bridge wire contract, as consumed by the GCS.
  *
  * This is deliberately a *wire* contract rather than a shared code dependency on
- * apps/web: the bridge's WebSocket is the boundary between the two, so modelling
+ * apps/hud: the bridge's WebSocket is the boundary between the two, so modelling
  * it independently keeps the GCS decoupled from the HUD harness.
  *
  * Only the fields a map needs are modelled. Unmodelled payload sections are

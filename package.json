@@ -2,7 +2,7 @@
   "name": "flight-path-hud",
   "private": true,
   "workspaces": [
-    "apps/web",
+    "apps/hud",
     "apps/gcs",
     "apps/mavlink-bridge",
     "apps/video-bridge",
@@ -10,12 +10,12 @@
     "packages/hud-ui"
   ],
   "scripts": {
-    "dev:instruments": "npm run dev:web & npm run dev:gcs",
+    "dev:instruments": "npm run dev:hud & npm run dev:gcs",
     "dev:gcs": "npm run dev --workspace @flight-path-hud/gcs & npm run start:bridge & npm run sample:bridge & npm run mock:video",
-    "dev:web": "npm run dev --workspace @flight-path-hud/web",
-    "build:web": "npm run build --workspace @flight-path-hud/web",
-    "lint:web": "npm run lint --workspace @flight-path-hud/web",
-    "test:web": "npm run test --workspace @flight-path-hud/web",
+    "dev:hud": "npm run dev --workspace @flight-path-hud/hud",
+    "build:hud": "npm run build --workspace @flight-path-hud/hud",
+    "lint:hud": "npm run lint --workspace @flight-path-hud/hud",
+    "test:hud": "npm run test --workspace @flight-path-hud/hud",
     "build:gcs": "npm run build --workspace @flight-path-hud/gcs",
     "test:gcs-core": "npm run test --workspace @flight-path-hud/gcs-core",
     "start:bridge": "npm run start --workspace @flight-path-hud/mavlink-bridge",

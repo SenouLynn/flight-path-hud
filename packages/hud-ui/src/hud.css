@@ -2,7 +2,7 @@
  * HUD instrument styles.
  *
  * Every selector here is .hud-* and is consumed by the components in this
- * package. Split out of the web harness App.css so any app rendering the HUD
+ * package. Split out of the hud harness App.css so any app rendering the HUD
  * gets the styling with the components.
  */
 

@@ -3,7 +3,7 @@
  *
  * The `logic/` modules are pure and framework-free so they port to C++/ESP32 —
  * see apps/esp32 for the mirrored core. The components are the React rendering
- * of those resolvers; both the web validation harness and the ground station
+ * of those resolvers; both the hud validation harness and the ground station
  * consume this package so the two can never drift.
  *
  * Consumers must also import `@flight-path-hud/hud-ui/hud.css`.

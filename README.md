@@ -1,6 +1,35 @@
-# HUD Visualizer
+# GCS Build-Out
+What started out as an instrument build-out for use on an ESP32 board evolved into push towards a full suite of MAVLink/auto-pilot web-application. I'm now targetting a multi-node, TAK-style oversight and management. 
+
+**Ramblings:**
+Examples: 
+- Most, if not all, functionality outlined below is already built better, more efficiently, and with maintined build targets for a wider range of hardware than I can ever hope to achieve: 
+  - MissionPlanner - ArduPilot configurator, also serves at GCS software
+  - QGroundControl - Less-good ArduPilot configurator, a better GCS though
+
+Portability & Evolution: 
+- Architecture must be portable and rooted in documented and established MAVLink application conventions.
+- Core logic must be isolated and tested, functionality should remain modular, UI should remain composable. 
+
+Order of Operations (?):
+- Build out MAVLink bridge to power basic flight instruments. Validate before porting to ESP32. These can be ported into a GCS environement as modules, and translated for ESP32 HUD/beam-splitting application. 
+- Build out video bridge to integrate into GCS suite.  
+- Build out mission-planning capabilities
+- Build out mutli-node capabilities 
+- Build out 'real' server
+
+Future Considerations: 
+- Cons
+- Consider persistence mechanism
+- Consider Lora/Mesh integration (Meshtastic nodes for humans, redundant telemetry streams onboard drones, mesh network & signal relays etc...)
+- Consider practical failure modes and how they manifest in telemetry streams. 
+
+
+## 1. MAVLink Flight-Instrument Harness
 **Setup & Problem Statement**
-I'm running a Hawkeye Firefly 4k Split camera which supports analog video streaming & onboard 4k recording. The camera is fixed to a pan/tilt gimbal. Loss of orientation to the craft and the ground is shockingly easy (and historically catastrophic). As POV rotates with the gimbal, having a fixed-reference with additional telemetry seems useful. Furthermore I use video quite a bit for debugging so having non-telemetry frame of reference can be helpful in log-analysis and debugging. 
+Original: I'm running a Hawkeye Firefly 4k Split camera which supports analog video streaming & onboard 4k recording. The camera is fixed to a pan/tilt gimbal. Loss of orientation to the craft and the ground is shockingly easy (and historically catastrophic). As POV rotates with the gimbal, having a fixed-reference with additional telemetry seems useful. Furthermore I use video quite a bit for debugging so having non-telemetry frame of reference can be helpful in log-analysis and debugging. 
+
+Current: This has somewhat evolved into a quasi ground-control-station/MAVLink application.
 
 **Solution Statement**
 Yeah this can be solved with a piece of tape. I'd rather over-engineer a solution. 
@@ -10,25 +39,6 @@ Supporting goals:
 - MAVLink dash - begin understanding MAVLink protocol & sytstem/application building
 - Mission-simulation - fake-log generator
 - Mission-replay - view instrumentation via simulated logs
-
-
-**Repo Purpose**
-1. Flesh out what features I actually want.
-2. Establish core functions and algorithm for extrapolating cardinality in Euclidean space. 
-3. Prepare for translation into C++ or lua (or whatever). 
-
-
-## What this repo actually is
-A **monorepo** for HUD validation and rendering experiments, not the flight HUD itself.
-The browser validation harness lives in [apps/web](apps/web); the separate native experiment
-lives in [apps/desktop](apps/desktop). All browser HUD math lives in
-pure, framework-free resolvers under [apps/web/src/logic/](apps/web/src/logic/) so it can be
-proven against known-answer replay frames and later ported to C++/ESP32 firmware. The web app
-renders both a live mock feed and expected-vs-resolved validation tables.
-
-The future device application starts in [apps/esp32](apps/esp32). Its C++ core can be run on
-your local machine before it is flashed to a board: `npm run test:esp32` runs host tests and
-`npm run preview:esp32` writes a deterministic SVG preview.
 
 ## Features
 #### Basic Telemetry
@@ -44,14 +54,21 @@ your local machine before it is flashed to a board: `npm run test:esp32` runs ho
 
 ### Log Consumption
 1. GPS/Location positional replay
-2. PID replay/tuning
-
-## General Knowledge 
-1. Basic physics engine - run mock simulations? 
 
 ## Mock GCS Dash (Mavlink Exploration)
 1. Rebuild a basic GCS (QGroundControl or MissionPlanner) with READONLY capabilities. 
 2. Video streaming exploration
+
+## 2. MAVLink GCS Sandbox
+Establish central observability mechanism for tracking statefulness of remote nodes:
+- Local position, orientation, and trajectory in cartesian space: describing relativity of vehicle to unbounded space. 
+- Contextual positioning: where is IT in relation to ME or THAT. 
+- Mission-planning: managing navigation way points in real time. 
+- Vehicle controls: managing vehicle state (ARM, RTH, FAISLAFE)
+- Integrated video streaming: real-time, networked FPV. 
+- 3D rendering: 2D maps are cool, showing real position data in 3D space would be neat (and potentially load bearing for some fun enhancements)
+
+
 
 ## Documentation
 - [docs/architecture.md](docs/architecture.md) — data flow, module map, conventions, tooling
