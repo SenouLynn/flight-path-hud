@@ -2,7 +2,7 @@
 
 **Status:** approved, not yet implemented.
 **Date:** 2026-08-11
-**Closes out:** the remainder of [Phase 5](../../mavlink_gcs_consume_plan.md#phase-5-map-and-mission-visualization-2-to-3-days)
+**Closes out:** the remainder of [Phase 5](mavlink_gcs_consume_plan.md#phase-5-map-and-mission-visualization-2-to-3-days)
 (mission overlay, home point marker) in the MAVLink GCS consume plan.
 
 ## What this is
