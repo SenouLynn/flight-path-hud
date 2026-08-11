@@ -23,6 +23,34 @@ tagged release exists.
 ## [Unreleased]
 
 ### Added
+- **Multi-node / TAK-style awareness recorded as a future phase** (ADR-0026,
+  [target](docs/multi_node_awareness.md)). Meshtastic and other CoT participants on
+  one shared picture, gated on the single-node system being robust, tested and
+  field-validated first. Notes what is already multi-node (per-system folds, the
+  bridge roster, duplicate-transmitter detection) versus what actually changes
+  (identity above `sysId:compId`, a node model above `VehicleState`, presentation
+  for many), and records the build pattern to follow: portable logic in isolation,
+  tested hard, integrated against a portable mock, embellished last.
+- **Video sidecar, first slice** (ADR-0021, [notes](docs/video_pipeline_notes.md)).
+  A Video view in the GCS, transport-agnostic health folds in
+  [gcs-core/video.ts](packages/gcs-core/src/video.ts) (fps, bitrate, frame age,
+  stall detection, reconnects — fields a transport cannot measure stay `null`
+  rather than being faked), and a `multipart/x-mixed-replace` adapter. New
+  [apps/video-bridge](apps/video-bridge) serves a moving test pattern with PNG
+  frames encoded via `zlib`, so the whole path runs with no capture hardware, no
+  media server and no ffmpeg: `npm run mock:video`.
+  The adapter demuxes the stream with `fetch` rather than pointing an `<img>` at
+  it — an `<img>` renders every part but fires `load` only for the first, so it
+  reports one frame and then looks permanently stalled. Demuxing costs
+  CORS-independence, so a blocked fetch falls back to `<img>` with degraded
+  statistics; a picture without numbers beats an error with neither.
+  MediaMTX, WHEP, and the analog/UVC capture paths are deliberately deferred —
+  each needs hardware or infrastructure that is not present, and each is a new
+  adapter behind the same port.
+- **`npm run clean:recordings`** — the startup retention sweep (ADR-0023) on
+  demand, with `--dry-run` and `--all`. The root script invokes node directly
+  because a nested `npm run` swallows `--` flags, which briefly made `--dry-run`
+  delete files; the tool now announces its mode on the first line.
 - **MapLibre GL replaces Leaflet as the map renderer** (ADR-0024), unlocking
   rotation, track-up and camera tilt — none of which Leaflet supports at all. The
   swap touched only [MapPanel.tsx](apps/gcs/src/map/MapPanel.tsx) and the tile

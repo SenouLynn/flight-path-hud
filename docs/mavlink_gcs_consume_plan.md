@@ -264,6 +264,14 @@ Tasks:
 Definition of done:
 - Deterministic replay catches regressions before live tests.
 
+## Phase 7 (future): Multi-node / TAK-style awareness
+
+Deliberately out of scope until the single-node system is robust, tested and
+field-validated — see [ADR-0026](./decisions.md) for the gate and
+[multi_node_awareness.md](./multi_node_awareness.md) for the target: Meshtastic
+and other TAK-style nodes on one shared picture, with a node identity model above
+the current MAVLink `sysId:compId`.
+
 ## Near-Term Next Steps (Start Here)
 
 1. Create `externalTypes.ts` and test fixtures in web app.

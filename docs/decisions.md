@@ -54,6 +54,73 @@ The entries below were reconstructed from the initial implementation (commits `9
 `355baff`) and documented on 2026-07-23. Dates reflect when each decision was first made in
 the code.
 
+## ADR-0026: Multi-node awareness is a separate phase, gated on single-node validation
+
+- **Status:** Accepted
+- **Date:** 2026-08-10
+- **Deciders:** team
+
+### Context
+The intended destination is TAK-style shared awareness: many nodes on one picture,
+contributed by MAVLink vehicles, Meshtastic mesh nodes and other CoT participants.
+
+Much of the groundwork is already multi-node. The bridge keeps a TTL-evicted
+roster of every `sysId:compId` and warns when one system transmits from two
+endpoints; `gcs-core` folds `vehicles`, `tracks`, `origins`, `positions` and
+`enuTracks` per system; the UI has a system selector. The gap is presentation, not
+data — the map draws the selected system and the sidebar describes one vehicle.
+
+Because so little appears to stand in the way, the tempting move is to widen the
+presentation now. That is the decision being recorded against.
+
+### Decision
+Multi-node is a **distinct phase**, not an increment, and it does not start until
+the single-node system is robust, tested, and validated in real life: real
+hardware or SITL rather than our own generator, known gaps closed or consciously
+accepted, and the thing used in anger at least once.
+
+The order matters because building multi-node on an unvalidated core multiplies
+every unproven assumption by the number of nodes. Several bugs this project has
+already hit — a decoder reading the wrong payload offsets, a sequence field
+overflowing a consumer's validator, two senders merging into one contradictory
+aircraft — would each have been harder to see, not easier, with more nodes on
+screen.
+
+When it does start, it follows the pattern this repo has settled into:
+
+1. Build the logic in isolation, portable — pure, no DOM, no transport.
+2. Test it hard in isolation; the suite is what makes later change safe.
+3. Integrate against a mock that is itself portable and speaks the real protocol,
+   so swapping in hardware is a producer change and nothing above it moves.
+4. Embellish last.
+
+The target and the specific work are described in
+[multi_node_awareness.md](./multi_node_awareness.md).
+
+### Consequences
+- ✅ The gate is explicit, so "the folds are already per-system, why not just draw
+  them all?" has a recorded answer rather than being re-argued.
+- ✅ The per-system folds and TTL sweeps keep earning their place meanwhile: they
+  are what makes the eventual step small.
+- ✅ The pattern is written down, so the next phase does not have to rediscover
+  it — logic first, tests, portable mock, then presentation.
+- ⚠️ Some single-node choices will not survive contact with a broader identity
+  model. `sysId:compId` is a MAVLink concept; a `NodeIdentity` above it will
+  demote `VehicleState` from root to contributor.
+- ⚠️ Deferring means the multi-vehicle UI stays unexercised, so presentation
+  assumptions accumulate untested. Accepted: an untested presentation layer is
+  cheaper to fix than an unvalidated core.
+
+### Alternatives considered
+- Widen presentation now, since the data is already per-system — rejected: it
+  would validate the multi-node picture against a synthetic single vehicle, which
+  proves nothing about either.
+- Treat Meshtastic as another MAVLink-ish source — rejected: it forces a mesh node
+  into a `sysId:compId` shape that does not fit, and the identity model is the
+  part most worth getting right.
+- Leave the target undocumented until it is scheduled — rejected: the current
+  design is already being steered by it, so the reasoning belongs on the record.
+
 ## ADR-0025: One control owns one camera axis; touching it by hand releases it
 
 - **Status:** Accepted
