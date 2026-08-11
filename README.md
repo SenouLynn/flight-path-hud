@@ -1,9 +1,19 @@
 # GCS Build-Out
-What started out as an instrument build-out for use on an ESP32 board evolved into push towards a full suite of MAVLink/auto-pilot web-application. I'm now targetting a multi-node, TAK-style oversight and management. 
+What started out as an instrument build-out for use on an ESP32 board evolved into push towards a full suite of MAVLink/auto-pilot web-application. I'm now targetting a multi-node, TAK-style oversight and management software as a staging and validation harness for future ports or application iterations. 
+
+**GCS Validation Harness:**
+```bash
+npm run dev:gcs
+```
+
+**Trajectory Projection Instrument Validation Harness:**
+```bash
+npm run dev:instruments
+```
 
 **Ramblings:**
 Examples: 
-- Most, if not all, functionality outlined below is already built better, more efficiently, and with maintined build targets for a wider range of hardware than I can ever hope to achieve: 
+- Most, if not all, functionality outlined below is already built better, more efficiently, with ample supported/maintained build targets for a wider range of hardware: 
   - MissionPlanner - ArduPilot configurator, also serves at GCS software
   - QGroundControl - Less-good ArduPilot configurator, a better GCS though
 
@@ -16,10 +26,12 @@ Order of Operations (?):
 - Build out video bridge to integrate into GCS suite.  
 - Build out mission-planning capabilities
 - Build out mutli-node capabilities 
-- Build out 'real' server
+- Bench tests
+- Field tests
+- Chat? Video Chat? Just for funsies?
 
 Future Considerations: 
-- Cons
+- Consider network heuristics
 - Consider persistence mechanism
 - Consider Lora/Mesh integration (Meshtastic nodes for humans, redundant telemetry streams onboard drones, mesh network & signal relays etc...)
 - Consider practical failure modes and how they manifest in telemetry streams. 
@@ -47,6 +59,7 @@ Supporting goals:
    - Roll: horizon line tilts
 2. Heading Indicator / Heading Tape — yaw (nose direction, compass-referenced)
 3. Rigid body orientation in 3 dimensional space (no velocity)
+4. Cartesian Position Replay
 
 #### Extrapolation
 1. Predictive path — linear and turn-aware (CTRV) projection, plus an integrated
@@ -67,6 +80,11 @@ Establish central observability mechanism for tracking statefulness of remote no
 - Vehicle controls: managing vehicle state (ARM, RTH, FAISLAFE)
 - Integrated video streaming: real-time, networked FPV. 
 - 3D rendering: 2D maps are cool, showing real position data in 3D space would be neat (and potentially load bearing for some fun enhancements)
+
+## 3. Cloud Hosting?
+
+
+
 
 
 
