@@ -25,3 +25,6 @@ apps/esp32/build/
 *.sln
 *.sw?
 apps/mavlink-bridge/recordings/
+
+# Local git worktrees (isolated implementation workspaces)
+.worktrees/
