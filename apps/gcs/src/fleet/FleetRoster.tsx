@@ -23,6 +23,7 @@ interface FleetRosterProps {
   /** Nodes taken off the map. Still listed here — the eye is a toggle, not a filter. */
   hiddenNodeIds: ReadonlySet<string>
   onToggleNodeHidden: (nodeId: string) => void
+  onCenterNode: (nodeId: string) => void
   onFocusNode: (nodeId: string) => void
   onLoadMission: (nodeId: string) => void
 }
@@ -36,6 +37,7 @@ export function FleetRoster({
   selectedSystem,
   hiddenNodeIds,
   onToggleNodeHidden,
+  onCenterNode,
   onFocusNode,
   onLoadMission,
 }: FleetRosterProps) {
@@ -65,6 +67,7 @@ export function FleetRoster({
               selected={selectedSystem !== null && systemKeyFromNodeId(node.identity.id) === selectedSystem}
               visible={!hiddenNodeIds.has(node.identity.id)}
               onToggleVisible={() => onToggleNodeHidden(node.identity.id)}
+              onCenter={() => onCenterNode(node.identity.id)}
               onOpen={() => onFocusNode(node.identity.id)}
               onLoadMission={() => onLoadMission(node.identity.id)}
             />

@@ -19,9 +19,10 @@ The two vehicles run as **separate** `sim_vehicle.py`/MAVProxy processes. This i
 intentional: ArduPilot's `--count` swarm launcher is for vehicles of the *same*
 type, whereas this acceptance target must mix Copter and Plane. Each process has
 its own `MAV_SYSID`, UDP source endpoint and seeded waypoint file. A SITL-only
-seeder waits for the vehicle heartbeat and completes the normal MAVLink mission
-count/request/item/ack transaction before MAVProxy starts its persistent UDP
-forwarding role.
+seeder waits for the vehicle heartbeat **and `HOME_POSITION`** before completing
+the normal MAVLink mission count/request/item/ack transaction; a heartbeat alone
+can precede GPS/home initialization and yield a temporary `0,0` mission-home
+item. MAVProxy starts its persistent UDP forwarding role only after that upload.
 
 Both simulators explicitly start at ArduPilot's `CMAC` location near Canberra,
 Australia. The seeded Copter and Plane routes use that same local area, while

@@ -79,6 +79,9 @@ tagged release exists.
   `BasemapControl`, since Follow and Track up have no meaning on a fleet map.
 
 ### Added
+- **Per-node fleet-map recenter control.** Each roster row now has a crosshair
+  beside its visibility eye that centers the fleet camera on that vehicle without
+  opening its detail view or changing the current zoom.
 - **Command-validation roadmap.**
   [docs/mavlink_command_validation.md](docs/mavlink_command_validation.md) defines
   a SITL-first, target-routed path from read-only requests through mission and

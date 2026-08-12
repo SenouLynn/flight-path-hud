@@ -66,6 +66,28 @@ def connect_and_wait(endpoint, timeout_seconds):
     raise TimeoutError(f"no SITL heartbeat on {endpoint} within {timeout_seconds}s: {last_error}")
 
 
+def wait_for_home_position(master, timeout_seconds):
+    """Wait until SITL has initialized the mission/home coordinate frame.
+
+    A heartbeat means the autopilot process is alive, but not that its simulated
+    GPS and home position are ready. ArduCopter can accept an upload in that
+    gap, then initially report mission item zero at its placeholder coordinate.
+    HOME_POSITION is the MAVLink readiness signal we need for this SITL-only
+    seeding path.
+    """
+    deadline = time.monotonic() + timeout_seconds
+    while time.monotonic() < deadline:
+        message = master.recv_match(type="HOME_POSITION", blocking=True, timeout=1)
+        if message is not None:
+            print(
+                f"home position {message.latitude / 1e7:.7f},{message.longitude / 1e7:.7f}; "
+                "mission storage is ready",
+                flush=True,
+            )
+            return message
+    raise TimeoutError("no HOME_POSITION after heartbeat; SITL GPS never initialized")
+
+
 def send_item(master, target_system, target_component, item):
     master.mav.mission_item_int_send(
         target_system,
@@ -119,7 +141,9 @@ def main():
 
     items = read_qgc_wpl(args.mission)
     master, heartbeat = connect_and_wait(args.master, args.timeout)
-    print(f"heartbeat from {heartbeat.get_srcSystem()}:{heartbeat.get_srcComponent()}; waiting {args.ready_delay:g}s for mission storage", flush=True)
+    print(f"heartbeat from {heartbeat.get_srcSystem()}:{heartbeat.get_srcComponent()}; waiting for home position", flush=True)
+    wait_for_home_position(master, args.timeout)
+    print(f"waiting {args.ready_delay:g}s for mission storage", flush=True)
     time.sleep(args.ready_delay)
     target_system, target_component = upload(master, heartbeat, items, args.timeout)
     print(f"seeded {len(items)} mission items to {target_system}:{target_component}", flush=True)

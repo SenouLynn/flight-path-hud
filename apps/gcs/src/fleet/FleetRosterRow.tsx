@@ -22,6 +22,7 @@ interface FleetRosterRowProps {
   /** Whether this node is currently drawn on the fleet map. */
   visible: boolean
   onToggleVisible: () => void
+  onCenter: () => void
   onOpen: () => void
   onLoadMission: () => void
 }
@@ -45,6 +46,16 @@ function EyeIcon({ visible }: { visible: boolean }) {
       />
       <circle cx="8" cy="8" r="2" fill="none" stroke="currentColor" strokeWidth="1.3" />
       {visible ? null : <path d="M2 14 14 2" stroke="currentColor" strokeWidth="1.3" />}
+    </svg>
+  )
+}
+
+/** Crosshair for recentering the fleet camera on this node. */
+function CenterIcon() {
+  return (
+    <svg width="14" height="14" viewBox="0 0 16 16" aria-hidden="true" focusable="false">
+      <circle cx="8" cy="8" r="3" fill="none" stroke="currentColor" strokeWidth="1.3" />
+      <path d="M8 1v3M8 12v3M1 8h3M12 8h3" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" />
     </svg>
   )
 }
@@ -73,6 +84,7 @@ export function FleetRosterRow({
   selected,
   visible,
   onToggleVisible,
+  onCenter,
   onOpen,
   onLoadMission,
 }: FleetRosterRowProps) {
@@ -96,6 +108,15 @@ export function FleetRosterRow({
             title={visible ? `Hide ${label} on the map` : `Show ${label} on the map`}
           >
             <EyeIcon visible={visible} />
+          </button>
+          <button
+            type="button"
+            className="icon-button"
+            disabled={!node.hasFix}
+            onClick={onCenter}
+            title={node.hasFix ? `Center the fleet map on ${label}` : `${label} has no position to center`}
+          >
+            <CenterIcon />
           </button>
           <button
             type="button"

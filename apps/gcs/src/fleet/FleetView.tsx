@@ -79,6 +79,10 @@ export function FleetView({
     }
   }
 
+  const centerNode = (nodeId: string) => {
+    mapHandleRef.current?.centerNode(nodeId)
+  }
+
   return (
     <div className="fleet-layout">
       <div className="gcs-subbar">
@@ -107,6 +111,7 @@ export function FleetView({
           selectedSystem={selectedSystem}
           hiddenNodeIds={hiddenNodeIds}
           onToggleNodeHidden={onToggleNodeHidden}
+          onCenterNode={centerNode}
           onFocusNode={focusNode}
           onLoadMission={loadMission}
         />

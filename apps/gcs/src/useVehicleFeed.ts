@@ -244,7 +244,12 @@ export function useVehicleFeed({
           const vehicle = mergeVehicleState(vehicles.get(key) ?? null, frame)
           vehicles.set(key, vehicle)
 
-          if (hasFix(vehicle)) {
+          // The vehicle fold deliberately retains its last absolute fix across
+          // attitude/VFR frames. Advance breadcrumbs only when a real position
+          // frame arrived, otherwise that retained fix is sampled at unrelated
+          // timestamps and a startup placeholder can become a continent-spanning
+          // line once GPS initializes.
+          if (frame.messageName === 'GLOBAL_POSITION_INT' && hasFix(vehicle)) {
             const step = appendTrackPoint(
               tracks.get(key) ?? null,
               { latDeg: vehicle.latDeg, lonDeg: vehicle.lonDeg, timestampMs: frame.recvTimestampMs },
@@ -252,9 +257,12 @@ export function useVehicleFeed({
             )
             tracks.set(key, step.state)
 
-            // Origin is captured lazily at the first absolute fix, same as the harness.
-            if (!origins.has(key)) {
+            // Origin is captured lazily at the first absolute fix. A large
+            // discontinuity is a new position epoch, so reset the ENU trail too.
+            if (!origins.has(key) || step.reset) {
               origins.set(key, originFromSample(vehicle.sample))
+              positions.delete(key)
+              enuTracks.set(key, [])
             }
 
             const enuStep = resolvePositionStep(

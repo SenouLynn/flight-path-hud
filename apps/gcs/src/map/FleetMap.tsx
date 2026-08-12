@@ -50,6 +50,8 @@ interface FleetMapProps {
 export interface FleetMapHandle {
   /** Frame every node that has a position. */
   fitFleet: () => void
+  /** Recenter the current camera on one node without changing the selected detail view. */
+  centerNode: (nodeId: string) => void
 }
 
 const ROUTES_SOURCE = 'fleet-routes'
@@ -163,7 +165,20 @@ export const FleetMap = forwardRef<FleetMapHandle, FleetMapProps>(function Fleet
     map.fitBounds(bounds, { padding: FIT_PADDING_PX, maxZoom: FIT_MAX_ZOOM, duration: 400 })
   }
 
-  useImperativeHandle(handleRef, () => ({ fitFleet }), [])
+  const centerNode = (nodeId: string) => {
+    const map = mapRef.current
+    const node = nodesRef.current.find((candidate) => candidate.identity.id === nodeId)
+
+    if (map === null || node === undefined || !node.hasFix || node.latDeg === null || node.lonDeg === null) {
+      return
+    }
+
+    // Deliberately retain zoom and bearing: this is a recenter action, not a
+    // single-node version of Fit fleet and not a change to the detail scope.
+    map.easeTo({ center: [node.lonDeg, node.latDeg], duration: 400 })
+  }
+
+  useImperativeHandle(handleRef, () => ({ fitFleet, centerNode }), [])
 
   // Create the map once. MapLibre owns this subtree; React must not touch it.
   useEffect(() => {
