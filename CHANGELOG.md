@@ -49,6 +49,16 @@ tagged release exists.
   `BasemapControl`, since Follow and Track up have no meaning on a fleet map.
 
 ### Added
+- **Command-validation roadmap.**
+  [docs/mavlink_command_validation.md](docs/mavlink_command_validation.md) defines
+  a SITL-first, target-routed path from read-only requests through mission and
+  mode operations, and keeps browser-GCS authority separate from a future ESP32
+  companion-computer role.
+- **ArduPilot SITL testing runbook.**
+  [docs/ardupilot_sitl_testing.md](docs/ardupilot_sitl_testing.md) records the
+  mixed Copter/Plane topology, the exact bridge acceptance checks, frame and
+  state persistence caveats, and why loading a mission is not the same as
+  commanding a vehicle to fly it.
 - **Mixed ArduPilot SITL acceptance harness.** `npm run sitl:up` starts pinned
   ArduPilot 4.6.2 ArduCopter (`1:1`) and ArduPlane (`2:1`) simulators alongside
   the bridge, each with a distinct seeded mission. A versioned sanitized MAVLink

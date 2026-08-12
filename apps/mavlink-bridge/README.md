@@ -59,6 +59,10 @@ mission overlays. `npm run sitl:logs` follows Compose logs.
 This validates one simulated mixed-fleet scenario only; it is not a field or
 arbitrary-fleet validation claim.
 
+See [ArduPilot SITL Testing Nuances](../../docs/ardupilot_sitl_testing.md) for
+the Compose topology, acceptance criteria, frame/mission behavior, and the
+important distinction between loading a mission and making a simulator fly it.
+
 ### macOS and Apple Silicon: important constraint
 
 The official SITL baseline is **Linux in Docker**, including on Apple Silicon

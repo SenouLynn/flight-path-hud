@@ -62,6 +62,10 @@ Non-goal for early phases:
   - Flight control authority.
   - Autopilot configuration tooling.
 
+Future command expansion is intentionally staged and SITL-first; see
+[mavlink_command_validation.md](./mavlink_command_validation.md). It does not change this
+phase's receive-only boundary.
+
 ## End State (Phase 1)
 
 A browser GCS page in `apps/hud` that can:
@@ -92,6 +96,11 @@ A browser GCS page in `apps/hud` that can:
 5. Video sidecar
 - Keep video stream transport behind ports/adapters so analog capture and digital camera paths can coexist.
 - Present one stable video panel contract to the UI regardless of ingest source.
+
+6. Future terrain-aware 3D scene
+- Keep ArduPilot SD-card terrain data separate from browser terrain rendering.
+- Select a browser terrain provider and altitude-datum policy before adding a 3D map.
+- See [terrain_and_3d_map_notes.md](./terrain_and_3d_map_notes.md).
 
 ## Concrete Work Plan
 
