@@ -26,7 +26,7 @@
     "preview:esp32": "make -C apps/esp32 run",
     "test:hud-ui": "npm run test --workspace @flight-path-hud/hud-ui",
     "mock:video": "npm run mock --workspace @flight-path-hud/video-bridge",
-    "clean:recordings": "node apps/mavlink-bridge/src/cleanRecordings.js",
+    "clean:recordings": "MAVLINK_BRIDGE_RECORD_DIR=apps/mavlink-bridge/recordings node apps/mavlink-bridge/src/cleanRecordings.js",
     "test:gcs": "npm run test --workspace @flight-path-hud/gcs",
     "sitl:up": "docker compose -f apps/mavlink-bridge/sitl/compose.yml up --build",
     "sitl:down": "docker compose -f apps/mavlink-bridge/sitl/compose.yml down",

@@ -581,7 +581,7 @@ Record by default, and bound it in two places:
 - **Per run**: a byte cap (`MAVLINK_BRIDGE_RECORD_MAX_MB`, 256). At the cap the
   recorder *stops* and says so.
 - **Across runs**: a startup sweep of the recordings directory by age
-  (`_RETAIN_DAYS`, 7) then by total size (`_TOTAL_MAX_MB`, 1024), oldest first.
+  (`_RETAIN_DAYS`, 7) then by total size (`_TOTAL_MAX_MB`, 128), oldest first.
 
 Each run writes `session-<timestamp>.jsonl`. Recording is skipped while replaying.
 `MAVLINK_BRIDGE_RECORD=0` disables it.

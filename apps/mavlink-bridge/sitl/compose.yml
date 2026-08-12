@@ -5,6 +5,10 @@ services:
     command: sh -c "npm ci && npm run start --workspace @flight-path-hud/mavlink-bridge"
     volumes:
       - ../../..:/workspace
+      # `npm ci` runs in Linux. Keep its native dependencies out of the host
+      # bind mount so it cannot replace macOS Rolldown/Vite bindings used by the
+      # browser GCS.
+      - bridge_node_modules:/workspace/node_modules
       - ../recordings:/workspace/apps/mavlink-bridge/recordings
     ports:
       - "8080:8080"
@@ -30,3 +34,6 @@ services:
       - ./plane.waypoints:/scenario/plane.waypoints:ro
     depends_on:
       - bridge
+
+volumes:
+  bridge_node_modules:

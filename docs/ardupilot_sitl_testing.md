@@ -18,7 +18,14 @@ when they disagree, ArduPilot's documentation wins.
 The two vehicles run as **separate** `sim_vehicle.py`/MAVProxy processes. This is
 intentional: ArduPilot's `--count` swarm launcher is for vehicles of the *same*
 type, whereas this acceptance target must mix Copter and Plane. Each process has
-its own `MAV_SYSID`, UDP source endpoint and seeded waypoint file.
+its own `MAV_SYSID`, UDP source endpoint and seeded waypoint file. A SITL-only
+seeder waits for the vehicle heartbeat and completes the normal MAVLink mission
+count/request/item/ack transaction before MAVProxy starts its persistent UDP
+forwarding role.
+
+Both simulators explicitly start at ArduPilot's `CMAC` location near Canberra,
+Australia. The seeded Copter and Plane routes use that same local area, while
+remaining intentionally distinct in waypoint count, route shape, and altitude.
 
 MAVProxy forwards each simulator's MAVLink stream to `bridge:14550` over the
 Compose network. The browser never speaks MAVLink directly; it connects only to
@@ -45,10 +52,21 @@ BUILDKIT_PROGRESS=plain npm run sitl:up
 ```
 
 The first build downloads ArduPilot and its submodules, installs its supported
-Ubuntu prerequisites, and compiles SITL. Docker caches those layers locally;
-neither the image nor the ArduPilot checkout belongs in Git. On an Apple Silicon
-Mac this is Linux/arm64 under Docker Desktop, which is the project's supported
-SITL baseline (ADR-0031), not a native macOS build.
+Ubuntu prerequisites, installs pinned MAVProxy `1.8.74` (which `sim_vehicle.py`
+starts as the forwarding process), and compiles SITL. Docker caches those layers
+locally; neither the image nor the ArduPilot checkout belongs in Git. On an Apple
+Silicon Mac this is Linux/arm64 under Docker Desktop, which is the project's
+supported SITL baseline (ADR-0031), not a native macOS build.
+
+### macOS host dependencies versus Linux bridge dependencies
+
+The bridge container bind-mounts this repository for source access, but its
+`node_modules` live in a Docker-managed volume. This is required on macOS:
+Vite/Rolldown has native bindings, and a Linux `npm ci` must never write into the
+host's macOS `node_modules` directory. If a previous container run did overwrite
+it, stop the stack and run `npm ci` from the repository root on the Mac, then
+start the GCS again. A missing `@rolldown/binding-darwin-arm64` error means this
+host dependency repair is required.
 
 In a second terminal start the GCS:
 
@@ -87,11 +105,11 @@ Keep the GCS WebSocket URL at `ws://localhost:8080/telemetry`. Use
 
 ### A loaded mission is not a flying mission
 
-The seeded `*.waypoints` files are loaded into ArduPilot by MAVProxy at startup.
-They give the bridge a real mission to read, but loading them neither arms the
-vehicle nor begins AUTO mode. This GCS intentionally has no arm/mode/mission
-write capability. A stationary marker is therefore expected at startup and is
-not a telemetry failure.
+The seeded `*.waypoints` files are uploaded to ArduPilot at startup through a
+connection-aware SITL-only MAVLink transaction. They give the bridge a real
+mission to read, but loading them neither arms the vehicle nor begins AUTO mode.
+This GCS intentionally has no arm/mode/mission write capability. A stationary
+marker is therefore expected at startup and is not a telemetry failure.
 
 If movement is needed for a separate map/track exercise, control it through an
 explicit MAVProxy or another authorized GCS workflow—not through this project

@@ -23,6 +23,10 @@ tagged release exists.
 ## [Unreleased]
 
 ### Changed
+- **Mixed SITL missions now match the explicit CMAC start location.** Copter and
+  Plane launch near Canberra, Australia and seed distinct local routes, replacing
+  the stale Swiss-coordinate waypoint fixtures that produced disconnected map
+  overlays.
 - **Bridge recording retention is now 128 MB by default.** The startup sweep
   keeps the newest captures within that lower total budget; set
   `MAVLINK_BRIDGE_RECORD_TOTAL_MAX_MB` to override it for a deliberate longer
@@ -30,9 +34,18 @@ tagged release exists.
 - **SITL image installs its pinned MAVProxy forwarding executable.** ArduPilot's
   prerequisite script sets up MAVProxy dependencies but does not provide
   `mavproxy.py`; the image now installs MAVProxy `1.8.74` before the Copter and
-  Plane containers invoke `sim_vehicle.py`.
+  Plane containers invoke `sim_vehicle.py`, and exposes its virtualenv on the
+  runtime `PATH`.
 
 ### Fixed
+- **SITL's Linux bridge install no longer overwrites macOS GCS dependencies.**
+  The Compose bridge now keeps its `node_modules` in a Docker volume, preserving
+  the host's Darwin Rolldown/Vite native binding for `npm run dev:gcs`.
+- **Headless SITL now seeds missions after an actual vehicle heartbeat.** MAVProxy
+  startup commands run before a connection is guaranteed and headless stdin made
+  the proxy exit; a SITL-only MAVLink mission handshake now seeds each vehicle,
+  then MAVProxy runs non-interactively in daemon mode as the persistent
+  forwarding hop.
 - **`npm run clean:recordings` now targets the bridge recordings directory.** The
   root helper previously checked a nonexistent root-level `recordings/` folder,
   so its dry run misleadingly reported nothing while bridge captures remained.
