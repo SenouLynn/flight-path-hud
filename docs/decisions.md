@@ -137,10 +137,10 @@ it never falls back to another sender. Replay remains outbound-disabled.
 - ⚠️ This tracks one endpoint per system. Redundant links are still reported as
   duplicate transmitters by the existing source-conflict mechanism; selecting a
   redundancy/failover policy is deferred.
-- ⚠️ The routing decision is covered by pure tests, but its load-bearing
-  validation remains the pending Docker execution of the mixed ArduCopter +
-  ArduPlane SITL scenario. The generated binary fixture is not a substitute for
-  that real-producer run.
+- ⚠️ The routing decision is covered by pure tests and a live mixed-SITL smoke
+  run. Its repeatable acceptance evidence still requires the stop/restart and
+  replay checklist plus a curated real-SITL recording fixture; the generated
+  binary-contract fixture is not a substitute for that captured producer run.
 
 ### Alternatives considered
 
@@ -591,6 +591,9 @@ Each run writes `session-<timestamp>.jsonl`. Recording is skipped while replayin
 - ✅ Disk use has a stated ceiling instead of growing until something breaks.
 - ✅ Deleted files are logged by name, size and reason — flight data never
   disappears silently.
+- ⚠️ The aggregate sweep runs only at startup and excludes the new active file.
+  With the defaults, disk use can therefore temporarily approach 384 MB: up to
+  128 MB retained from prior runs plus the active run's 256 MB cap.
 - ⚠️ Stopping at the cap means a long session is incomplete rather than rotated.
   Chosen deliberately: a recording truncated mid-stream is harder to trust than
   one that plainly ends.

@@ -1,14 +1,14 @@
 # GCS Build-Out
-What started out as an instrument build-out for use on an ESP32 board evolved into push towards a full suite of MAVLink/auto-pilot web-application. I'm now targetting a multi-node, TAK-style oversight and management software as a staging and validation harness for future ports or application iterations. 
+What started out as an instrument build-out for use on an ESP32 board evolved into push towards a full suite of MAVLink/auto-pilot web-application. I'm now targetting a multi-node, TAK-style command+control as a staging and validation harness for future ports or application iterations. 
 
 **GCS Validation Harness:**
 ```bash
-npm run dev:gcs
+npm run gcs:mock
 ```
 
 **Trajectory Projection Instrument Validation Harness:**
 ```bash
-npm run dev:instruments
+npm run dev:hud
 ```
 
 **Ramblings:**
@@ -77,16 +77,62 @@ Establish central observability mechanism for tracking statefulness of remote no
 - Local position, orientation, and trajectory in cartesian space: describing relativity of vehicle to unbounded space. 
 - Contextual positioning: where is IT in relation to ME or THAT. 
 - Mission-planning: managing navigation way points in real time. 
+- SITL (Software in the Loop) harness validation
 - Vehicle controls: managing vehicle state (ARM, RTH, FAISLAFE)
 - Integrated video streaming: real-time, networked FPV. 
 - 3D rendering: 2D maps are cool, showing real position data in 3D space would be neat (and potentially load bearing for some fun enhancements)
 
-## 3. Cloud Hosting?
 
+## Current validation workflows
 
+Install dependencies once:
 
+```bash
+npm ci
+```
 
+### GCS mock mode
 
+The deterministic development harness starts the browser GCS, MAVLink bridge,
+synthetic two-vehicle fleet, and mock video source:
+
+```bash
+npm run gcs:mock
+```
+
+### GCS mixed-SITL mode
+
+The real-producer harness starts Docker Compose in the background with pinned
+ArduPilot 4.6.2 + ArduCopter (`1:1`), ArduPlane (`2:1`), and the bridge, and runs
+the browser GCS. Open the Vite address it prints (normally
+`http://localhost:5174`) and use `ws://localhost:8080/telemetry`.
+
+```bash
+npm run gcs:sitl
+```
+
+Stop the detached simulator stack after the GCS exits:
+
+```bash
+npm run sitl:down
+```
+
+For attached Compose output or diagnostics, use `npm run sitl:up` or
+`npm run sitl:logs`. The first SITL build compiles ArduPilot and is intentionally
+large; Docker caches the result locally. Docker Desktop Linux/arm64 containers
+are the supported path on Apple Silicon Macs. Native macOS SITL is best-effort.
+
+The GCS is read-only apart from targeted mission downloads: loading a mission
+does not arm a vehicle or start AUTO mode.
+
+### Checks and maintenance
+
+```bash
+npm run build:gcs
+npm run test:gcs-core
+npm run test:bridge
+npm run clean:recordings -- --dry-run
+```
 
 ## Documentation
 - [docs/architecture.md](docs/architecture.md) — data flow, module map, conventions, tooling
@@ -96,6 +142,7 @@ Establish central observability mechanism for tracking statefulness of remote no
 - [docs/mavlink_gcs_consume_plan.md](docs/mavlink_gcs_consume_plan.md) — receive-only MAVLink GCS roadmap and concrete next steps
 - [docs/mavlink_command_validation.md](docs/mavlink_command_validation.md) — staged browser-GCS command validation roadmap
 - [docs/ardupilot_sitl_testing.md](docs/ardupilot_sitl_testing.md) — mixed Copter/Plane SITL runbook and acceptance nuances
+- [docs/session_handoff_2026-08-12.md](docs/session_handoff_2026-08-12.md) — current mixed-SITL session state and resumption guide
 - [docs/terrain_and_3d_map_notes.md](docs/terrain_and_3d_map_notes.md) — ArduPilot terrain files versus future browser 3D-map terrain
 - [docs/gcs_runtime_blueprint.md](docs/gcs_runtime_blueprint.md) — portable runtime architecture for cloud-web and Pi-local deployment
 - [docs/decisions.md](docs/decisions.md) — Architecture Decision Record (ADR) log

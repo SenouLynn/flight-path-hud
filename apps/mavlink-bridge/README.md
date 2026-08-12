@@ -102,6 +102,9 @@ Behaviour worth knowing:
   data would be worse than the disk usage.
 - The sweep only touches `.jsonl` files, and never the file the current run is
   about to write.
+- The sweep runs only at bridge startup, not continuously. Because it retains up
+  to 128 MB from prior runs and excludes the active recording (capped at 256 MB),
+  the directory can temporarily approach roughly 384 MB with the defaults.
 - Recording is skipped while replaying — otherwise a replay would write a second
   copy of a recording you already have.
 

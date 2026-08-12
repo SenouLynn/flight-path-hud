@@ -23,6 +23,15 @@ tagged release exists.
 ## [Unreleased]
 
 ### Changed
+- **Root commands now expose the two GCS validation modes directly.**
+  `npm run gcs:mock` starts the deterministic local fleet, while
+  `npm run gcs:sitl` starts the detached mixed ArduPilot Compose stack and the
+  browser GCS. Obsolete bridge/sample/video composition aliases were removed
+  from the root interface; SITL lifecycle commands remain for diagnostics.
+- **Mixed SITL has passed its initial live smoke run.** The Docker-built Copter
+  and Plane streams now reach the browser GCS together with independent map
+  placement and mission pulls; retained capture/replay and single-vehicle
+  restart checks remain the formal acceptance gate.
 - **Mixed SITL missions now match the explicit CMAC start location.** Copter and
   Plane launch near Canberra, Australia and seed distinct local routes, replacing
   the stale Swiss-coordinate waypoint fixtures that produced disconnected map
@@ -79,6 +88,10 @@ tagged release exists.
   `BasemapControl`, since Follow and Track up have no meaning on a fleet map.
 
 ### Added
+- **Mixed-SITL session handoff.**
+  [docs/session_handoff_2026-08-12.md](docs/session_handoff_2026-08-12.md)
+  records the completed smoke run, remaining acceptance evidence, platform
+  constraints, and the recommended motion-validation follow-on.
 - **Per-node fleet-map recenter control.** Each roster row now has a crosshair
   beside its visibility eye that centers the fleet camera on that vehicle without
   opening its detail view or changing the current zoom.

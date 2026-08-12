@@ -1,9 +1,11 @@
 # Multi-node awareness
 
 **Status: producer, domain and presentation built for MAVLink nodes, with a
-mixed ArduCopter/ArduPlane SITL acceptance harness. The harness has not yet been
-Docker-built or executed; that acceptance run is the next load-bearing step. Not
-field-validated.**
+mixed ArduCopter/ArduPlane SITL harness Docker-built and manually observed live.
+The two-node roster, independent missions, map placement and per-system routing
+have been exercised. The repeatable capture/replay and stop/restart portions of
+the acceptance checklist remain before calling this scenario fully validated.
+Not field-validated.**
 [ADR-0026](./decisions.md) gated this phase on the single-node system being
 validated in real life. [ADR-0028](./decisions.md) amended that gate's scope to
 let producer work proceed *while every node on the link is synthetic*, because a
@@ -31,13 +33,13 @@ same kind of object on the map, differing in transport and in what they report.
 
 ## Next load-bearing validation step
 
-Build and execute the mixed ArduCopter (`1:1`) + ArduPlane (`2:1`) Docker SITL
-scenario with `npm run sitl:up`. This is not a smoke test to defer: it is the
-first real-producer check of MAVLink v2 decoding, per-system UDP mission return
-routing, independent mission pulls, stale-node eviction, reconnect, recording,
-and replay. Capture the resulting recording as the versioned fixture only after
-that run passes. Until then, the checked-in fixture is a binary-contract fixture,
-not evidence that ArduPilot SITL has been validated.
+Complete and preserve the mixed ArduCopter (`1:1`) + ArduPlane (`2:1`) Docker
+SITL acceptance scenario: stop/restart one simulator, replay the captured
+session, then curate a short sanitized recording as the versioned real-producer
+fixture. This is the evidence gate for MAVLink v2 decoding, per-system UDP
+mission return routing, independent mission pulls, stale-node eviction,
+reconnect, recording, and replay. The checked-in fixture remains a
+binary-contract fixture until that captured SITL fixture is added.
 
 ## What is already multi-node
 
@@ -67,8 +69,9 @@ start:
   system alongside `nodes`, so a plan belonging to a node nobody has selected is
   no longer invisible.
 
-The gap is no longer data or presentation but *evidence*: everything above is
-exercised only against `mockFleetRunner.js`.
+The gap is no longer data or presentation but *repeatable evidence*: the live
+SITL smoke run has exercised the data path, while the preserved recording and
+the stop/restart/replay acceptance evidence remain to be completed.
 
 ## What would actually change
 
