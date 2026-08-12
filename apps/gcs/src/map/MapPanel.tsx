@@ -1,26 +1,33 @@
 /**
- * THE ONLY FILE THAT IMPORTS THE MAP RENDERER.
+ * THE SINGLE-NODE MAP. It renders exactly one vehicle and never grows a
+ * multi-node display mode — the fleet picture is FleetMap, a separate component
+ * with its own map instance (see docs/multi_node_awareness.md).
  *
  * Everything it needs arrives as plain data — vehicle state, an array of lat/lon
- * points, a tile config — so replacing the renderer means rewriting this component
- * and nothing else. No MapLibre type may appear in any prop.
+ * points, a tile config — so replacing the renderer means rewriting this
+ * directory and nothing else. No MapLibre type may appear in any prop. The
+ * renderer itself, the style and the marker factories live in `./mapAdapter`.
  *
  * Imperative on purpose: MapLibre owns a WebGL canvas and mutates sources in
  * place, so React renders an empty container once and updates happen in effects
  * against refs.
- *
- * COORDINATE ORDER: MapLibre is [lng, lat] — the reverse of Leaflet and of how
- * the rest of this codebase names things. Every conversion goes through
- * `toLngLat` so the flip happens in exactly one place.
  */
 
 import maplibregl from 'maplibre-gl'
 import 'maplibre-gl/dist/maplibre-gl.css'
 import { forwardRef, useEffect, useImperativeHandle, useRef } from 'react'
-import type { Feature, LineString } from 'geojson'
 import type { HomePosition, MissionPlan, TrackPoint, VehicleState } from '@flight-path-hud/gcs-core'
 import { EMPTY_MISSION } from '@flight-path-hud/gcs-core'
 import type { TileSource } from './tileSource'
+import {
+  buildStyle,
+  createHomeMarkerElement,
+  createVehicleMarkerElement,
+  createWaypointMarkerElement,
+  emptyFeature,
+  styleWaypointMarker,
+  toLngLat,
+} from './mapAdapter'
 
 interface MapPanelProps {
   vehicle: VehicleState | null
@@ -61,76 +68,10 @@ export interface MapHandle {
   panTo: (latDeg: number, lonDeg: number) => void
 }
 
-const BASEMAP_SOURCE = 'basemap'
 const TRACK_SOURCE = 'track'
 const TRACK_LAYER = 'track-line'
 const ROUTE_SOURCE = 'route'
 const ROUTE_LAYER = 'route-line'
-
-/** The single point where lat/lon becomes MapLibre's lng/lat. */
-function toLngLat(latDeg: number, lonDeg: number): [number, number] {
-  return [lonDeg, latDeg]
-}
-
-function buildStyle(tileSource: TileSource): maplibregl.StyleSpecification {
-  return {
-    version: 8,
-    sources: {
-      [BASEMAP_SOURCE]: {
-        type: 'raster',
-        tiles: tileSource.tiles,
-        tileSize: tileSource.tileSize,
-        maxzoom: tileSource.maxZoom,
-        attribution: tileSource.attribution,
-      },
-    },
-    layers: [
-      { id: 'background', type: 'background', paint: { 'background-color': '#0a0e14' } },
-      { id: 'basemap', type: 'raster', source: BASEMAP_SOURCE },
-    ],
-  }
-}
-
-function emptyTrack(): Feature<LineString> {
-  return { type: 'Feature', properties: {}, geometry: { type: 'LineString', coordinates: [] } }
-}
-
-/** Nose-up triangle; heading is applied as a marker rotation, not a redraw. */
-function createMarkerElement(): HTMLElement {
-  const element = document.createElement('div')
-  element.className = 'vehicle-marker'
-  element.innerHTML = `<svg width="28" height="28" viewBox="0 0 28 28">
-    <polygon points="14,3 21,24 14,19 7,24" fill="#ffb454" stroke="#1b1b1b" stroke-width="1.5" stroke-linejoin="round" />
-  </svg>`
-  return element
-}
-
-/** Diamond, not the nose-triangle: home has no heading, so nothing here rotates. */
-function createHomeMarkerElement(): HTMLElement {
-  const element = document.createElement('div')
-  element.className = 'home-marker'
-  element.innerHTML = `<svg width="24" height="24" viewBox="0 0 24 24">
-    <polygon points="12,2 22,12 12,22 2,12" fill="#57e389" stroke="#1b1b1b" stroke-width="1.5" stroke-linejoin="round" />
-  </svg>`
-  return element
-}
-
-/**
- * A numbered badge, not a data-driven circle layer: MapLibre can only draw
- * `text-field` symbols against server-hosted glyph PBFs (a `glyphs` URL in the
- * style), and this app's Pi target deliberately avoids any dependency on a
- * hosted service it isn't self-serving (ADR-0024's "no cloud dependency" rule
- * — the same reason 3D terrain and vector-tile buildings are deferred). Plain
- * DOM text sidesteps that entirely, at the cost of one marker per waypoint
- * instead of one GPU-batched layer — fine at mission-plan scale (tens of
- * waypoints, not thousands).
- */
-function createWaypointMarkerElement(seq: number, active: boolean): HTMLElement {
-  const element = document.createElement('div')
-  element.className = active ? 'waypoint-marker active' : 'waypoint-marker'
-  element.textContent = String(seq)
-  return element
-}
 
 /**
  * Writes the route line into the source `addOverlayLayers` created. Split out
@@ -169,7 +110,7 @@ function syncRouteSource(map: maplibregl.Map, mission: MissionPlan): void {
  * sources included). Factored once both callers needed both.
  */
 function addOverlayLayers(map: maplibregl.Map): void {
-  map.addSource(TRACK_SOURCE, { type: 'geojson', data: emptyTrack() })
+  map.addSource(TRACK_SOURCE, { type: 'geojson', data: emptyFeature() })
   map.addLayer({
     id: TRACK_LAYER,
     type: 'line',
@@ -178,7 +119,7 @@ function addOverlayLayers(map: maplibregl.Map): void {
     paint: { 'line-color': '#74d7ff', 'line-width': 2.5, 'line-opacity': 0.9 },
   })
 
-  map.addSource(ROUTE_SOURCE, { type: 'geojson', data: emptyTrack() })
+  map.addSource(ROUTE_SOURCE, { type: 'geojson', data: emptyFeature() })
   map.addLayer({
     id: ROUTE_LAYER,
     type: 'line',
@@ -379,7 +320,7 @@ export const MapPanel = forwardRef<MapHandle, MapPanelProps>(function MapPanel(
     positionRef.current = position
 
     if (markerRef.current === null) {
-      markerRef.current = new maplibregl.Marker({ element: createMarkerElement() })
+      markerRef.current = new maplibregl.Marker({ element: createVehicleMarkerElement() })
         .setLngLat(position)
         .addTo(map)
     } else {
@@ -508,7 +449,7 @@ export const MapPanel = forwardRef<MapHandle, MapPanelProps>(function MapPanel(
       }
 
       existing.setLngLat(position)
-      existing.getElement().className = active ? 'waypoint-marker active' : 'waypoint-marker'
+      styleWaypointMarker(existing.getElement(), active)
     })
 
     // Drop markers for waypoints no longer in the mission — a shorter reload,

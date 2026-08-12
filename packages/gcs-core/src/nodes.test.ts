@@ -4,7 +4,9 @@ import {
   classifyFreshness,
   mavlinkNodeIdentity,
   nodeSummaryFromVehicle,
+  parseMavlinkNodeId,
   summarizeNodes,
+  systemKeyFromNodeId,
 } from './nodes'
 import type { VehicleState } from './vehicle'
 
@@ -51,6 +53,64 @@ describe('mavlinkNodeIdentity', () => {
 
   it('distinguishes components of the same system', () => {
     expect(mavlinkNodeIdentity(1, 1).id).not.toBe(mavlinkNodeIdentity(1, 2).id)
+  })
+})
+
+describe('parseMavlinkNodeId', () => {
+  it('round-trips every id mavlinkNodeIdentity can build', () => {
+    for (const [sysId, compId] of [[1, 1], [2, 1], [10, 1], [0, 0], [255, 255], [7, 190]]) {
+      expect(parseMavlinkNodeId(mavlinkNodeIdentity(sysId, compId).id)).toEqual({ sysId, compId })
+    }
+  })
+
+  it('reads the id, not the label, so a real callsign cannot break it', () => {
+    // The label defaults to the `sysId:compId` string today, which makes it an
+    // accidental second source of identity. Parsing must not depend on that.
+    const identity = mavlinkNodeIdentity(2, 1, 'Figure-8 01')
+    expect(parseMavlinkNodeId(identity.id)).toEqual({ sysId: 2, compId: 1 })
+  })
+
+  it('rejects ids that are not MAVLink node ids', () => {
+    for (const id of [
+      'mavlink:1',
+      'mavlink:1:1:1',
+      'mavlink:a:1',
+      'mavlink::1',
+      'mavlink:1:',
+      'mavlink:-1:1',
+      'mavlink:1.0:1',
+      'meshtastic:abc',
+      // The systemKey format, which is the id this is most likely to be confused with.
+      '1:1',
+      '',
+    ]) {
+      expect(parseMavlinkNodeId(id)).toBeNull()
+    }
+  })
+
+  it('rejects out-of-range ids, which MAVLink cannot address', () => {
+    expect(parseMavlinkNodeId('mavlink:256:1')).toBeNull()
+    expect(parseMavlinkNodeId('mavlink:1:256')).toBeNull()
+  })
+
+  it('rejects leading zeros, so one system has exactly one id', () => {
+    expect(parseMavlinkNodeId('mavlink:01:1')).toBeNull()
+  })
+})
+
+describe('systemKeyFromNodeId', () => {
+  it('produces the key the per-system folds and the system selector use', () => {
+    expect(systemKeyFromNodeId('mavlink:1:1')).toBe('1:1')
+    expect(systemKeyFromNodeId('mavlink:10:1')).toBe('10:1')
+  })
+
+  it('agrees with summarizeNodes, which is where the ids come from', () => {
+    const [summary] = summarizeNodes([vehicle({ sysId: 4, compId: 2 })], 1000)
+    expect(systemKeyFromNodeId(summary.identity.id)).toBe('4:2')
+  })
+
+  it('is null for a node that has no MAVLink system key', () => {
+    expect(systemKeyFromNodeId('meshtastic:abc')).toBeNull()
   })
 })
 

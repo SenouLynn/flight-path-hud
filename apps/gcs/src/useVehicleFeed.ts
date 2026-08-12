@@ -75,6 +75,16 @@ export interface VehicleFeedState {
   knownSystems: string[]
   /** Latest mission plan for the active system. EMPTY_MISSION until requested. */
   mission: MissionPlan
+  /**
+   * Latest mission plan for *every* system, keyed by `systemKey`. The fleet
+   * picture needs all of them at once; `mission` above stays the active system's
+   * plan, so the single-node panels are unaffected.
+   *
+   * Published on mission arrival rather than on the node timer: a plan changes
+   * only when the operator asks for one, so copying the map twice a second
+   * forever would allocate for nothing.
+   */
+  missions: ReadonlyMap<string, MissionPlan>
   /** Latest home position for the active system. Null until the bridge reports one. */
   home: HomePosition | null
   /**
@@ -96,11 +106,11 @@ export interface VehicleFeedState {
 }
 
 /**
- * The log and the node roster are each published on their own timer, so they are
- * held as separate state. `requestMission` is a stable callback, not fold-derived
- * state.
+ * The log and the node roster are each published on their own timer, and the
+ * per-system mission map on mission arrival, so all three are held as separate
+ * state. `requestMission` is a stable callback, not fold-derived state.
  */
-type FeedSnapshot = Omit<VehicleFeedState, 'log' | 'nodes' | 'requestMission'>
+type FeedSnapshot = Omit<VehicleFeedState, 'log' | 'nodes' | 'missions' | 'requestMission'>
 
 const INITIAL: FeedSnapshot = {
   vehicle: null,
@@ -166,6 +176,7 @@ export function useVehicleFeed({
   const [snapshot, setSnapshot] = useState<FeedSnapshot>(INITIAL)
   const [log, setLog] = useState<LogEntry[]>([])
   const [nodes, setNodes] = useState<NodeSummary[]>([])
+  const [missionsByKey, setMissionsByKey] = useState<ReadonlyMap<string, MissionPlan>>(new Map())
 
   // Read the selection per frame so changing it never tears down the socket.
   const selectedRef = useRef(selectedSystem)
@@ -270,6 +281,12 @@ export function useVehicleFeed({
           const key = systemKey(frame.sysId, frame.compId)
           missions.set(key, missionPlanFromFrame(frame))
 
+          // Unconditional, unlike the publish() below: a plan belonging to a node
+          // that isn't the selected one is exactly what the fleet picture is for.
+          // Gating this on the selection would store every other node's mission
+          // and then never show it.
+          setMissionsByKey(new Map(missions))
+
           const selected = selectedRef.current
           if (selected === null || selected === key) {
             publish(selected ?? key)
@@ -328,6 +345,7 @@ export function useVehicleFeed({
 
     const sweepTimer = setInterval(() => {
       const staleBeforeMs = Date.now() - SYSTEM_TTL_MS
+      let droppedMission = false
 
       vehicles.forEach((vehicle, key) => {
         if (vehicle.lastUpdateMs >= staleBeforeMs) {
@@ -339,9 +357,16 @@ export function useVehicleFeed({
         origins.delete(key)
         positions.delete(key)
         enuTracks.delete(key)
-        missions.delete(key)
+        droppedMission = missions.delete(key) || droppedMission
         homes.delete(key)
       })
+
+      // The roster recomputes from `vehicles` on its own timer, but the published
+      // mission map is a copy — without this, an evicted node's route would stay
+      // on the fleet map after the node itself had gone.
+      if (droppedMission) {
+        setMissionsByKey(new Map(missions))
+      }
     }, SYSTEM_SWEEP_MS)
 
     return () => {
@@ -353,8 +378,9 @@ export function useVehicleFeed({
       setSnapshot(INITIAL)
       setLog([])
       setNodes([])
+      setMissionsByKey(new Map())
     }
   }, [url, trackConfig])
 
-  return { ...snapshot, log, nodes, requestMission }
+  return { ...snapshot, log, nodes, missions: missionsByKey, requestMission }
 }

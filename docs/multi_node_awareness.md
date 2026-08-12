@@ -1,11 +1,14 @@
 # Multi-node awareness
 
-**Status: producer and domain layers underway; presentation still gated.**
+**Status: producer, domain and presentation built for MAVLink nodes, against a
+synthetic fleet. Not validated.**
 [ADR-0026](./decisions.md) gated this phase on the single-node system being
-validated in real life. [ADR-0028](./decisions.md) amends that gate's scope:
-work may proceed *while every node on the link is synthetic*, because a second
-mock is itself a validation instrument. Real hardware or SITL is still the
-precondition for any multi-node UI and for calling multi-node validated.
+validated in real life. [ADR-0028](./decisions.md) amended that gate's scope to
+let producer work proceed *while every node on the link is synthetic*, because a
+second mock is itself a validation instrument; [ADR-0029](./decisions.md)
+extended the same reasoning to presentation, and redrew the line around *claims*
+rather than code. Real hardware or SITL is still the precondition for calling
+multi-node validated and for any operational use.
 
 Everything built so far is deliberately load-bearing for this. Nothing here asks
 for a rewrite; it asks for a broader identity model and a presentation layer that
@@ -46,9 +49,14 @@ start:
   `NodeSummary` and freshness banding, derived from the per-system folds rather
   than accumulated separately. `useVehicleFeed` publishes it as `nodes`.
 
-The gap is presentation, not data: the map renders the selected system only, and
-the sidebar describes one vehicle. The state for the others already exists, is
-already bounded, and is now already summarised.
+- **The fleet view consumes it.** A roster plus its own unified map, drawing
+  every node, its route and its waypoints in a per-node colour, above the
+  single-node view as list-to-detail. `useVehicleFeed` publishes `missions` per
+  system alongside `nodes`, so a plan belonging to a node nobody has selected is
+  no longer invisible.
+
+The gap is no longer data or presentation but *evidence*: everything above is
+exercised only against `mockFleetRunner.js`.
 
 ## What would actually change
 
@@ -62,17 +70,21 @@ already bounded, and is now already summarised.
 3. **Ingress adapters per transport.** Unchanged and still ahead. The port model
    already anticipates it — Meshtastic and CoT ingress sit beside UDP and replay,
    and the bridge core does not move.
-4. **Presentation for many.** Still gated. Simultaneous markers, labels,
-   filtering, affiliation colour, and a selection model that is "focus one of
-   many" rather than "show one".
-5. ~~**Staleness as a first-class display concept.**~~ **Modelled, not yet
-   drawn.** `classifyFreshness` bands age into `live`/`aging`/`stale`, separately
-   from eviction TTL and with per-transport thresholds. Nothing renders it yet.
+4. ~~**Presentation for many.**~~ **Mostly done.** Simultaneous markers, per-node
+   colour, and a selection model that is "focus one of many" rather than "show
+   one" — the fleet roster pins `selectedSystem` and hands off to the node view.
+   Labels are DOM markers, not `text-field` symbols, for the reason in
+   [ADR-0024](./decisions.md). Still open: filtering, and affiliation colour,
+   which needs a type/affiliation model this has no transport to justify yet.
+5. ~~**Staleness as a first-class display concept.**~~ **Done.**
+   `classifyFreshness` bands age into `live`/`aging`/`stale`, separately from
+   eviction TTL and with per-transport thresholds. Rendered as marker opacity on
+   the fleet map and as a band plus an age on each roster row.
 
 ## What must be true first
 
-**For presentation, and for calling multi-node validated** — single-node has to be
-robust, tested and flown. Specifically:
+**For calling multi-node validated** — single-node has to be robust, tested and
+flown. Specifically:
 
 - Real hardware or SITL in place of the synthetic fleet, with the decoders
   validated against actual MAVLink rather than our own generator.
@@ -80,15 +92,19 @@ robust, tested and flown. Specifically:
   memory ceiling, the untested v2 payload-truncation path).
 - Field validation: the thing used in anger once, not just watched on a desk.
 
-Building multi-node *presentation* on an unvalidated single-node core would
-multiply every unproven assumption by the number of nodes.
+**For building** the bar is lower, and deliberately so — see
+[ADR-0028](./decisions.md) and [ADR-0029](./decisions.md). A synthetic fleet is a
+way of testing the core, not a claim about it, and each layer built against it
+immediately exposed a latent defect the single-node system could not reach:
+`decodeMissionRequest` discarded `target_system`, so a second vehicle would have
+answered its neighbour's mission requests; and the node id (`mavlink:1:1`) had no
+converter to the system key (`1:1`) that every fold, `knownSystems` and
+`selectedSystem` use, while `NodeIdentity.label` coincidentally equalled it —
+making the wrong implementation work right up until a node gets a real callsign.
+That is the argument for doing these parts early rather than late.
 
-**For producer and domain work** the bar is lower, and deliberately so — see
-[ADR-0028](./decisions.md). A second synthetic node is a way of testing the core,
-not a claim about it: writing one immediately exposed a latent single-node defect
-(`decodeMissionRequest` discarded `target_system`, so a second vehicle would have
-answered its neighbour's mission requests). That is the argument for doing this
-part early rather than late.
+What is *not* lowered: none of this says the fleet picture is right. It says the
+wiring behind it is exercised.
 
 ## The pattern to follow
 
@@ -103,22 +119,37 @@ forward unchanged:
    with real hardware is a producer swap and nothing above changes.
 4. **Then embellish.** Presentation last, on top of something already proven.
 
-Multi-node is being approached the same way: the node model and its folds, tested
-alone; a mock fleet that speaks the real protocol; then the map that draws them.
-Steps 1-3 are in place for MAVLink nodes. Still ahead: a mock mesh producer on a
-second transport, and the presentation layer.
+Multi-node followed it exactly: the node model and its folds, tested alone; a
+mock fleet that speaks the real protocol; then the map that draws them. All four
+steps are in place for MAVLink nodes. Still ahead: a mock mesh producer on a
+second transport.
 
-## The UI shape this is heading for
+## The UI shape
 
-Recorded so the seams land in the right place. **Two separate views, each with its
-own map:**
+**Two separate views, each with its own map**, as built:
 
-- **Node view** — the current UI, and it *is* the single-node view. Instruments,
-  logs, mission and sidebar all follow exactly one node. `MapPanel.tsx` stays
-  single-node; it does not grow a multi-node display mode.
-- **Fleet view** — new and independent: a roster plus its own unified map showing
-  every node. It consumes `NodeSummary[]` directly, which is what that projection
-  exists for.
+- **Node view** (`NodeView.tsx`) — the original UI, and it *is* the single-node
+  view. Instruments, logs, mission and sidebar all follow exactly one node.
+  `MapPanel.tsx` stayed single-node; it did not grow a multi-node display mode.
+- **Fleet view** (`fleet/FleetView.tsx`) — independent: a roster plus its own
+  unified map showing every node. It consumes `NodeSummary[]` directly, which is
+  what that projection exists for.
+
+`App.tsx` is the shell above both, and owns `useVehicleFeed` — its cleanup stops
+the socket and resets every fold, so a feed owned by either view would drop the
+link and every trail on each navigation. Only the inactive view unmounts, which
+also keeps exactly one MapLibre context alive at a time.
+
+The seam between them is one callback: the roster maps a node id back to a system
+key and pins `selectedSystem`, which is what makes it "focus this node" rather
+than "show whichever reported last".
+
+The shared parts of `MapPanel.tsx` moved to `map/mapAdapter.ts` — `toLngLat`,
+`buildStyle`, the marker-element factories — and the keyed-diff pattern it used
+for waypoint markers is what `FleetMap.tsx` uses for N vehicles, keyed on
+`identity.id`. `addOverlayLayers` did *not* move: it hard-codes one track and one
+route, where the fleet map needs a single data-driven layer whose `line-color`
+reads a per-feature property.
 
 They stay decoupled for now; the link between them (fleet → focus a node → node
 view) is deliberately left open. Because the two maps are separate components

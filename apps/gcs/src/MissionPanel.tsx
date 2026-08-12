@@ -7,6 +7,7 @@
 
 import type { ConnectionState, MissionPlan } from '@flight-path-hud/gcs-core'
 import { formatCoord, formatNumber } from './format'
+import { missionGate } from './missionGate'
 
 interface MissionPanelProps {
   mission: MissionPlan
@@ -17,27 +18,6 @@ interface MissionPanelProps {
   onSelectWaypoint: (latDeg: number, lonDeg: number) => void
 }
 
-/** Names whichever condition currently blocks the button, matching MapControls.tsx's convention. */
-function loadMissionTitle(
-  replayMode: boolean | null,
-  hasVehicle: boolean,
-  connectionState: ConnectionState,
-): string | undefined {
-  if (connectionState !== 'open') {
-    return 'Link is not connected'
-  }
-  if (replayMode === null) {
-    return 'Waiting for link mode…'
-  }
-  if (replayMode === true) {
-    return "Recorded sessions can't query a live vehicle"
-  }
-  if (!hasVehicle) {
-    return 'No system selected yet'
-  }
-  return undefined
-}
-
 export function MissionPanel({
   mission,
   replayMode,
@@ -46,15 +26,17 @@ export function MissionPanel({
   onLoadMission,
   onSelectWaypoint,
 }: MissionPanelProps) {
+  const gate = missionGate(connectionState, replayMode, hasVehicle)
+
   return (
     <section className="panel">
       <h2>Mission</h2>
       <button
         type="button"
         className="segment"
-        disabled={connectionState !== 'open' || replayMode !== false || !hasVehicle}
+        disabled={!gate.enabled}
         onClick={onLoadMission}
-        title={loadMissionTitle(replayMode, hasVehicle, connectionState)}
+        title={gate.reason}
       >
         Load mission
       </button>

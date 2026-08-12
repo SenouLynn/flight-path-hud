@@ -22,7 +22,38 @@ tagged release exists.
 
 ## [Unreleased]
 
+### Changed
+- **Per-node mission plans are published** — `useVehicleFeed` cached a
+  `MissionPlan` per system but surfaced only the selected one, so any other
+  node's mission arrived, was stored, and was invisible. Now exposed as
+  `missions`, keyed by system, published on arrival and on TTL eviction.
+- **Shared map primitives extracted** to `apps/gcs/src/map/mapAdapter.ts` —
+  `toLngLat`, `buildStyle` and the marker-element factories, now that a second
+  map consumes them. The marker factories take an optional colour and default to
+  the single-node appearance. `addOverlayLayers` deliberately stayed in
+  `MapPanel.tsx`: it hard-codes one track and one route, and the fleet map needs
+  a data-driven layer instead. The basemap picker split out of `MapControls` as
+  `BasemapControl`, since Follow and Track up have no meaning on a fleet map.
+
 ### Added
+- **Fleet view — the multi-node picture** (ADR-0029,
+  [target](docs/multi_node_awareness.md)). A roster plus its own unified map
+  showing every node on the link, with per-node colour carried across the marker,
+  route line, waypoint badges and roster swatch. Freshness renders as marker
+  opacity and as a band plus an age per row; a node with no fix is rostered but
+  not drawn. "Load mission" is per node, exercising the per-vehicle
+  `target_system` addressing that a single-node UI could never reach.
+  `App.tsx` became a shell owning `useVehicleFeed` — the feed must outlive the
+  view switch, or navigating would drop the link and every trail — with the
+  original UI moved to `NodeView.tsx` unchanged. The seam between them is one
+  callback that pins `selectedSystem`. Built against the synthetic fleet only;
+  nothing here is a claim that multi-node is validated.
+- **The node id ↔ system key seam** (`parseMavlinkNodeId`, `systemKeyFromNodeId`
+  in `packages/gcs-core/src/nodes.ts`). `NodeIdentity.id` is `mavlink:1:1` while
+  every fold key, `knownSystems` and `selectedSystem` are `1:1`, and nothing
+  converted between them — while `NodeIdentity.label` coincidentally equalled the
+  key, so the wrong implementation worked until a node got a real callsign.
+  Written and read in one file, and tested against that coincidence.
 - **Multi-node / TAK-style awareness recorded as a future phase** (ADR-0026,
   [target](docs/multi_node_awareness.md)). Meshtastic and other CoT participants on
   one shared picture, gated on the single-node system being robust, tested and

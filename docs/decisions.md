@@ -54,9 +54,88 @@ The entries below were reconstructed from the initial implementation (commits `9
 `355baff`) and documented on 2026-07-23. Dates reflect when each decision was first made in
 the code.
 
-## ADR-0028: Multi-node may proceed while every node is synthetic
+## ADR-0029: The synthetic-fleet gate covers claims, not code
 
 - **Status:** Accepted
+- **Date:** 2026-08-12
+- **Deciders:** team
+- **Amends:** [ADR-0028](#adr-0028-multi-node-may-proceed-while-every-node-is-synthetic)
+
+### Context
+[ADR-0028](#adr-0028-multi-node-may-proceed-while-every-node-is-synthetic) separated
+*producing* a second node from *presenting* one, unblocked production, and kept
+presentation gated: "No multi-node UI ships against a synthetic-only picture; the
+map and sidebar stay single-node."
+
+The argument it used to unblock production applies verbatim to presentation. It
+justified the second mock on the grounds that a synthetic node is a validation
+instrument rather than a claim, and pointed at `decodeMissionRequest` discarding
+`target_system` — a latent single-node defect that only a second node could
+reach. Building the fleet view surfaced the same class of defect, and none of it
+needed an aircraft:
+
+- **Two incompatible identity formats.** `NodeIdentity.id` is `mavlink:1:1`;
+  every fold key, `knownSystems` and `selectedSystem` are `systemKey()`'s `1:1`.
+  Nothing converted between them. Worse, `NodeIdentity.label` *happened* to equal
+  the system key, so the obvious wrong implementation works today and breaks the
+  first time a node is given a real callsign. Now one tested pair of functions
+  (`parseMavlinkNodeId`/`systemKeyFromNodeId`) beside the constructor that
+  writes the format.
+- **Per-node plans were stored but never published.** `useVehicleFeed` kept
+  `missions` per system and surfaced only the selected one, so a non-selected
+  node's mission arrived, was cached, and was invisible.
+- **Per-node mission targeting is unreachable from a single-node UI**, which by
+  construction only ever asks about one vehicle. Two rows and two Load buttons
+  exercise ADR-0028's own `target_system` fix as a matter of course.
+
+The gate as written blocked the work that tests it — the same shape of problem
+ADR-0028 identified in ADR-0026, one level up.
+
+### Decision
+Multi-node **presentation** may proceed while every node on the link is
+synthetic. The tiering in ADR-0028 collapses to a single line, drawn around
+claims rather than around code:
+
+1. **Building — unblocked.** Producer, domain and presentation alike. The fleet
+   view ships against the synthetic fleet.
+2. **Claiming — still gated, unchanged.** Real hardware or SITL remains the
+   precondition for calling multi-node validated, and for any operational or
+   field use. Nothing here weakens that; it is the part of ADR-0026 that has
+   earned its keep.
+
+The pattern ADR-0026 prescribes is unchanged and was followed: pure logic first
+(`nodes.ts`, `fleetColors.ts`, `fleetMapData.ts`, all tested in isolation), then
+a thin imperative shell over it (`FleetMap.tsx`).
+
+### Consequences
+- ✅ The id seam exists, is tested, and is written down once — instead of being
+  re-derived per call site, which is how the `label` coincidence would have
+  become load-bearing.
+- ✅ Per-node mission targeting is now exercised on every run rather than being
+  a property asserted about code nobody drives.
+- ✅ The gate is easier to hold: "don't claim it works" is a line that does not
+  need re-litigating each time someone wants to write a component.
+- ⚠️ **The fleet view proves the wiring, not the picture.** Every node it draws
+  comes from a generator we wrote, so it cannot say anything about real MAVLink
+  timing, dropout behaviour, or how a dozen real vehicles read at once. Freshness
+  banding in particular is tuned against a mock that never jitters.
+- ⚠️ Presentation assumptions still accumulate untested at the component layer —
+  there are no React component tests, by choice ([ADR-0026](#adr-0026-multi-node-awareness-is-a-separate-phase-gated-on-single-node-validation)'s
+  "logic in isolation" pattern puts the coverage in the pure modules instead).
+
+### Alternatives considered
+- Leave ADR-0028's tier 2 standing and build the fleet view anyway — rejected:
+  an accepted ADR that the code openly contradicts is worse than either honest
+  outcome, and makes every other ADR advisory.
+- Supersede ADR-0026 and ADR-0028 outright — rejected: the hardware gate on
+  *claims* is the part both got right, and nothing here challenges it.
+- Wait for hardware — rejected on ADR-0028's own reasoning: the defects above
+  were desk-reproducible, and deferring the UI would have left all three latent
+  until a second real vehicle hit them, which is the expensive place to find out.
+
+## ADR-0028: Multi-node may proceed while every node is synthetic
+
+- **Status:** Accepted — presentation gate amended by [ADR-0029](#adr-0029-the-synthetic-fleet-gate-covers-claims-not-code)
 - **Date:** 2026-08-12
 - **Deciders:** team
 - **Amends:** [ADR-0026](#adr-0026-multi-node-awareness-is-a-separate-phase-gated-on-single-node-validation)
@@ -89,6 +168,10 @@ The hardware gate is unchanged in substance and still binds:
    isolation, all exercising the real protocol.
 2. **Presentation — still gated as before.** No multi-node UI ships against a
    synthetic-only picture; the map and sidebar stay single-node.
+   *(Amended by [ADR-0029](#adr-0029-the-synthetic-fleet-gate-covers-claims-not-code):
+   presentation is unblocked on the same reasoning this ADR used for producers.
+   The map and sidebar did stay single-node — the fleet picture is a separate
+   view rather than a mode on them.)*
 3. **Any claim involving a real source — still gated.** Real hardware or SITL
    remains the precondition for calling multi-node validated, and for building the
    UI that implies it.

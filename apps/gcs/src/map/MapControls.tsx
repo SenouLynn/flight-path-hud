@@ -7,6 +7,7 @@
  * out of the chrome means swapping it does not take the controls with it.
  */
 
+import { BasemapControl, MaxZoomReadout } from './BasemapControl'
 import type { TileSource } from './tileSource'
 
 /** Tilt used by the 3D toggle. Past ~60° the horizon dominates the frame. */
@@ -41,15 +42,11 @@ export function MapControls({
 }: MapControlsProps) {
   return (
     <div className="map-controls">
-      <select
-        value={basemapId}
-        onChange={(event) => onBasemapChange(event.target.value)}
-        aria-label="Basemap"
-      >
-        {basemaps.map((basemap) => (
-          <option key={basemap.id} value={basemap.id}>{basemap.label}</option>
-        ))}
-      </select>
+      <BasemapControl
+        basemaps={basemaps}
+        basemapId={basemapId}
+        onBasemapChange={onBasemapChange}
+      />
 
       <button
         type="button"
@@ -91,7 +88,7 @@ export function MapControls({
         >
           Reset view
         </button>
-        <span className="map-controls-meta">max z{maxZoom}</span>
+        <MaxZoomReadout maxZoom={maxZoom} />
       </div>
     </div>
   )

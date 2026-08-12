@@ -709,3 +709,149 @@ body {
 .connection-state.playing { color: #6ee7a8; }
 .connection-state.stalled { color: var(--warn); }
 .connection-state.idle { color: var(--muted); }
+
+/*
+ * Fleet view — the roster and its unified map.
+ *
+ * Same two-column shell as .gcs-layout, and deliberately not a variant of it:
+ * the two views are independent components, so sharing a layout class would be
+ * the coupling the separation exists to avoid.
+ */
+.fleet-layout {
+  display: grid;
+  grid-template-columns: minmax(300px, 380px) 1fr;
+  grid-template-rows: auto minmax(0, 1fr);
+  grid-template-areas:
+    'topbar topbar'
+    'sidebar map';
+  height: 100vh;
+}
+
+.fleet-main {
+  grid-area: map;
+  display: grid;
+  min-width: 0;
+  min-height: 0;
+}
+
+/* Pushed to the right of the title, the way .views-menu sits in the node view. */
+.fleet-topbar-meta {
+  margin-left: auto;
+  color: var(--muted);
+  font-size: 11px;
+}
+
+/*
+ * The roster scrolls inside itself. The shell is exactly one viewport (see the
+ * html/body rule above), so a fleet long enough to overflow must never be what
+ * introduces a page scrollbar.
+ */
+.fleet-list {
+  max-height: calc(100vh - 260px);
+  overflow-y: auto;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.fleet-empty {
+  margin: 4px 0 0;
+  color: var(--muted);
+  font-size: 11px;
+}
+
+.fleet-row {
+  padding: 5px 4px;
+  border-bottom: 1px solid var(--border);
+}
+
+.fleet-row:last-child {
+  border-bottom: none;
+}
+
+/* Same "this is the selected one" treatment as .segment.active and .mission-row.active. */
+.fleet-row.selected {
+  background: #2a3a52;
+}
+
+/* The whole identity block is the focus target, so it fills the row. */
+.fleet-row-main {
+  display: block;
+  width: 100%;
+  padding: 2px;
+  border: none;
+  background: none;
+  color: var(--text);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.fleet-row-main:hover {
+  background: #18202e;
+}
+
+.fleet-row-head {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+/* Ties the row to this node's marker, route and waypoint badges on the map. */
+.fleet-swatch {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  border: 1px solid #1b1b1b;
+  flex: none;
+}
+
+.fleet-row-label {
+  font-size: 12px;
+}
+
+.fleet-row-stats {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding-left: 15px;
+  color: var(--muted);
+  font-size: 10px;
+  font-variant-numeric: tabular-nums;
+}
+
+.fleet-row-age {
+  margin-left: auto;
+}
+
+.fleet-row-nofix {
+  color: var(--warn);
+}
+
+.fleet-row-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 2px 0 15px;
+}
+
+.fleet-row-mission {
+  color: var(--muted);
+  font-size: 10px;
+  font-variant-numeric: tabular-nums;
+}
+
+/*
+ * Freshness is how much to trust what is drawn, which is a different question
+ * from whether the node still exists (that is the TTL's). Colour carries the
+ * band in the roster; the map says the same thing with opacity.
+ */
+.node-freshness {
+  font-size: 9px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.node-freshness.live { color: #6ee7a8; }
+.node-freshness.aging { color: var(--warn); }
+.node-freshness.stale { color: var(--error); }

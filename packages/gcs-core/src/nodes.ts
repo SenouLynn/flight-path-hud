@@ -21,6 +21,7 @@
  */
 
 import { hasFix, type VehicleState } from './vehicle'
+import { systemKey } from './wire'
 
 /** Extension point. Meshtastic and CoT participants join here, not by pretending to be vehicles. */
 export type NodeKind = 'mavlink-vehicle'
@@ -86,6 +87,60 @@ export function mavlinkNodeIdentity(sysId: number, compId: number, label?: strin
     // shows, so the two surfaces name the same vehicle the same way.
     label: label ?? `${sysId}:${compId}`,
   }
+}
+
+/** The `sysId`/`compId` pair carried inside a `mavlink-vehicle` node id. */
+export interface MavlinkNodeAddress {
+  sysId: number
+  compId: number
+}
+
+/** `mavlink:<sysId>:<compId>`, both plain unsigned decimals with no leading zeros. */
+const MAVLINK_NODE_ID_PATTERN = /^mavlink:(0|[1-9]\d*):(0|[1-9]\d*)$/
+
+/**
+ * The inverse of `mavlinkNodeIdentity`, and the reason it lives here: the id
+ * format is written in exactly one file, so it can only be read in the same one.
+ *
+ * A `NodeSummary` carries a `NodeIdentity`, not a `sysId`/`compId` pair — that is
+ * the whole point of the transport-neutral seam, since a Meshtastic node has no
+ * such pair. But the outbound mission request is a MAVLink message addressed to a
+ * MAVLink system, so something has to cross back. This is that crossing, and it
+ * returns `null` for every id that isn't a MAVLink one rather than guessing.
+ *
+ * Do NOT use `NodeIdentity.label` for this. It currently happens to equal the
+ * `sysId:compId` string, but only because no caller passes `mavlinkNodeIdentity`
+ * a real label yet; the first one that does would silently break any code reading
+ * identity back out of it.
+ */
+export function parseMavlinkNodeId(id: string): MavlinkNodeAddress | null {
+  const match = MAVLINK_NODE_ID_PATTERN.exec(id)
+
+  if (match === null) {
+    return null
+  }
+
+  const sysId = Number(match[1])
+  const compId = Number(match[2])
+
+  // MAVLink ids are single bytes. A well-formed but out-of-range id is a
+  // different transport's id that happens to look like ours, not a vehicle.
+  if (sysId > 255 || compId > 255) {
+    return null
+  }
+
+  return { sysId, compId }
+}
+
+/**
+ * A node id as the `sysId:compId` key the per-system folds, `knownSystems` and
+ * the system selector all use. Null when the id names something that is not a
+ * MAVLink vehicle, which has no such key by definition.
+ */
+export function systemKeyFromNodeId(id: string): string | null {
+  const address = parseMavlinkNodeId(id)
+
+  return address === null ? null : systemKey(address.sysId, address.compId)
 }
 
 /**
