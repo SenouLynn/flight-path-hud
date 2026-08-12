@@ -3,6 +3,12 @@
 This is the future on-device application. Its `hud/` C++ library must remain independent of
 Arduino, a display driver, and networking so that the exact same code can run on a host/development machine.
 
+Its intended operational role is a **read-only onboard HUD**: consume MAVLink telemetry from
+the vehicle link and render a unified fixed-reference overlay on the small display in the FPV
+camera optical path. It is not a companion-computer command client, a MAVLink router, or a
+flight-control dependency. Missing or stale telemetry must degrade the display safely rather
+than affecting vehicle behavior.
+
 ## Validate locally first
 
 No ESP32, PlatformIO, or graphics library is required for the first validation loop:
