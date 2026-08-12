@@ -100,6 +100,48 @@ export function sortedWaypoints(mission: MissionPlan): MissionPlan['items'] {
   return [...mission.items].sort((left, right) => left.seq - right.seq)
 }
 
+/**
+ * A value that changes exactly when the map's *overlay* — route lines and
+ * waypoint badges — would actually look different.
+ *
+ * The roster republishes every 500 ms whether or not anything moved, so `nodes`
+ * has a fresh array identity twice a second. An effect keyed on it rebuilds the
+ * whole fleet's route FeatureCollection and hands it to `setData` at 2 Hz,
+ * making MapLibre re-parse and redraw *every* node's route — including nodes the
+ * operator never touched, on a tick they never caused. Waypoint badges get the
+ * same treatment.
+ *
+ * Overlays are fixed to the ground: they depend on which nodes are on the map
+ * and what plan each has, and not at all on where a vehicle currently is or how
+ * stale it has become. Keying the effects on this instead means a moving fleet
+ * costs nothing and a mission arriving costs one redraw.
+ *
+ * Deliberately derived from the drawn state rather than from `missions` wholesale
+ * — a plan belonging to a hidden or absent node must not churn what is visible.
+ */
+export function overlaySignature(
+  nodes: readonly NodeSummary[],
+  missions: ReadonlyMap<string, MissionPlan>,
+): string {
+  return nodes
+    .map((node) => {
+      const mission = missionFor(node, missions)
+
+      if (mission === null) {
+        return `${node.identity.id}:-`
+      }
+
+      // Positions are included: a reloaded plan can keep its waypoint count and
+      // move them, which has to redraw.
+      const waypoints = sortedWaypoints(mission)
+        .map((item) => `${item.seq},${item.latDeg},${item.lonDeg}`)
+        .join(';')
+
+      return `${node.identity.id}:${mission.activeIndex ?? '-'}:${waypoints}`
+    })
+    .join('|')
+}
+
 /** `[[west, south], [east, north]]`, MapLibre's fitBounds argument order. */
 export type FleetBounds = [[number, number], [number, number]]
 

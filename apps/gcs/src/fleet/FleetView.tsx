@@ -25,6 +25,9 @@ interface FleetViewProps {
   basemapId: string
   onBasemapChange: (id: string) => void
   selectedSystem: string | null
+  /** Nodes the operator has taken off the map. Still rostered. */
+  hiddenNodeIds: ReadonlySet<string>
+  onToggleNodeHidden: (nodeId: string) => void
   /** Focus a node in the single-node view. Receives a systemKey, not a node id. */
   onFocusNode: (systemKey: string) => void
 }
@@ -37,9 +40,18 @@ export function FleetView({
   basemapId,
   onBasemapChange,
   selectedSystem,
+  hiddenNodeIds,
+  onToggleNodeHidden,
   onFocusNode,
 }: FleetViewProps) {
   const mapHandleRef = useRef<FleetMapHandle | null>(null)
+
+  /*
+   * Hiding is applied here rather than inside FleetMap, so the map stays a plain
+   * "draw these nodes" component with no opinion about why some are missing —
+   * and "Fit fleet" frames what is actually shown rather than what is rostered.
+   */
+  const shownNodes = feed.nodes.filter((node) => !hiddenNodeIds.has(node.identity.id))
 
   // Stable, so the map's marker effects don't re-run every render just because
   // the roster republished on its 500 ms timer.
@@ -69,12 +81,13 @@ export function FleetView({
 
   return (
     <div className="fleet-layout">
-      <header className="gcs-topbar">
-        <span className="app-title">Fleet</span>
-        <span className="fleet-topbar-meta">
+      <div className="gcs-subbar">
+        <span className="subbar-title">Fleet</span>
+        <span className="subbar-meta">
           {feed.nodes.length} node{feed.nodes.length === 1 ? '' : 's'} on the link
+          {hiddenNodeIds.size > 0 ? `, ${hiddenNodeIds.size} hidden` : ''}
         </span>
-      </header>
+      </div>
 
       <aside className="gcs-sidebar">
         <LinkPanel
@@ -92,6 +105,8 @@ export function FleetView({
           connectionState={feed.connectionState}
           replayMode={feed.replayMode}
           selectedSystem={selectedSystem}
+          hiddenNodeIds={hiddenNodeIds}
+          onToggleNodeHidden={onToggleNodeHidden}
           onFocusNode={focusNode}
           onLoadMission={loadMission}
         />
@@ -101,7 +116,7 @@ export function FleetView({
         <div className="view-pane map-pane">
           <FleetMap
             ref={mapHandleRef}
-            nodes={feed.nodes}
+            nodes={shownNodes}
             missions={feed.missions}
             tileSource={tileSource}
             colorOf={colorOf}

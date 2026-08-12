@@ -41,13 +41,23 @@ tagged release exists.
   showing every node on the link, with per-node colour carried across the marker,
   route line, waypoint badges and roster swatch. Freshness renders as marker
   opacity and as a band plus an age per row; a node with no fix is rostered but
-  not drawn. "Load mission" is per node, exercising the per-vehicle
+  not drawn. Each row carries an eye that takes the node off the map entirely
+  (marker, route and waypoints) while leaving it listed, and an arrow into its
+  detail view. "Load mission" is per node, exercising the per-vehicle
   `target_system` addressing that a single-node UI could never reach.
   `App.tsx` became a shell owning `useVehicleFeed` — the feed must outlive the
   view switch, or navigating would drop the link and every trail — with the
   original UI moved to `NodeView.tsx` unchanged. The seam between them is one
   callback that pins `selectedSystem`. Built against the synthetic fleet only;
   nothing here is a claim that multi-node is validated.
+- **A global header and scope picker.** "Ground control" and a node picker now
+  sit above both views rather than inside one, with each view contributing its
+  own chrome (the fleet back-link and Views, or the fleet heading) to a subbar
+  beneath. The picker names whichever node is on screen — including the
+  auto-selected one, which the node view's "Active system" control reports as
+  "Auto (latest)" — or `Nodes…` for the fleet. It is deliberately a second
+  control rather than a replacement: one answers *which* node is displayed, the
+  other *how* it was chosen.
 - **The node id ↔ system key seam** (`parseMavlinkNodeId`, `systemKeyFromNodeId`
   in `packages/gcs-core/src/nodes.ts`). `NodeIdentity.id` is `mavlink:1:1` while
   every fold key, `knownSystems` and `selectedSystem` are `1:1`, and nothing

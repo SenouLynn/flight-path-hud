@@ -35,19 +35,59 @@ body {
   color: var(--text);
 }
 
+/*
+ * The shell: a global header over whichever view is mounted. The header holds
+ * what belongs to the app rather than to a view — its name and the scope picker
+ * — so neither is duplicated or lost when the view switches.
+ */
+.app-shell {
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+  height: 100vh;
+}
+
 .gcs-layout {
   display: grid;
   grid-template-columns: minmax(260px, 320px) 1fr;
   grid-template-rows: auto minmax(0, 1fr);
   grid-template-areas:
-    'topbar topbar'
+    'subbar subbar'
     'sidebar map';
-  height: 100vh;
+  /* Fills the shell's second row; min-height lets that row actually shrink. */
+  height: 100%;
+  min-height: 0;
 }
 
-/* Title leads, Views is secondary chrome; map chrome lives on the map itself. */
+/*
+ * Per-view chrome, under the global header: the fleet back-link and Views in the
+ * node view, a heading and counts in the fleet view. Lighter than the header
+ * above it, since it is the subordinate of the two bars.
+ */
+.gcs-subbar {
+  grid-area: subbar;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 4px 10px;
+  border-bottom: 1px solid var(--border);
+  background: var(--bg);
+}
+
+.subbar-title {
+  color: var(--text);
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.subbar-meta {
+  margin-left: auto;
+  color: var(--muted);
+  font-size: 11px;
+}
+
+/* Title leads, the scope picker is secondary chrome; map chrome lives on the map itself. */
 .gcs-topbar {
-  grid-area: topbar;
   display: flex;
   align-items: center;
   gap: 14px;
@@ -722,9 +762,10 @@ body {
   grid-template-columns: minmax(300px, 380px) 1fr;
   grid-template-rows: auto minmax(0, 1fr);
   grid-template-areas:
-    'topbar topbar'
+    'subbar subbar'
     'sidebar map';
-  height: 100vh;
+  height: 100%;
+  min-height: 0;
 }
 
 .fleet-main {
@@ -734,11 +775,48 @@ body {
   min-height: 0;
 }
 
-/* Pushed to the right of the title, the way .views-menu sits in the node view. */
-.fleet-topbar-meta {
+/* The global scope picker, pushed right of the app title in the header. */
+.node-picker {
+  display: flex;
+  align-items: center;
+  gap: 6px;
   margin-left: auto;
+}
+
+.node-picker-label {
   color: var(--muted);
-  font-size: 11px;
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+/*
+ * Square, quiet, and only coloured on hover: these sit in every roster row, so
+ * anything heavier would read as a wall of buttons rather than a list of nodes.
+ */
+.icon-button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  padding: 0;
+  border: 1px solid transparent;
+  border-radius: var(--radius);
+  background: none;
+  color: var(--muted);
+  cursor: pointer;
+}
+
+.icon-button:hover {
+  border-color: var(--border);
+  background: #18202e;
+  color: var(--text);
+}
+
+/* The eye when the node is hidden — pressed, and the one state worth colouring. */
+.icon-button[aria-pressed='true'] {
+  color: var(--warn);
 }
 
 /*
@@ -774,27 +852,32 @@ body {
   background: #2a3a52;
 }
 
-/* The whole identity block is the focus target, so it fills the row. */
-.fleet-row-main {
-  display: block;
-  width: 100%;
-  padding: 2px;
-  border: none;
-  background: none;
-  color: var(--text);
-  font: inherit;
-  text-align: left;
-  cursor: pointer;
+/*
+ * A hidden node stays in the roster and stays readable — it is dimmed, not
+ * struck out. The eye is what changed, not the node.
+ */
+.fleet-row.hidden-node .fleet-row-head,
+.fleet-row.hidden-node .fleet-row-stats,
+.fleet-row.hidden-node .fleet-row-actions {
+  opacity: 0.45;
 }
 
-.fleet-row-main:hover {
-  background: #18202e;
+/* The eye itself must stay legible, or the way back out is the dimmest thing. */
+.fleet-row.hidden-node .icon-button {
+  opacity: 1;
 }
 
 .fleet-row-head {
   display: flex;
   align-items: center;
   gap: 6px;
+}
+
+/* Right-aligned as a pair, away from the identity they act on. */
+.fleet-row-icons {
+  display: flex;
+  gap: 2px;
+  margin-left: auto;
 }
 
 /* Ties the row to this node's marker, route and waypoint badges on the map. */

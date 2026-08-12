@@ -20,6 +20,9 @@ interface FleetRosterProps {
   replayMode: boolean | null
   /** systemKey of the node the node view is pinned to, if any. */
   selectedSystem: string | null
+  /** Nodes taken off the map. Still listed here — the eye is a toggle, not a filter. */
+  hiddenNodeIds: ReadonlySet<string>
+  onToggleNodeHidden: (nodeId: string) => void
   onFocusNode: (nodeId: string) => void
   onLoadMission: (nodeId: string) => void
 }
@@ -31,6 +34,8 @@ export function FleetRoster({
   connectionState,
   replayMode,
   selectedSystem,
+  hiddenNodeIds,
+  onToggleNodeHidden,
   onFocusNode,
   onLoadMission,
 }: FleetRosterProps) {
@@ -58,7 +63,9 @@ export function FleetRoster({
               // Compared through the id, never through `identity.label` — the
               // label only happens to equal the system key today.
               selected={selectedSystem !== null && systemKeyFromNodeId(node.identity.id) === selectedSystem}
-              onFocus={() => onFocusNode(node.identity.id)}
+              visible={!hiddenNodeIds.has(node.identity.id)}
+              onToggleVisible={() => onToggleNodeHidden(node.identity.id)}
+              onOpen={() => onFocusNode(node.identity.id)}
               onLoadMission={() => onLoadMission(node.identity.id)}
             />
           ))}

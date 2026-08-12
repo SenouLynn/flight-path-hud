@@ -5,6 +5,7 @@ import {
   freshnessOpacity,
   isDrawable,
   missionFor,
+  overlaySignature,
   routeFeatureCollection,
   sortedWaypoints,
 } from './fleetMapData'
@@ -169,6 +170,77 @@ describe('routeFeatureCollection', () => {
 
     expect(routeFeatureCollection([node({ hasFix: false })], missions, alwaysRed).features)
       .toHaveLength(1)
+  })
+})
+
+describe('overlaySignature', () => {
+  const missions = new Map([['1:1', mission([item(0, 47.0, 8.0), item(1, 47.1, 8.1)])]])
+
+  it('is unchanged when only the vehicles moved', () => {
+    // The roster republishes every 500 ms whether or not anything changed. Routes
+    // and waypoint badges are fixed to the ground, so a moving vehicle must not
+    // cause the whole fleet's overlay to be rebuilt and re-pushed at 2 Hz.
+    const before = overlaySignature([node({ latDeg: 47.0, lonDeg: 8.0 })], missions)
+    const after = overlaySignature([node({ latDeg: 47.9, lonDeg: 8.9 })], missions)
+
+    expect(after).toBe(before)
+  })
+
+  it('is unchanged when only freshness or age moved on', () => {
+    const before = overlaySignature([node({ ageMs: 0, freshness: 'live' })], missions)
+    const after = overlaySignature([node({ ageMs: 9000, freshness: 'aging' })], missions)
+
+    expect(after).toBe(before)
+  })
+
+  it('changes when a node joins the fleet', () => {
+    const before = overlaySignature([node()], missions)
+    const after = overlaySignature(
+      [node(), node({ identity: { id: 'mavlink:2:1', kind: 'mavlink-vehicle', label: '2:1' } })],
+      missions,
+    )
+
+    expect(after).not.toBe(before)
+  })
+
+  it('changes when a node is hidden or swept away', () => {
+    const both = [node(), node({ identity: { id: 'mavlink:2:1', kind: 'mavlink-vehicle', label: '2:1' } })]
+
+    expect(overlaySignature([both[0]], missions)).not.toBe(overlaySignature(both, missions))
+  })
+
+  it('changes when a mission arrives', () => {
+    const before = overlaySignature([node()], new Map())
+    const after = overlaySignature([node()], missions)
+
+    expect(after).not.toBe(before)
+  })
+
+  it('changes when a plan is reloaded with different waypoints', () => {
+    const shorter = new Map([['1:1', mission([item(0, 47.0, 8.0)])]])
+
+    expect(overlaySignature([node()], shorter)).not.toBe(overlaySignature([node()], missions))
+  })
+
+  it('changes when a waypoint moves, even with the same count', () => {
+    const moved = new Map([['1:1', mission([item(0, 47.0, 8.0), item(1, 47.5, 8.5)])]])
+
+    expect(overlaySignature([node()], moved)).not.toBe(overlaySignature([node()], missions))
+  })
+
+  it('changes when the active waypoint changes', () => {
+    const plan = mission([item(0, 47.0, 8.0), item(1, 47.1, 8.1)])
+    const active = new Map([['1:1', { ...plan, activeIndex: 1 }]])
+
+    expect(overlaySignature([node()], active)).not.toBe(overlaySignature([node()], missions))
+  })
+
+  it('ignores a mission belonging to a node that is not on the map', () => {
+    // A hidden node's plan is still in the feed; it must not keep the visible
+    // fleet's overlay churning.
+    const withStranger = new Map(missions).set('9:1', mission([item(0, 40, 5), item(1, 41, 6)]))
+
+    expect(overlaySignature([node()], withStranger)).toBe(overlaySignature([node()], missions))
   })
 })
 

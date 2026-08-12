@@ -147,13 +147,12 @@ export function NodeView({
 
   return (
     <div className="gcs-layout">
-      <header className="gcs-topbar">
+      <div className="gcs-subbar">
         <button type="button" className="segment" onClick={onBackToFleet} title="Back to the fleet roster">
           ← Fleet
         </button>
-        <span className="app-title">Ground control</span>
         <ViewsMenu visible={visibleViews} onToggle={toggleView} />
-      </header>
+      </div>
 
       <aside className="gcs-sidebar">
         <LinkPanel

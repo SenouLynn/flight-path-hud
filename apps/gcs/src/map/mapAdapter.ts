@@ -60,7 +60,7 @@ export const DEFAULT_VEHICLE_COLOR = '#ffb454'
  */
 export function createVehicleMarkerElement(color: string = DEFAULT_VEHICLE_COLOR): HTMLElement {
   const element = document.createElement('div')
-  element.className = 'vehicle-marker'
+  element.classList.add('vehicle-marker')
   element.innerHTML = `<svg width="28" height="28" viewBox="0 0 28 28">
     <polygon points="14,3 21,24 14,19 7,24" fill="${color}" stroke="#1b1b1b" stroke-width="1.5" stroke-linejoin="round" />
   </svg>`
@@ -70,7 +70,7 @@ export function createVehicleMarkerElement(color: string = DEFAULT_VEHICLE_COLOR
 /** Diamond, not the nose-triangle: home has no heading, so nothing here rotates. */
 export function createHomeMarkerElement(): HTMLElement {
   const element = document.createElement('div')
-  element.className = 'home-marker'
+  element.classList.add('home-marker')
   element.innerHTML = `<svg width="24" height="24" viewBox="0 0 24 24">
     <polygon points="12,2 22,12 12,22 2,12" fill="#57e389" stroke="#1b1b1b" stroke-width="1.5" stroke-linejoin="round" />
   </svg>`
@@ -98,6 +98,7 @@ export function createWaypointMarkerElement(
   color?: string,
 ): HTMLElement {
   const element = document.createElement('div')
+  element.classList.add('waypoint-marker')
   element.textContent = String(seq)
   styleWaypointMarker(element, active, color)
   return element
@@ -106,6 +107,15 @@ export function createWaypointMarkerElement(
 /**
  * Applies the class and colour an already-mounted waypoint badge should carry.
  * Shared with the factory above so a badge looks the same however it got there.
+ *
+ * MUST use `classList`, never `className`. MapLibre adds its own
+ * `maplibregl-marker` class to whatever element it is handed, and that class is
+ * what carries `position: absolute; left: 0; top: 0` — the anchoring its
+ * `transform` is measured against. Assigning `className` wholesale drops it, and
+ * the badge falls into the container's normal flow: the first one lands on the
+ * origin, exactly where it belongs, and every badge after it stacks below,
+ * displaced. Because this only runs on the update path, a badge renders
+ * correctly when created and jumps the first time anything restyles it.
  *
  * The active highlight deliberately wins over the node colour. An inline
  * background outranks any class rule, so keeping one set would hide
@@ -119,7 +129,7 @@ export function styleWaypointMarker(
   active: boolean,
   color?: string,
 ): void {
-  element.className = active ? 'waypoint-marker active' : 'waypoint-marker'
+  element.classList.toggle('active', active)
   // Empty string removes the inline declaration and hands the badge back to the
   // stylesheet, rather than pinning it to a wrong colour.
   element.style.background = active || color === undefined ? '' : color

@@ -14,7 +14,7 @@
 
 import maplibregl from 'maplibre-gl'
 import 'maplibre-gl/dist/maplibre-gl.css'
-import { forwardRef, useEffect, useImperativeHandle, useRef } from 'react'
+import { forwardRef, useEffect, useImperativeHandle, useMemo, useRef } from 'react'
 import type { MissionPlan, NodeSummary } from '@flight-path-hud/gcs-core'
 import type { FeatureCollection, LineString } from 'geojson'
 import type { TileSource } from './tileSource'
@@ -30,6 +30,7 @@ import {
   freshnessOpacity,
   isDrawable,
   missionFor,
+  overlaySignature,
   routeFeatureCollection,
   sortedWaypoints,
 } from '../fleet/fleetMapData'
@@ -136,6 +137,20 @@ export const FleetMap = forwardRef<FleetMapHandle, FleetMapProps>(function Fleet
 
   const handlersRef = useRef({ onSelectNode })
   handlersRef.current = { onSelectNode }
+
+  /*
+   * The overlay effects below key on this rather than on `nodes`. The roster
+   * republishes twice a second with a fresh array, and route lines and waypoint
+   * badges do not move when a vehicle does — without this, every tick rebuilt
+   * the whole fleet's routes and pushed them through `setData`, redrawing every
+   * node's overlay at 2 Hz whether or not anything had changed.
+   */
+  const overlayKey = useMemo(() => overlaySignature(nodes, missions), [nodes, missions])
+
+  // Read inside the overlay effects, which no longer re-run when `nodes` alone
+  // changes identity — they still need the current roster to iterate.
+  const overlayNodesRef = useRef(nodes)
+  overlayNodesRef.current = nodes
 
   const fitFleet = () => {
     const map = mapRef.current
@@ -289,10 +304,10 @@ export const FleetMap = forwardRef<FleetMapHandle, FleetMapProps>(function Fleet
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [nodes])
 
-  // Route lines. Depends on `missions` rather than `nodes` where it can, since
-  // plans change only when the operator asks for one.
+  // Route lines. Redrawn only when the overlay would actually differ, never on
+  // an ordinary roster tick.
   useEffect(() => {
-    const routes = routeFeatureCollection(nodes, missions, colorOf)
+    const routes = routeFeatureCollection(overlayNodesRef.current, missions, colorOf)
     routesRef.current = routes
 
     const map = mapRef.current
@@ -300,13 +315,17 @@ export const FleetMap = forwardRef<FleetMapHandle, FleetMapProps>(function Fleet
     if (map !== null) {
       syncRoutesSource(map, routes)
     }
-  }, [nodes, missions, colorOf])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [overlayKey, colorOf])
 
   /*
    * Waypoint badges: one DOM marker per waypoint per node, keyed by
    * `nodeId#seq`. Same keyed diff as the vehicle markers, and as MapPanel's
    * single-node version — `seq` alone is not unique across a fleet, since every
    * node's plan starts at 0.
+   *
+   * Keyed on the overlay signature, not the roster: badges sit on the ground and
+   * must not be restyled every time a vehicle moves.
    */
   useEffect(() => {
     const map = mapRef.current
@@ -318,7 +337,7 @@ export const FleetMap = forwardRef<FleetMapHandle, FleetMapProps>(function Fleet
     const markers = waypointMarkersRef.current
     const seen = new Set<string>()
 
-    nodes.forEach((node) => {
+    overlayNodesRef.current.forEach((node) => {
       const mission = missionFor(node, missions)
 
       if (mission === null) {
@@ -357,7 +376,8 @@ export const FleetMap = forwardRef<FleetMapHandle, FleetMapProps>(function Fleet
         markers.delete(key)
       }
     })
-  }, [nodes, missions, colorOf])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [overlayKey, colorOf])
 
   return <div ref={containerRef} className="map-panel" />
 })
