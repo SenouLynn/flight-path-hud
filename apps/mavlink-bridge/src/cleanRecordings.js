@@ -16,7 +16,7 @@ import { pruneRecordings } from './recording.js'
 
 const RECORD_DIR = process.env.MAVLINK_BRIDGE_RECORD_DIR ?? 'recordings'
 const RETAIN_DAYS = Number.parseFloat(process.env.MAVLINK_BRIDGE_RECORD_RETAIN_DAYS ?? '7')
-const TOTAL_MAX_MB = Number.parseFloat(process.env.MAVLINK_BRIDGE_RECORD_TOTAL_MAX_MB ?? '1024')
+const TOTAL_MAX_MB = Number.parseFloat(process.env.MAVLINK_BRIDGE_RECORD_TOTAL_MAX_MB ?? '128')
 
 const args = process.argv.slice(2)
 const deleteAll = args.includes('--all')
@@ -38,8 +38,11 @@ function listRecordings(directory) {
     .filter((name) => name.endsWith('.jsonl'))
     .map((name) => {
       const fullPath = path.join(directory, name)
-      return { name, fullPath, sizeBytes: fs.statSync(fullPath).size }
+      const stats = fs.statSync(fullPath)
+      return { name, fullPath, sizeBytes: stats.size, modifiedMs: stats.mtimeMs }
     })
+    // Match pruneRecordings(): preserve the newest captures first.
+    .sort((left, right) => right.modifiedMs - left.modifiedMs)
 }
 
 const before = listRecordings(RECORD_DIR)

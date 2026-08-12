@@ -23,6 +23,19 @@ tagged release exists.
 ## [Unreleased]
 
 ### Changed
+- **Bridge recording retention is now 128 MB by default.** The startup sweep
+  keeps the newest captures within that lower total budget; set
+  `MAVLINK_BRIDGE_RECORD_TOTAL_MAX_MB` to override it for a deliberate longer
+  capture window.
+- **SITL image installs its pinned MAVProxy forwarding executable.** ArduPilot's
+  prerequisite script sets up MAVProxy dependencies but does not provide
+  `mavproxy.py`; the image now installs MAVProxy `1.8.74` before the Copter and
+  Plane containers invoke `sim_vehicle.py`.
+
+### Fixed
+- **`npm run clean:recordings` now targets the bridge recordings directory.** The
+  root helper previously checked a nonexistent root-level `recordings/` folder,
+  so its dry run misleadingly reported nothing while bridge captures remained.
 - **Detail scope is always pinned to one node.** The redundant sidebar "Active
   system" selector and its unstable "Auto (latest)" option are gone. The global
   Scope picker is now the only selector; it opens or changes a concrete system,

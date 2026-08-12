@@ -23,7 +23,7 @@ const RECORD_ENABLED = process.env.MAVLINK_BRIDGE_RECORD !== '0'
 const RECORD_DIR = process.env.MAVLINK_BRIDGE_RECORD_DIR ?? 'recordings'
 const RECORD_MAX_MB = Number.parseFloat(process.env.MAVLINK_BRIDGE_RECORD_MAX_MB ?? '256')
 const RECORD_RETAIN_DAYS = Number.parseFloat(process.env.MAVLINK_BRIDGE_RECORD_RETAIN_DAYS ?? '7')
-const RECORD_TOTAL_MAX_MB = Number.parseFloat(process.env.MAVLINK_BRIDGE_RECORD_TOTAL_MAX_MB ?? '1024')
+const RECORD_TOTAL_MAX_MB = Number.parseFloat(process.env.MAVLINK_BRIDGE_RECORD_TOTAL_MAX_MB ?? '128')
 
 /** Timestamped per run: overwriting one file would make retention meaningless. */
 function defaultRecordPath() {

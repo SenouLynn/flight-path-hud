@@ -92,7 +92,7 @@ sweeps its recordings directory, and every run is capped:
 | `MAVLINK_BRIDGE_RECORD_FILE` | *(timestamped)* | Explicit path, overrides the above |
 | `MAVLINK_BRIDGE_RECORD_MAX_MB` | `256` | Per-run cap (~17 h at ~15 MB/h) |
 | `MAVLINK_BRIDGE_RECORD_RETAIN_DAYS` | `7` | Startup sweep drops older files |
-| `MAVLINK_BRIDGE_RECORD_TOTAL_MAX_MB` | `1024` | Startup sweep trims oldest-first past this |
+| `MAVLINK_BRIDGE_RECORD_TOTAL_MAX_MB` | `128` | Startup sweep trims oldest-first past this |
 
 Behaviour worth knowing:
 
