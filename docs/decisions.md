@@ -54,6 +54,54 @@ The entries below were reconstructed from the initial implementation (commits `9
 `355baff`) and documented on 2026-07-23. Dates reflect when each decision was first made in
 the code.
 
+## ADR-0030: UDP mission replies are routed by MAVLink system, not sender recency
+
+- **Status:** Accepted
+- **Date:** 2026-08-12
+- **Deciders:** team
+- **Related:** [ADR-0027](#adr-0027-one-narrow-outbound-capability--a-read-only-mission-request)
+
+### Context
+
+ADR-0027 permits exactly one outbound capability: an explicit, read-only mission
+pull. The initial UDP adapter returned every outbound frame to the most recent
+sender. That was harmless only while one simulated vehicle owned the socket. In a
+mixed Copter/Plane fleet, the most recent sender is unrelated to the operator's
+selected `target_system`; a mission request or ACK can reach the wrong aircraft.
+
+### Decision
+
+The bridge records the UDP endpoint that emitted traffic for each `sysId:compId`.
+Mission request-list, request-item retries, and the final accepted ACK use the
+endpoint associated with their target system. Routes expire on the same TTL as the
+bridge system roster. A request for a live but unroutable system fails explicitly;
+it never falls back to another sender. Replay remains outbound-disabled.
+
+### Consequences
+
+- ✅ Mixed MAVLink vehicle types can share the bridge without outbound mission
+  traffic crossing between systems.
+- ✅ The routing rule is transport-local: mission synchronization remains a pure,
+  per-system state machine.
+- ⚠️ A vehicle must transmit at least one supported MAVLink message before its
+  endpoint is known, so an immediate mission request can fail once rather than be
+  guessed at.
+- ⚠️ This tracks one endpoint per system. Redundant links are still reported as
+  duplicate transmitters by the existing source-conflict mechanism; selecting a
+  redundancy/failover policy is deferred.
+- ⚠️ The routing decision is covered by pure tests, but its load-bearing
+  validation remains the pending Docker execution of the mixed ArduCopter +
+  ArduPlane SITL scenario. The generated binary fixture is not a substitute for
+  that real-producer run.
+
+### Alternatives considered
+
+- Send to the latest UDP sender — rejected: sender recency is not vehicle identity.
+- Broadcast each request to every observed endpoint — rejected: it violates the
+  operator's explicit target and can make several vehicles answer one pull.
+- Add a generic outbound socket API — rejected: it weakens ADR-0027's deliberately
+  narrow outbound boundary.
+
 ## ADR-0029: The synthetic-fleet gate covers claims, not code
 
 - **Status:** Accepted

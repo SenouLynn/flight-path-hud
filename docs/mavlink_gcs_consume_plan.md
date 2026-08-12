@@ -276,12 +276,16 @@ the current MAVLink `sysId:compId`.
 
 ## Near-Term Next Steps (Start Here)
 
-1. Create `externalTypes.ts` and test fixtures in hud app.
-2. Implement `wsTelemetrySource.ts` with reconnect + health metrics.
-3. Scaffold `apps/mavlink-bridge` with UDP input and WebSocket output.
-4. Connect bridge output to hud app and verify HUD updates.
-5. Add `GcsView` with stream health cards.
-6. Define video sidecar contracts and pick first adapter path (analog USB capture or Firefly PC-CAM UVC).
+1. **Execute the mixed Docker SITL acceptance run.** Build and run the pinned
+   ArduCopter + ArduPlane scenario; verify per-system mission routing, disconnect
+   and reconnect, recording, and replay. This is load-bearing: do not call the
+   harness or multi-node picture SITL-validated until it has passed.
+2. Create `externalTypes.ts` and test fixtures in hud app.
+3. Implement `wsTelemetrySource.ts` with reconnect + health metrics.
+4. Scaffold `apps/mavlink-bridge` with UDP input and WebSocket output.
+5. Connect bridge output to hud app and verify HUD updates.
+6. Add `GcsView` with stream health cards.
+7. Define video sidecar contracts and pick first adapter path (analog USB capture or Firefly PC-CAM UVC).
 
 ## Test Checklist Per Phase
 

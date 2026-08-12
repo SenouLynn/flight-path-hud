@@ -51,8 +51,9 @@ const ingress = REPLAY_FILE === null
   : createReplayIngress(REPLAY_FILE, { speed: REPLAY_SPEED, loop: REPLAY_LOOP })
 
 const missionRouter = createMissionRouter({
-  send: (buffer) => ingress.send?.(buffer),
-  canSend: () => typeof ingress.send === 'function',
+  send: (sysId, compId, buffer) => ingress.sendTo?.(sysId, compId, buffer),
+  canSend: (sysId, compId) => ingress.hasRoute?.(sysId, compId) === true,
+  isLive: () => typeof ingress.sendTo === 'function',
 })
 
 const MISSION_MESSAGE_NAMES = new Set(['MISSION_COUNT', 'MISSION_ITEM_INT', 'MISSION_CURRENT', 'MISSION_ACK'])
@@ -94,6 +95,9 @@ function publish(frame) {
 
 const tickTimer = setInterval(() => {
   core.tick()
+  // The bridge roster and outbound routing share one lifetime. A vehicle that
+  // aged out must not remain a stale target for a later mission request.
+  ingress.expireRoutes?.(SYSTEM_TTL_MS)
 }, 1000)
 
 function reportSourceConflicts() {
@@ -111,6 +115,9 @@ const stopIngress = ingress.start((datagram, meta) => {
   // sweep runs on the wall clock, so recorded times would age every system out
   // instantly. Determinism is exercised at the core level in the contract test.
   core.ingestDatagram(datagram, undefined, meta?.source).forEach((envelope) => {
+    if (meta?.source !== undefined) {
+      ingress.rememberSystem?.(envelope.sysId, envelope.compId, meta.source)
+    }
     if (envelope.messageName === 'HOME_POSITION' || MISSION_MESSAGE_NAMES.has(envelope.messageName)) {
       const frame = missionRouter.ingestEnvelope(envelope)
       if (frame !== null) {

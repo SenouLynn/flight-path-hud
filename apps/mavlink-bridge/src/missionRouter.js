@@ -56,7 +56,7 @@ function toWireItem(item) {
  * mission/home cache that lets a late-connecting client see state immediately
  * (design doc §4) instead of waiting for the next natural event.
  */
-export function createMissionRouter({ send, canSend, now = Date.now }) {
+export function createMissionRouter({ send, canSend, isLive = () => true, now = Date.now }) {
   const syncs = new Map()
   const missionCache = new Map()
   const homeCache = new Map()
@@ -67,7 +67,10 @@ export function createMissionRouter({ send, canSend, now = Date.now }) {
 
     if (sync === undefined) {
       sync = createMissionSync({
-        send, now,
+        // Keep the state machine transport-neutral, but bind its closed set of
+        // outbound frames to this specific vehicle. `send` must never select a
+        // destination from unrelated, recently heard traffic.
+        send: (buffer) => send(sysId, compId, buffer), now,
         sysId: GCS_SYSTEM_ID, compId: GCS_COMPONENT_ID,
         targetSystemId: sysId, targetComponentId: compId,
       })
@@ -179,8 +182,9 @@ export function createMissionRouter({ send, canSend, now = Date.now }) {
         }
       }
 
-      if (!canSend()) {
-        const frame = { type: 'mission', sysId, compId, status: 'failed', items: [], activeIndex: null, reason: 'replay mode: no live vehicle to query' }
+      if (!canSend(sysId, compId)) {
+        const reason = isLive() ? 'no live UDP endpoint for requested system' : 'replay mode: no live vehicle to query'
+        const frame = { type: 'mission', sysId, compId, status: 'failed', items: [], activeIndex: null, reason }
         missionCache.set(systemKey(sysId, compId), frame)
         return frame
       }

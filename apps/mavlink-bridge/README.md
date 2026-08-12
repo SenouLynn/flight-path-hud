@@ -31,6 +31,34 @@ and refuses to start twice. Two senders both claim `sysId 1`, and the client
 correctly merges them into a single aircraft with contradictory telemetry, which
 shows up as a sawtooth ground track rather than an obvious error.
 
+## Mixed ArduPilot SITL acceptance
+
+The repository includes a reproducible **ArduCopter + ArduPlane** scenario for
+validating the bridge against real binary MAVLink v2, rather than the JSON mock:
+
+```bash
+npm run sitl:up
+# separate terminal
+npm run dev --workspace @flight-path-hud/gcs
+```
+
+`sitl:up` builds the pinned ArduPilot 4.6.2 image and starts the bridge plus
+Copter (`1:1`) and Plane (`2:1`). Open the GCS at the Vite URL and retain its
+default `ws://localhost:8080/telemetry` link. Both nodes must be live and moving.
+Their seeded missions intentionally have different waypoint counts; click **Load
+mission** for each row in either order and verify each route belongs to the
+selected system, not the other vehicle.
+
+Stop one service (for example `docker compose -f apps/mavlink-bridge/sitl/compose.yml
+stop plane`): it should become stale and leave the roster while Copter remains
+live. Restart it with `start plane` and verify recovery without reloading the
+browser. The bridge records the run; use `npm run sitl:down`, then replay its new
+recording through `npm run replay:bridge` and verify the same two-node roster and
+mission overlays. `npm run sitl:logs` follows Compose logs.
+
+This validates one simulated mixed-fleet scenario only; it is not a field or
+arbitrary-fleet validation claim.
+
 ## Recording
 
 **Recording is on by default.** Each run writes
@@ -85,7 +113,7 @@ per-run cap above.
 | --- | --- | --- |
 | `MAVLINK_BRIDGE_UDP_HOST` / `_UDP_PORT` | `0.0.0.0` / `14550` | UDP ingress |
 | `MAVLINK_BRIDGE_WS_PORT` / `_WS_PATH` | `8080` / `/telemetry` | WebSocket egress |
-| `MAVLINK_BRIDGE_SYSTEM_TTL_MS` | `10000` | Drop a quiet system from the roster |
+| `MAVLINK_BRIDGE_SYSTEM_TTL_MS` | `10000` | Drop a quiet system and its UDP return route from the roster |
 | `MAVLINK_BRIDGE_SAMPLE_PORT` | `14549` | Sample sender's single-instance lock |
 
 ## Envelope shape

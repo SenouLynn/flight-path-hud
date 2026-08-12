@@ -1,7 +1,9 @@
 # Multi-node awareness
 
-**Status: producer, domain and presentation built for MAVLink nodes, against a
-synthetic fleet. Not validated.**
+**Status: producer, domain and presentation built for MAVLink nodes, with a
+mixed ArduCopter/ArduPlane SITL acceptance harness. The harness has not yet been
+Docker-built or executed; that acceptance run is the next load-bearing step. Not
+field-validated.**
 [ADR-0026](./decisions.md) gated this phase on the single-node system being
 validated in real life. [ADR-0028](./decisions.md) amended that gate's scope to
 let producer work proceed *while every node on the link is synthetic*, because a
@@ -26,6 +28,16 @@ position, an identity and a staleness, contributed by different transports.
 
 The unifying idea is that a vehicle we fly and a node someone is carrying are the
 same kind of object on the map, differing in transport and in what they report.
+
+## Next load-bearing validation step
+
+Build and execute the mixed ArduCopter (`1:1`) + ArduPlane (`2:1`) Docker SITL
+scenario with `npm run sitl:up`. This is not a smoke test to defer: it is the
+first real-producer check of MAVLink v2 decoding, per-system UDP mission return
+routing, independent mission pulls, stale-node eviction, reconnect, recording,
+and replay. Capture the resulting recording as the versioned fixture only after
+that run passes. Until then, the checked-in fixture is a binary-contract fixture,
+not evidence that ArduPilot SITL has been validated.
 
 ## What is already multi-node
 

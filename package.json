@@ -27,6 +27,9 @@
     "test:hud-ui": "npm run test --workspace @flight-path-hud/hud-ui",
     "mock:video": "npm run mock --workspace @flight-path-hud/video-bridge",
     "clean:recordings": "node apps/mavlink-bridge/src/cleanRecordings.js",
-    "test:gcs": "npm run test --workspace @flight-path-hud/gcs"
+    "test:gcs": "npm run test --workspace @flight-path-hud/gcs",
+    "sitl:up": "docker compose -f apps/mavlink-bridge/sitl/compose.yml up --build",
+    "sitl:down": "docker compose -f apps/mavlink-bridge/sitl/compose.yml down",
+    "sitl:logs": "docker compose -f apps/mavlink-bridge/sitl/compose.yml logs --follow"
   }
 }

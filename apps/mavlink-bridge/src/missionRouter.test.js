@@ -6,16 +6,19 @@ import { MAX_RETRIES, MISSION_ITEM_TIMEOUT_MS } from './missionSync.js'
 function makeRouter(overrides = {}) {
   const sent = []
   let canSendValue = true
+  let liveValue = true
   let nowMs = 0
   const router = createMissionRouter({
-    send: (buffer) => sent.push(buffer),
+    send: (sysId, compId, buffer) => sent.push({ sysId, compId, buffer }),
     canSend: () => canSendValue,
+    isLive: () => liveValue,
     now: () => nowMs,
     ...overrides,
   })
   return {
     router, sent,
     setCanSend: (value) => { canSendValue = value },
+    setLive: (value) => { liveValue = value },
     advance: (deltaMs) => { nowMs += deltaMs },
   }
 }
@@ -48,6 +51,7 @@ test('handleClientMessage triggers a pull and returns a pending frame', () => {
   assert.equal(frame.status, 'pending')
   assert.equal(frame.items.length, 0)
   assert.equal(sent.length, 1) // MISSION_REQUEST_LIST went out
+  assert.deepEqual(sent[0], { sysId: 1, compId: 1, buffer: sent[0].buffer })
 })
 
 test('a full pull ends with status complete, scaled lat/lon/alt, then acknowledgePublished flips it to published internally', () => {
@@ -70,13 +74,44 @@ test('a full pull ends with status complete, scaled lat/lon/alt, then acknowledg
 })
 
 test('handleClientMessage fails immediately when canSend() is false (replay mode)', () => {
-  const { router, setCanSend, sent } = makeRouter()
+  const { router, setCanSend, setLive, sent } = makeRouter()
   setCanSend(false)
+  setLive(false)
 
   const frame = router.handleClientMessage({ type: 'requestMission', sysId: 1, compId: 1 })
   assert.equal(frame.status, 'failed')
   assert.match(frame.reason, /replay/i)
   assert.equal(sent.length, 0, 'no outbound bytes in replay mode')
+})
+
+test('a live request with no route fails safely rather than using another vehicle endpoint', () => {
+  const { router, setCanSend, sent } = makeRouter()
+  setCanSend(false)
+
+  const frame = router.handleClientMessage({ type: 'requestMission', sysId: 2, compId: 1 })
+  assert.equal(frame.status, 'failed')
+  assert.match(frame.reason, /no live UDP endpoint/i)
+  assert.equal(sent.length, 0)
+})
+
+test('each mission sync binds every request, retry, and ack to its own system', () => {
+  const { router, sent, advance } = makeRouter()
+  router.handleClientMessage({ type: 'requestMission', sysId: 1, compId: 1 })
+  router.handleClientMessage({ type: 'requestMission', sysId: 2, compId: 1 })
+
+  assert.deepEqual(sent.slice(0, 2).map(({ sysId, compId }) => `${sysId}:${compId}`), ['1:1', '2:1'])
+
+  // Let only Plane's count arrive. Its item request must still target Plane,
+  // regardless of Copter being the other active pull.
+  router.ingestEnvelope({ sysId: 2, compId: 1, messageName: 'MISSION_COUNT', payload: { missionCount: { count: 1 } } })
+  assert.equal(`${sent.at(-1).sysId}:${sent.at(-1).compId}`, '2:1')
+
+  router.ingestEnvelope({ sysId: 2, compId: 1, messageName: 'MISSION_ITEM_INT', payload: { missionItemInt: { seq: 0, command: 16, current: true, autocontinue: true, latDegE7: 1, lonDegE7: 1, altM: 1 } } })
+  assert.equal(`${sent.at(-1).sysId}:${sent.at(-1).compId}`, '2:1', 'final ACK stays on Plane route')
+
+  advance(1500)
+  router.tick()
+  assert.equal(`${sent.at(-1).sysId}:${sent.at(-1).compId}`, '1:1', 'Copter retry stays on Copter route')
 })
 
 test('handleClientMessage ignores a message of the wrong type', () => {

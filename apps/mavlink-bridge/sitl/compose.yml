@@ -1,0 +1,32 @@
+services:
+  bridge:
+    image: node:22-bookworm-slim
+    working_dir: /workspace
+    command: sh -c "npm ci && npm run start --workspace @flight-path-hud/mavlink-bridge"
+    volumes:
+      - ../../..:/workspace
+      - ../recordings:/workspace/apps/mavlink-bridge/recordings
+    ports:
+      - "8080:8080"
+
+  copter:
+    build: .
+    environment:
+      VEHICLE: ArduCopter
+      SYSID: "1"
+      MISSION_FILE: /scenario/copter.waypoints
+    volumes:
+      - ./copter.waypoints:/scenario/copter.waypoints:ro
+    depends_on:
+      - bridge
+
+  plane:
+    build: .
+    environment:
+      VEHICLE: ArduPlane
+      SYSID: "2"
+      MISSION_FILE: /scenario/plane.waypoints
+    volumes:
+      - ./plane.waypoints:/scenario/plane.waypoints:ro
+    depends_on:
+      - bridge

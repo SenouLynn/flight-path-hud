@@ -23,6 +23,11 @@ tagged release exists.
 ## [Unreleased]
 
 ### Changed
+- **Mission requests route per MAVLink system endpoint.** The UDP adapter no
+  longer replies to whichever vehicle sent most recently: it remembers the
+  endpoint that last carried each `sysId:compId`, and mission requests, retries
+  and ACKs use that route. A missing or stale route fails explicitly rather than
+  leaking a request to a neighbouring vehicle (ADR-0030).
 - **Per-node mission plans are published** — `useVehicleFeed` cached a
   `MissionPlan` per system but surfaced only the selected one, so any other
   node's mission arrived, was stored, and was invisible. Now exposed as
@@ -36,6 +41,12 @@ tagged release exists.
   `BasemapControl`, since Follow and Track up have no meaning on a fleet map.
 
 ### Added
+- **Mixed ArduPilot SITL acceptance harness.** `npm run sitl:up` starts pinned
+  ArduPilot 4.6.2 ArduCopter (`1:1`) and ArduPlane (`2:1`) simulators alongside
+  the bridge, each with a distinct seeded mission. A versioned sanitized MAVLink
+  v2 fixture protects the two-system decoder/replay path without requiring Docker
+  in the ordinary Node test suite. This validates one simulated mixed-fleet
+  scenario only; field and broader multi-node claims remain gated (ADR-0030).
 - **Fleet view — the multi-node picture** (ADR-0029,
   [target](docs/multi_node_awareness.md)). A roster plus its own unified map
   showing every node on the link, with per-node colour carried across the marker,
