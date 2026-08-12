@@ -23,20 +23,6 @@ import { MissionPanel } from './MissionPanel'
 import type { VehicleFeedState } from './useVehicleFeed'
 import { VIEW_OPTIONS, ViewsMenu, type ViewId } from './ViewsMenu'
 
-/**
- * Column weights. Instruments match the map; parameters get half, since a table
- * of short values needs far less room than either.
- *
- * minmax(0, …) rather than a bare fr: an `fr` track floors at its content's
- * min-content width, and the raw-stream rows are wide and `nowrap`. Without this
- * the logs column expands to fit them and squeezes the other panels to nothing.
- */
-const VIEW_WEIGHTS: Record<ViewId, string> = {
-  instruments: 'minmax(0, 1fr)',
-  map: 'minmax(0, 1fr)',
-  video: 'minmax(0, 1fr)',
-}
-
 /** `n/a` means the transport cannot measure it, which is not the same as zero. */
 function formatMeasured(value: number | null, digits: number, suffix: string): string {
   return value === null ? '—' : `${value.toFixed(digits)}${suffix}`
@@ -46,8 +32,6 @@ interface NodeViewProps {
   feed: VehicleFeedState
   url: string
   onUrlChange: (url: string) => void
-  selectedSystem: string | null
-  onSelectSystem: (system: string | null) => void
   tileSource: TileSource
   basemapId: string
   onBasemapChange: (id: string) => void
@@ -59,8 +43,6 @@ export function NodeView({
   feed,
   url,
   onUrlChange,
-  selectedSystem,
-  onSelectSystem,
   tileSource,
   basemapId,
   onBasemapChange,
@@ -84,7 +66,10 @@ export function NodeView({
   })
 
   const shownViews = VIEW_OPTIONS.filter((option) => visibleViews[option.id])
-  const gridTemplateColumns = shownViews.map((option) => VIEW_WEIGHTS[option.id]).join(' ')
+  // Panel placement belongs in CSS, where responsive layouts can use the same
+  // identifiers to rearrange views without changing mount order or restarting a
+  // video stream. The modifiers describe which named grid areas are available.
+  const mainClassName = ['gcs-main', ...shownViews.map((option) => `has-${option.id}`)].join(' ')
 
   const toggleView = (id: ViewId) => {
     setVisibleViews((previous) => ({ ...previous, [id]: !previous[id] }))
@@ -163,28 +148,6 @@ export function NodeView({
           decodeErrorCount={feed.decodeErrorCount}
         />
 
-        <section className="panel">
-          <h2>System</h2>
-          <label className="control">
-            <span>Active system</span>
-            <select
-              value={selectedSystem ?? ''}
-              onChange={(event) => onSelectSystem(event.target.value === '' ? null : event.target.value)}
-            >
-              <option value="">Auto (latest)</option>
-              {feed.knownSystems.map((system) => (
-                <option key={system} value={system}>{system}</option>
-              ))}
-            </select>
-          </label>
-          {feed.knownSystems.length > 1 ? (
-            <p className="warn">
-              {feed.knownSystems.length} systems on this link. If that is unexpected, you may have
-              duplicate transmitters.
-            </p>
-          ) : null}
-        </section>
-
         <MissionPanel
           mission={feed.mission}
           replayMode={feed.replayMode}
@@ -256,9 +219,9 @@ export function NodeView({
         Panels render by mapping VIEW_OPTIONS, so DOM order always matches the
         column weights built from the same list.
       */}
-      <main className="gcs-main" style={{ gridTemplateColumns }}>
+      <main className={mainClassName}>
         {shownViews.map((option) => (
-          <div key={option.id} className={option.id === 'map' ? 'view-pane map-pane' : 'view-pane'}>
+          <div key={option.id} className={`view-pane view-pane--${option.id}`}>
             {option.id === 'video' ? (
               <VideoPanel
                 url={activeVideoUrl}

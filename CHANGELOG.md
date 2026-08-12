@@ -23,6 +23,14 @@ tagged release exists.
 ## [Unreleased]
 
 ### Changed
+- **Detail scope is always pinned to one node.** The redundant sidebar "Active
+  system" selector and its unstable "Auto (latest)" option are gone. The global
+  Scope picker is now the only selector; it opens or changes a concrete system,
+  so a multi-vehicle stream cannot make the detail view alternate between nodes.
+- **Linux/arm64 Docker is now the SITL acceptance baseline** (ADR-0031). This
+  keeps Apple Silicon development rigs on the same userspace as Linux deployment
+  targets; native macOS SITL remains best-effort exploration, never the source of
+  a validation claim.
 - **Mission requests route per MAVLink system endpoint.** The UDP adapter no
   longer replies to whichever vehicle sent most recently: it remembers the
   endpoint that last carried each `sysId:compId`, and mission requests, retries
@@ -61,14 +69,12 @@ tagged release exists.
   original UI moved to `NodeView.tsx` unchanged. The seam between them is one
   callback that pins `selectedSystem`. Built against the synthetic fleet only;
   nothing here is a claim that multi-node is validated.
-- **A global header and scope picker.** "Ground control" and a node picker now
+- **A global header and scope picker.** "Ground control" and one node picker now
   sit above both views rather than inside one, with each view contributing its
   own chrome (the fleet back-link and Views, or the fleet heading) to a subbar
-  beneath. The picker names whichever node is on screen — including the
-  auto-selected one, which the node view's "Active system" control reports as
-  "Auto (latest)" — or `Nodes…` for the fleet. It is deliberately a second
-  control rather than a replacement: one answers *which* node is displayed, the
-  other *how* it was chosen.
+  beneath. The picker names the concrete node on screen, or `Nodes…` for the
+  fleet; it is the only detail selector so a live multi-node feed cannot switch
+  the operator's view behind their back.
 - **The node id ↔ system key seam** (`parseMavlinkNodeId`, `systemKeyFromNodeId`
   in `packages/gcs-core/src/nodes.ts`). `NodeIdentity.id` is `mavlink:1:1` while
   every fold key, `knownSystems` and `selectedSystem` are `1:1`, and nothing

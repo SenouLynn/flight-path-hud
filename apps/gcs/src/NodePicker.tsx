@@ -5,10 +5,9 @@
  * answerable and changeable from anywhere without going back to the roster
  * first.
  *
- * Distinct from the node view's "Active system" control, which is deliberately
- * left alone. That one answers *how* the displayed node is chosen — pinned, or
- * whichever reported last. This one answers *which node is on screen*, and so
- * names a concrete node even when the other reads "Auto (latest)".
+ * This is the only node selector. Choosing a node always pins the detail view to
+ * that concrete system; a "latest frame wins" option would ping-pong between
+ * vehicles on a live multi-node link.
  */
 
 import { systemKeyFromNodeId, type NodeSummary } from '@flight-path-hud/gcs-core'

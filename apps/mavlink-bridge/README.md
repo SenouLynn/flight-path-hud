@@ -59,6 +59,19 @@ mission overlays. `npm run sitl:logs` follows Compose logs.
 This validates one simulated mixed-fleet scenario only; it is not a field or
 arbitrary-fleet validation claim.
 
+### macOS and Apple Silicon: important constraint
+
+The official SITL baseline is **Linux in Docker**, including on Apple Silicon
+Macs. Docker Desktop runs the image as Linux/arm64; it is not an x86 emulator.
+The image is built/downloaded on first use and cached locally by Docker. Do not
+commit Docker images, ArduPilot checkouts, or build outputs to this repository.
+
+ArduPilot's documented SITL setup targets Linux and Windows/WSL. Native macOS
+SITL has community support and may be useful for experiments, but it is
+best-effort only: it is not required, not part of this acceptance run, and not a
+source of validation evidence. Reproduce any native-Mac-only behavior in this
+Compose stack before changing the bridge or GCS. See ADR-0031.
+
 ## Recording
 
 **Recording is on by default.** Each run writes

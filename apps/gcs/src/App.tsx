@@ -18,7 +18,6 @@
  * chrome to a subbar beneath it.
  */
 
-import { systemKey } from '@flight-path-hud/gcs-core'
 import { useMemo, useState } from 'react'
 import { FleetView } from './fleet/FleetView'
 import { DEFAULT_BASEMAP, findBasemap } from './map/tileSource'
@@ -65,26 +64,20 @@ function App() {
   }
 
   /*
-   * The whole seam between the two views. Pinning `selectedSystem` rather than
-   * leaving it on "Auto (latest)" is what makes this "focus this node" instead
-   * of "show whichever node reported most recently" — which, on a live fleet,
-   * would be a different aircraft a moment later.
+   * The whole seam between the two views. Pinning `selectedSystem` is what makes
+   * this "focus this node" rather than "show whichever node reported most
+   * recently" — which, on a live fleet, would be a different aircraft a moment
+   * later.
    */
   const focusNode = (system: string) => {
     setSelectedSystem(system)
     setAppView('node')
   }
 
-  /*
-   * What the scope picker should read. In the node view with no explicit
-   * selection the displayed vehicle is whichever reported last, so name it —
-   * the picker describes what is on screen, not how it got chosen.
-   */
-  const scopedSystem = appView === 'node'
-    ? selectedSystem ?? (feed.vehicle === null
-      ? null
-      : systemKey(feed.vehicle.sysId, feed.vehicle.compId))
-    : null
+  // A node view is reached only through focusNode/changeScope, both of which pin
+  // a concrete system. There is intentionally no "latest frame wins" detail
+  // mode: a live multi-vehicle link would make the screen ping-pong between nodes.
+  const scopedSystem = appView === 'node' ? selectedSystem : null
 
   const changeScope = (system: string | null) => {
     if (system === null) {
@@ -120,8 +113,6 @@ function App() {
           feed={feed}
           url={url}
           onUrlChange={setUrl}
-          selectedSystem={selectedSystem}
-          onSelectSystem={setSelectedSystem}
           tileSource={tileSource}
           basemapId={basemapId}
           onBasemapChange={setBasemapId}

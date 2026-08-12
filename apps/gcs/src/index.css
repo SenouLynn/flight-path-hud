@@ -244,11 +244,10 @@ body {
 .mission-status.failed { color: var(--error); }
 
 /*
- * The map is always present; the HUD is an optional second column. This is the
- * seam a Mission-Control-style view switcher would grow from — more panes become
- * more columns rather than a different layout.
+ * Detail panes are named areas rather than anonymous columns. This keeps the map
+ * on the left and instruments beside it on a wide screen, then lets the compact
+ * layout stack video over instruments without remounting either view.
  */
-/* Columns are set inline from the Views selection. */
 .gcs-main {
   grid-area: map;
   display: grid;
@@ -256,6 +255,37 @@ body {
   /* Without this the row grows to fit the tallest panel instead of clipping it. */
   min-height: 0;
 }
+
+.gcs-main.has-map.has-instruments.has-video {
+  grid-template-columns: minmax(380px, 1.35fr) minmax(290px, 1fr);
+  grid-template-rows: minmax(0, 1fr) minmax(0, 2fr);
+  grid-template-areas:
+    'map video'
+    'map instruments';
+}
+
+.gcs-main.has-map.has-instruments:not(.has-video) {
+  grid-template-columns: minmax(380px, 1.5fr) minmax(300px, 1fr);
+  grid-template-areas: 'map instruments';
+}
+
+.gcs-main.has-map.has-video:not(.has-instruments) {
+  grid-template-columns: minmax(380px, 1.5fr) minmax(240px, 1fr);
+  grid-template-areas: 'map video';
+}
+
+.gcs-main.has-instruments.has-video:not(.has-map) {
+  grid-template-columns: minmax(300px, 1fr) minmax(240px, 0.8fr);
+  grid-template-areas: 'instruments video';
+}
+
+.gcs-main.has-map:not(.has-instruments):not(.has-video) { grid-template-areas: 'map'; }
+.gcs-main.has-instruments:not(.has-map):not(.has-video) { grid-template-areas: 'instruments'; }
+.gcs-main.has-video:not(.has-map):not(.has-instruments) { grid-template-areas: 'video'; }
+
+.view-pane--map { grid-area: map; }
+.view-pane--instruments { grid-area: instruments; }
+.view-pane--video { grid-area: video; }
 
 .view-pane {
   position: relative;
@@ -265,8 +295,48 @@ body {
   background: var(--bg);
 }
 
-.view-pane + .view-pane {
+/* Borders follow visual adjacency, not JSX order (which stays stable for mounts). */
+.gcs-main.has-map.has-instruments .view-pane--instruments,
+.gcs-main.has-map.has-video .view-pane--video,
+.gcs-main.has-instruments.has-video:not(.has-map) .view-pane--video {
   border-left: 1px solid var(--border);
+}
+
+.gcs-main.has-map.has-instruments.has-video .view-pane--video {
+  border-bottom: 1px solid var(--border);
+}
+
+/* Tablet/narrow desktop: give the sidebar a bounded row and stack the working
+ * panes vertically. Each internal panel scrolls; the document never does. */
+@media (max-width: 900px) {
+  .gcs-layout {
+    grid-template-columns: 1fr;
+    grid-template-rows: auto minmax(120px, 28vh) minmax(0, 1fr);
+    grid-template-areas:
+      'subbar'
+      'sidebar'
+      'map';
+  }
+
+  .gcs-sidebar {
+    border-right: 0;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .gcs-main.has-map.has-instruments.has-video {
+    grid-template-columns: 1fr;
+    grid-template-rows: minmax(180px, 1fr) minmax(90px, 0.33fr) minmax(160px, 0.67fr);
+    grid-template-areas:
+      'map'
+      'video'
+      'instruments';
+    overflow-y: auto;
+  }
+
+  .gcs-main.has-map.has-instruments.has-video .view-pane--video,
+  .gcs-main.has-map.has-instruments.has-video .view-pane--instruments {
+    border-left: 0;
+  }
 }
 
 .views-empty {

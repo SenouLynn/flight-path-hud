@@ -54,6 +54,54 @@ The entries below were reconstructed from the initial implementation (commits `9
 `355baff`) and documented on 2026-07-23. Dates reflect when each decision was first made in
 the code.
 
+## ADR-0031: Linux containers are the SITL baseline; native macOS is best-effort
+
+- **Status:** Accepted
+- **Date:** 2026-08-12
+- **Deciders:** team
+- **Related:** [ADR-0020](#adr-0020-multi-target-gcs-via-ports-and-adapters)
+
+### Context
+
+The main development machines are Apple Silicon Macs, while the intended field
+and deployment targets are Linux (Raspberry Pi and cloud). ArduPilot documents
+SITL setup for Linux and Windows/WSL, not macOS as a primary supported target.
+Community reports demonstrate that native Apple Silicon builds can work, but also
+report toolchain, linker, MAVProxy, and runtime differences. Making a native Mac
+install the project baseline would turn those host-specific differences into a
+source of non-reproducible acceptance results.
+
+### Decision
+
+The mixed SITL acceptance scenario runs in a pinned Linux/arm64 Docker image.
+Apple Silicon developers run that same Linux environment through Docker Desktop;
+the built image stays in Docker's local cache and is never committed to this
+repository. Linux and Windows/WSL hosts may run the same Compose scenario.
+
+Native macOS SITL is allowed for personal exploration only. It is not a required
+developer setup, an acceptance environment, or evidence that the GCS is
+validated. Any issue seen only in a native Mac build must be reproduced in the
+Docker scenario before it changes bridge or GCS behavior.
+
+### Consequences
+
+- ✅ The main Mac development rigs and Linux deployment targets exercise one
+  reproducible Linux userspace and pinned ArduPilot revision.
+- ✅ First use is slow, but subsequent runs reuse Docker's local build cache.
+- ⚠️ Docker Desktop is now a prerequisite for the official macOS SITL workflow.
+- ⚠️ Native macOS regressions may remain invisible; they are explicitly outside
+  the baseline and can be promoted only through a separate decision.
+
+### Alternatives considered
+
+- Native macOS SITL as the primary workflow — rejected: it is not the documented
+  upstream baseline and Apple Silicon compatibility has a history of variation.
+- Commit a prebuilt image or source build output — rejected: it makes the repo
+  enormous and opaque; Docker's local cache solves repeat-run performance without
+  versioning binary artifacts.
+- Require an external Linux or Windows machine for Mac developers — rejected:
+  Docker provides the same Linux target locally without splitting daily workflow.
+
 ## ADR-0030: UDP mission replies are routed by MAVLink system, not sender recency
 
 - **Status:** Accepted
