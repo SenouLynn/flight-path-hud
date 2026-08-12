@@ -22,12 +22,20 @@ export interface TrackConfig {
    * five messages per tick, so an unguarded trail stores five duplicates each time.
    */
   minSpacingM: number
+  /**
+   * A larger jump is a new position epoch, not a line the vehicle traversed.
+   * GPS/SITL initialization can briefly report a placeholder fix before the
+   * true origin is available; reset the breadcrumb instead of drawing across
+   * continents. Undefined leaves the guard disabled for callers that need it.
+   */
+  maxDiscontinuityM?: number
 }
 
 export const DEFAULT_TRACK_CONFIG: TrackConfig = {
   maxPoints: 1000,
   maxAgeMs: 300000,
   minSpacingM: 1,
+  maxDiscontinuityM: 1000,
 }
 
 export interface TrackState {
@@ -38,6 +46,8 @@ export interface TrackStepResult {
   state: TrackState
   /** Whether this fix was recorded, or rejected as too close to the last one. */
   appended: boolean
+  /** Whether an implausible position jump started a fresh breadcrumb epoch. */
+  reset: boolean
 }
 
 export const EMPTY_TRACK: TrackState = { points: [] }
@@ -67,6 +77,12 @@ export function appendTrackPoint(
   const points = previous?.points ?? []
   const last = points[points.length - 1]
 
+  if (last !== undefined
+    && config.maxDiscontinuityM !== undefined
+    && distanceM(last, fix) > config.maxDiscontinuityM) {
+    return { state: { points: [fix] }, appended: true, reset: true }
+  }
+
   if (last !== undefined && distanceM(last, fix) < config.minSpacingM) {
     // Still prune: a stationary vehicle should age its trail out, not freeze it.
     const pruned = prune(points, fix.timestampMs, config)
@@ -75,13 +91,13 @@ export function appendTrackPoint(
     // renderer can skip. At ~33 frames/s with a 1 m spacing guard, four frames in
     // five land here.
     if (pruned === points && previous !== null) {
-      return { state: previous, appended: false }
+      return { state: previous, appended: false, reset: false }
     }
 
-    return { state: { points: pruned }, appended: false }
+    return { state: { points: pruned }, appended: false, reset: false }
   }
 
-  return { state: { points: prune([...points, fix], fix.timestampMs, config) }, appended: true }
+  return { state: { points: prune([...points, fix], fix.timestampMs, config) }, appended: true, reset: false }
 }
 
 /** Total ground distance along the retained trail, in metres. */

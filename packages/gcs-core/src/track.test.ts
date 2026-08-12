@@ -41,6 +41,17 @@ describe('appendTrackPoint', () => {
     expect(second.state.points).toHaveLength(2)
   })
 
+  it('starts a fresh breadcrumb rather than drawing an implausible GPS jump', () => {
+    const first = appendTrackPoint(null, northOf(0, 1000), CONFIG)
+    const jumped = appendTrackPoint(first.state, northOf(2000, 1100), {
+      ...CONFIG,
+      maxDiscontinuityM: 1000,
+    })
+
+    expect(jumped.reset).toBe(true)
+    expect(jumped.state.points).toEqual([northOf(2000, 1100)])
+  })
+
   it('does not grow the trail when a vehicle sits still and repeats its fix', () => {
     // The bridge sends five messages per tick, so an unguarded trail would take
     // five identical points every 150ms.

@@ -38,14 +38,18 @@ tagged release exists.
   runtime `PATH`.
 
 ### Fixed
+- **Breadcrumb trails ignore startup GPS discontinuities.** The GCS now advances
+  a trail only for `GLOBAL_POSITION_INT` frames and begins a fresh trail after a
+  jump greater than 1 km, rather than connecting a simulator's placeholder fix
+  to its initialized location with a phantom long-distance route.
 - **SITL's Linux bridge install no longer overwrites macOS GCS dependencies.**
   The Compose bridge now keeps its `node_modules` in a Docker volume, preserving
   the host's Darwin Rolldown/Vite native binding for `npm run dev:gcs`.
-- **Headless SITL now seeds missions after an actual vehicle heartbeat.** MAVProxy
-  startup commands run before a connection is guaranteed and headless stdin made
-  the proxy exit; a SITL-only MAVLink mission handshake now seeds each vehicle,
-  then MAVProxy runs non-interactively in daemon mode as the persistent
-  forwarding hop.
+- **Headless SITL waits for GPS/home initialization before seeding missions.** A
+  heartbeat establishes the autopilot connection but can precede `HOME_POSITION`,
+  which made Copter initially report mission item zero at `0,0`. The SITL-only
+  MAVLink handshake now waits for both, then MAVProxy runs non-interactively as
+  the persistent forwarding hop.
 - **`npm run clean:recordings` now targets the bridge recordings directory.** The
   root helper previously checked a nonexistent root-level `recordings/` folder,
   so its dry run misleadingly reported nothing while bridge captures remained.
