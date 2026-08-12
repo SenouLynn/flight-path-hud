@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { parseWireFrame, parseWireMessage, systemKey } from './wire'
+import { parseWireEvent, parseWireFrame, parseWireMessage, encodeRequestMission, systemKey } from './wire'
 
 function validFrame() {
   return {
@@ -99,6 +99,203 @@ describe('parseWireMessage', () => {
 
   it('returns null for non-string socket data', () => {
     expect(parseWireMessage(new ArrayBuffer(8))).toBeNull()
+  })
+})
+
+describe('parseWireEvent', () => {
+  // parseWireEvent's contract is "raw socket message in" — on a live WebSocket,
+  // `event.data` is always a string, so every fixture below is JSON.stringify'd
+  // before being handed in, exactly as stream.ts's onMessage will do it.
+
+  it('passes through a valid telemetry frame with kind telemetry', () => {
+    const event = parseWireEvent(JSON.stringify(validFrame()))
+
+    if (event.kind !== 'telemetry') {
+      throw new Error(`expected telemetry event, got ${event.kind}`)
+    }
+    expect(event.frame.sysId).toBe(1)
+    expect(event.frame.messageName).toBe('GLOBAL_POSITION_INT')
+  })
+
+  it('parses a well-formed mission frame', () => {
+    const missionFrame = {
+      type: 'mission',
+      sysId: 1,
+      compId: 2,
+      status: 'complete',
+      items: [
+        { seq: 0, command: 16, current: false, autocontinue: true, latDeg: 47.5, lonDeg: 8.5, altM: 100 },
+      ],
+      activeIndex: 0,
+      reason: null,
+    }
+
+    const event = parseWireEvent(JSON.stringify(missionFrame))
+
+    if (event.kind !== 'mission') {
+      throw new Error(`expected mission event, got ${event.kind}`)
+    }
+    expect(event.frame.type).toBe('mission')
+    expect(event.frame.sysId).toBe(1)
+    expect(event.frame.compId).toBe(2)
+    expect(event.frame.status).toBe('complete')
+    expect(event.frame.items).toHaveLength(1)
+    expect(event.frame.items[0].seq).toBe(0)
+    expect(event.frame.activeIndex).toBe(0)
+  })
+
+  it('parses a well-formed home frame', () => {
+    const homeFrame = {
+      type: 'home',
+      sysId: 1,
+      compId: 2,
+      lat: 47.5,
+      lon: 8.5,
+      altMslM: 100,
+    }
+
+    const event = parseWireEvent(JSON.stringify(homeFrame))
+
+    if (event.kind !== 'home') {
+      throw new Error(`expected home event, got ${event.kind}`)
+    }
+    expect(event.frame.type).toBe('home')
+    expect(event.frame.lat).toBe(47.5)
+    expect(event.frame.lon).toBe(8.5)
+  })
+
+  it('parses a well-formed linkMode frame', () => {
+    const linkModeFrame = {
+      type: 'linkMode',
+      replayMode: true,
+    }
+
+    const event = parseWireEvent(JSON.stringify(linkModeFrame))
+
+    if (event.kind !== 'linkMode') {
+      throw new Error(`expected linkMode event, got ${event.kind}`)
+    }
+    expect(event.frame.type).toBe('linkMode')
+    expect(event.frame.replayMode).toBe(true)
+  })
+
+  it('returns unrecognized for mission frame with bad status', () => {
+    const missionFrame = {
+      type: 'mission',
+      sysId: 1,
+      compId: 2,
+      status: 'invalid_status',
+      items: [],
+      activeIndex: null,
+      reason: null,
+    }
+
+    const event = parseWireEvent(JSON.stringify(missionFrame))
+
+    expect(event.kind).toBe('unrecognized')
+  })
+
+  it('returns unrecognized for mission frame with non-array items', () => {
+    const missionFrame = {
+      type: 'mission',
+      sysId: 1,
+      compId: 2,
+      status: 'complete',
+      items: 'not an array',
+      activeIndex: null,
+      reason: null,
+    }
+
+    const event = parseWireEvent(JSON.stringify(missionFrame))
+
+    expect(event.kind).toBe('unrecognized')
+  })
+
+  it('returns unrecognized for mission frame with malformed item', () => {
+    const missionFrame = {
+      type: 'mission',
+      sysId: 1,
+      compId: 2,
+      status: 'complete',
+      items: [
+        { seq: 0, command: 16, current: false, autocontinue: true, latDeg: 47.5, lonDeg: 8.5 },
+      ],
+      activeIndex: null,
+      reason: null,
+    }
+
+    const event = parseWireEvent(JSON.stringify(missionFrame))
+
+    expect(event.kind).toBe('unrecognized')
+  })
+
+  it('returns unrecognized for untagged garbage with no type', () => {
+    const event = parseWireEvent(JSON.stringify({ something: 'random' }))
+
+    expect(event.kind).toBe('unrecognized')
+  })
+
+  it('returns unrecognized for non-string input', () => {
+    // Guards against the exact regression this fix addresses: an already-parsed
+    // object (or any other non-string) must never reach JSON.parse.
+    expect(parseWireEvent(42).kind).toBe('unrecognized')
+    expect(parseWireEvent(null).kind).toBe('unrecognized')
+    expect(parseWireEvent(undefined).kind).toBe('unrecognized')
+    expect(parseWireEvent(validFrame()).kind).toBe('unrecognized')
+  })
+
+  it('returns unrecognized for malformed JSON rather than throwing', () => {
+    expect(parseWireEvent('{ not json').kind).toBe('unrecognized')
+  })
+
+  it('returns unrecognized for well-formed JSON that is not an object', () => {
+    expect(parseWireEvent('42').kind).toBe('unrecognized')
+    expect(parseWireEvent('null').kind).toBe('unrecognized')
+    expect(parseWireEvent('"just a string"').kind).toBe('unrecognized')
+  })
+})
+
+describe('encodeRequestMission', () => {
+  it('encodes valid sysId and compId to JSON that round-trips correctly', () => {
+    const encoded = encodeRequestMission(1, 2)
+
+    expect(encoded).not.toBeNull()
+    expect(typeof encoded).toBe('string')
+
+    const parsed = JSON.parse(encoded!)
+    expect(parsed.type).toBe('requestMission')
+    expect(parsed.sysId).toBe(1)
+    expect(parsed.compId).toBe(2)
+  })
+
+  it('returns null for sysId out of range', () => {
+    expect(encodeRequestMission(-1, 1)).toBeNull()
+    expect(encodeRequestMission(256, 1)).toBeNull()
+  })
+
+  it('returns null for compId out of range', () => {
+    expect(encodeRequestMission(1, -1)).toBeNull()
+    expect(encodeRequestMission(1, 256)).toBeNull()
+  })
+
+  it('returns null for non-integer sysId or compId', () => {
+    expect(encodeRequestMission(1.5, 1)).toBeNull()
+    expect(encodeRequestMission(1, 2.5)).toBeNull()
+  })
+
+  it('returns null for undefined sysId or compId', () => {
+    expect(encodeRequestMission(undefined as any, 1)).toBeNull()
+    expect(encodeRequestMission(1, undefined as any)).toBeNull()
+  })
+
+  it('encodes boundary values correctly', () => {
+    const encoded0 = encodeRequestMission(0, 0)
+    expect(encoded0).not.toBeNull()
+    expect(JSON.parse(encoded0!)).toEqual({ type: 'requestMission', sysId: 0, compId: 0 })
+
+    const encoded255 = encodeRequestMission(255, 255)
+    expect(encoded255).not.toBeNull()
+    expect(JSON.parse(encoded255!)).toEqual({ type: 'requestMission', sysId: 255, compId: 255 })
   })
 })
 

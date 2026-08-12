@@ -5,6 +5,8 @@ import { MapControls, TILTED_PITCH_DEG } from './map/MapControls'
 import { MapPanel, type MapHandle } from './map/MapPanel'
 import { DEFAULT_VIDEO_URL, VideoPanel } from './video/VideoPanel'
 import { BASEMAPS, DEFAULT_BASEMAP, findBasemap } from './map/tileSource'
+import { formatCoord, formatNumber } from './format'
+import { MissionPanel } from './MissionPanel'
 import { useVehicleFeed } from './useVehicleFeed'
 import { VIEW_OPTIONS, ViewsMenu, type ViewId } from './ViewsMenu'
 
@@ -23,14 +25,6 @@ const VIEW_WEIGHTS: Record<ViewId, string> = {
 }
 
 const DEFAULT_URL = 'ws://localhost:8080/telemetry'
-
-function formatCoord(value: number | null): string {
-  return value === null ? 'N/A' : value.toFixed(6)
-}
-
-function formatNumber(value: number | null, digits = 1, suffix = ''): string {
-  return value === null ? 'N/A' : `${value.toFixed(digits)}${suffix}`
-}
 
 /** `n/a` means the transport cannot measure it, which is not the same as zero. */
 function formatMeasured(value: number | null, digits: number, suffix: string): string {
@@ -167,6 +161,21 @@ function App() {
           ) : null}
         </section>
 
+        <MissionPanel
+          mission={feed.mission}
+          replayMode={feed.replayMode}
+          hasVehicle={vehicle !== null}
+          connectionState={feed.connectionState}
+          onLoadMission={() => vehicle !== null && feed.requestMission(vehicle.sysId, vehicle.compId)}
+          onSelectWaypoint={(latDeg, lonDeg) => {
+            // Same hand-over as a manual drag: Follow's per-frame recentre
+            // would otherwise snap straight back to the vehicle before the
+            // operator ever sees the waypoint they just clicked.
+            handOverCamera()
+            mapHandleRef.current?.panTo(latDeg, lonDeg)
+          }}
+        />
+
         {visibleViews.video ? (
           <section className="panel">
             <h2>Video Link</h2>
@@ -248,6 +257,8 @@ function App() {
                   pitchDeg={tilted ? TILTED_PITCH_DEG : 0}
                   onCameraGrab={handOverCamera}
                   onUserPitch={() => setTilted(false)}
+                  mission={feed.mission}
+                  home={feed.home}
                 />
                 <MapControls
                   basemaps={BASEMAPS}

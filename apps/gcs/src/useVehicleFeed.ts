@@ -8,18 +8,25 @@
 
 import {
   DEFAULT_TRACK_CONFIG,
+  EMPTY_MISSION,
   EMPTY_TRACK,
   appendLogEntry,
   appendTrackPoint,
+  encodeRequestMission,
   hasFix,
+  homeFromWireFrame,
   mergeVehicleState,
+  missionPlanFromFrame,
   startTelemetryStream,
   systemKey,
   toDecodeErrorEntry,
   toLogEntry,
   type ConnectionState,
+  type HomePosition,
   type LogEntry,
+  type MissionPlan,
   type SocketLike,
+  type StreamHandle,
   type TrackConfig,
   type TrackPoint,
   type TrackState,
@@ -33,7 +40,7 @@ import {
   type TelemetrySample,
   type TrackPoint as EnuTrackPoint,
 } from '@flight-path-hud/hud-ui'
-import { useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 
 /**
  * The browser's WebSocket, adapted to the core's transport-agnostic shape. This
@@ -46,6 +53,7 @@ function browserSocketFactory(url: string): SocketLike {
   return {
     addEventListener: (event, handler) => socket.addEventListener(event, handler),
     removeEventListener: (event, handler) => socket.removeEventListener(event, handler),
+    send: (data) => socket.send(data),
     close: () => socket.close(),
   }
 }
@@ -63,12 +71,27 @@ export interface VehicleFeedState {
   decodeErrorCount: number
   /** Every system seen on the link, so a multi-vehicle stream is visible. */
   knownSystems: string[]
+  /** Latest mission plan for the active system. EMPTY_MISSION until requested. */
+  mission: MissionPlan
+  /** Latest home position for the active system. Null until the bridge reports one. */
+  home: HomePosition | null
+  /**
+   * Null means "the bridge hasn't told us yet" — distinct from false. Reset to null
+   * on every reconnect, since the bridge resends `linkMode` fresh on each new
+   * connection per the protocol.
+   */
+  replayMode: boolean | null
   /** Recent raw messages, newest last. Published on a timer, not per frame. */
   log: LogEntry[]
+  /** Ask the bridge for the active system's current mission plan. */
+  requestMission: (sysId: number, compId: number) => void
 }
 
-/** The log is published on its own timer, so it is held as separate state. */
-type FeedSnapshot = Omit<VehicleFeedState, 'log'>
+/**
+ * The log is published on its own timer, so it is held as separate state.
+ * `requestMission` is a stable callback, not fold-derived state.
+ */
+type FeedSnapshot = Omit<VehicleFeedState, 'log' | 'requestMission'>
 
 const INITIAL: FeedSnapshot = {
   vehicle: null,
@@ -79,6 +102,9 @@ const INITIAL: FeedSnapshot = {
   frameCount: 0,
   decodeErrorCount: 0,
   knownSystems: [],
+  mission: EMPTY_MISSION,
+  home: null,
+  replayMode: null,
 }
 
 /** Matches the hud harness's live-source window. */
@@ -121,6 +147,17 @@ export function useVehicleFeed({
     selectedRef.current = selectedSystem
   }, [selectedSystem])
 
+  // Held outside the effect so requestMission (called from elsewhere in the tree)
+  // can reach the current stream without re-subscribing to it.
+  const streamRef = useRef<StreamHandle | null>(null)
+
+  const requestMission = useCallback((sysId: number, compId: number) => {
+    const message = encodeRequestMission(sysId, compId)
+    if (message !== null) {
+      streamRef.current?.send(message)
+    }
+  }, [])
+
   useEffect(() => {
     // Per-system folds: two vehicles must never merge into one aircraft.
     const vehicles = new Map<string, VehicleState>()
@@ -129,9 +166,14 @@ export function useVehicleFeed({
     const origins = new Map<string, GeoOrigin | null>()
     const positions = new Map<string, PositionState>()
     const enuTracks = new Map<string, EnuTrackPoint[]>()
+    const missions = new Map<string, MissionPlan>()
+    const homes = new Map<string, HomePosition>()
     let frameCount = 0
     let decodeErrorCount = 0
     let connectionState: ConnectionState = 'connecting'
+    // Null means "the bridge hasn't told us yet" — must not default to false, or the
+    // Load-mission button would read as enabled before a real linkMode frame arrives.
+    let replayMode: boolean | null = null
     let logEntries: LogEntry[] = []
     let logDirty = false
     let nextLogId = 1
@@ -147,10 +189,13 @@ export function useVehicleFeed({
         frameCount,
         decodeErrorCount,
         knownSystems: [...vehicles.keys()].sort(),
+        mission: missions.get(activeKey) ?? EMPTY_MISSION,
+        home: homes.get(activeKey) ?? null,
+        replayMode,
       })
     }
 
-    const stop = startTelemetryStream(
+    const stream = startTelemetryStream(
       { url, socketFactory: browserSocketFactory },
       {
         onFrame: (frame) => {
@@ -195,9 +240,37 @@ export function useVehicleFeed({
             publish(selected ?? key)
           }
         },
+        onMission: (frame) => {
+          const key = systemKey(frame.sysId, frame.compId)
+          missions.set(key, missionPlanFromFrame(frame))
+
+          const selected = selectedRef.current
+          if (selected === null || selected === key) {
+            publish(selected ?? key)
+          }
+        },
+        onHome: (frame) => {
+          const key = systemKey(frame.sysId, frame.compId)
+          homes.set(key, homeFromWireFrame(frame))
+
+          const selected = selectedRef.current
+          if (selected === null || selected === key) {
+            publish(selected ?? key)
+          }
+        },
+        onLinkMode: (frame) => {
+          replayMode = frame.replayMode
+          setSnapshot((previous) => ({ ...previous, replayMode }))
+        },
         onConnectionState: (state) => {
           connectionState = state
-          setSnapshot((previous) => ({ ...previous, connectionState: state }))
+          // The bridge resends linkMode fresh on every new connection ('connecting'
+          // fires on every reconnect), so any previously known value is stale until
+          // it does — go back to "not told yet" rather than keep showing the old one.
+          if (state === 'connecting') {
+            replayMode = null
+          }
+          setSnapshot((previous) => ({ ...previous, connectionState: state, replayMode }))
         },
         onDecodeError: () => {
           decodeErrorCount += 1
@@ -206,6 +279,8 @@ export function useVehicleFeed({
         },
       },
     )
+
+    streamRef.current = stream
 
     const logTimer = setInterval(() => {
       if (!logDirty) {
@@ -229,17 +304,20 @@ export function useVehicleFeed({
         origins.delete(key)
         positions.delete(key)
         enuTracks.delete(key)
+        missions.delete(key)
+        homes.delete(key)
       })
     }, SYSTEM_SWEEP_MS)
 
     return () => {
       clearInterval(logTimer)
       clearInterval(sweepTimer)
-      stop()
+      stream.stop()
+      streamRef.current = null
       setSnapshot(INITIAL)
       setLog([])
     }
   }, [url, trackConfig])
 
-  return { ...snapshot, log }
+  return { ...snapshot, log, requestMission }
 }

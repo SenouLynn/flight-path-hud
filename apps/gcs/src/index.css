@@ -99,6 +99,17 @@ body {
   font-weight: 600;
 }
 
+/*
+ * Resting background is unchanged — only the text and cursor read as blocked.
+ * Background set explicitly (not just left alone) so :hover — same specificity,
+ * earlier in source — cannot sneak its background onto a disabled button.
+ */
+.segment:disabled {
+  background: var(--bg);
+  color: var(--muted);
+  cursor: not-allowed;
+}
+
 .gcs-sidebar {
   grid-area: sidebar;
   overflow-y: auto;
@@ -186,6 +197,11 @@ body {
 .connection-state.connecting { color: var(--warn); }
 .connection-state.closed { color: var(--muted); }
 .connection-state.error { color: var(--error); }
+
+.mission-status.idle { color: var(--muted); }
+.mission-status.pending { color: var(--warn); }
+.mission-status.complete { color: #6ee7a8; }
+.mission-status.failed { color: var(--error); }
 
 /*
  * The map is always present; the HUD is an optional second column. This is the
@@ -543,6 +559,87 @@ body {
 .vehicle-marker {
   background: none;
   border: none;
+}
+
+.home-marker {
+  background: none;
+  border: none;
+}
+
+/*
+ * Plain text, not an SVG like the two markers above — this one has content
+ * (the seq number) to lay out, and centering text in a circle is simplest as
+ * real HTML rather than an SVG <text> element.
+ */
+.waypoint-marker {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: #c792ea;
+  border: 1.5px solid #1b1b1b;
+  color: #1b1b1b;
+  font-size: 9px;
+  font-weight: 700;
+  line-height: 1;
+  user-select: none;
+  cursor: default;
+}
+
+.waypoint-marker.active {
+  width: 20px;
+  height: 20px;
+  background: #ffdd57;
+  font-size: 10px;
+}
+
+/*
+ * Sits in normal sidebar flow rather than a grid row that fills leftover
+ * height (the log/param panels' trick), so the bound has to be a literal
+ * height — enough rows to be useful without the Mission panel dominating the
+ * rest of the sidebar.
+ */
+.mission-list {
+  overflow-x: auto;
+  overflow-y: auto;
+  max-height: 180px;
+  margin-top: 4px;
+}
+
+.mission-row {
+  display: grid;
+  /*
+   * seq/lat/lon widened past their content's worst case: seq up to 3 digits,
+   * and formatCoord's toFixed(6) puts a western-hemisphere lon at 11 chars
+   * (e.g. "-122.310300") — at 11px monospace (~6.5-7px/char) that is ~72-77px,
+   * so 80px leaves headroom without wrapping or overlapping the next column.
+   */
+  grid-template-columns: 28px 34px 80px 80px 48px;
+  gap: 6px;
+  width: 100%;
+  padding: 3px 4px;
+  border: none;
+  background: none;
+  color: var(--text);
+  font: inherit;
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  text-align: left;
+  cursor: pointer;
+}
+
+.mission-row:hover {
+  background: #18202e;
+}
+
+/* Same "this is the selected one" treatment as .segment.active (background/text/weight). */
+.mission-row.active {
+  background: #2a3a52;
+  color: #fff;
+  font-weight: 600;
 }
 
 /*

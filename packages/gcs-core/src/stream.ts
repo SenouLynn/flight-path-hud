@@ -9,18 +9,22 @@
  * connection state, and the caller folds.
  */
 
-import { parseWireMessage, type WireFrame } from './wire'
+import { parseWireEvent, type HomeWireFrame, type LinkModeWireFrame, type MissionWireFrame, type WireFrame } from './wire'
 
 export type ConnectionState = 'connecting' | 'open' | 'closed' | 'error'
 
 export interface SocketLike {
   addEventListener: (event: 'open' | 'close' | 'error' | 'message', handler: (event: unknown) => void) => void
   removeEventListener: (event: 'open' | 'close' | 'error' | 'message', handler: (event: unknown) => void) => void
+  send: (data: string) => void
   close: () => void
 }
 
 export interface StreamHandlers {
   onFrame: (frame: WireFrame) => void
+  onMission?: (frame: MissionWireFrame) => void
+  onHome?: (frame: HomeWireFrame) => void
+  onLinkMode?: (frame: LinkModeWireFrame) => void
   onConnectionState?: (state: ConnectionState) => void
   /** Frames that failed to parse — surfaced so a UI can show a decode-error count. */
   onDecodeError?: () => void
@@ -59,11 +63,23 @@ function cancelTimeout(handle: unknown): void {
   hostTimers.clearTimeout(handle)
 }
 
+export interface StreamHandle {
+  stop: () => void
+  /**
+   * Sends a raw string over the current socket. Returns false and sends nothing when
+   * not currently in the 'open' connection state — same false-not-throw contract as
+   * the bridge's own udpIngress.js send(), which returns false when there is nowhere
+   * to send yet.
+   */
+  send: (data: string) => boolean
+}
+
 /**
- * Connect and start delivering frames. Returns a stop function that tears down
- * listeners, cancels any pending reconnect, and closes the socket.
+ * Connect and start delivering frames. Returns a handle with a stop function that
+ * tears down listeners, cancels any pending reconnect, and closes the socket, plus
+ * a send function gated on the current connection state.
  */
-export function startTelemetryStream(options: StreamOptions, handlers: StreamHandlers): () => void {
+export function startTelemetryStream(options: StreamOptions, handlers: StreamHandlers): StreamHandle {
   const {
     url,
     socketFactory,
@@ -76,20 +92,33 @@ export function startTelemetryStream(options: StreamOptions, handlers: StreamHan
   let socket: SocketLike | null = null
   let reconnectTimer: TimerHandle | null = null
   let reconnectDelayMs = reconnectInitialMs
+  let connectionState: ConnectionState = 'connecting'
 
   const setConnectionState = (state: ConnectionState) => {
+    connectionState = state
     handlers.onConnectionState?.(state)
   }
 
   const onMessage = (event: unknown) => {
-    const frame = parseWireMessage((event as { data?: unknown })?.data)
+    const wireEvent = parseWireEvent((event as { data?: unknown })?.data)
 
-    if (frame === null) {
-      handlers.onDecodeError?.()
-      return
+    switch (wireEvent.kind) {
+      case 'telemetry':
+        handlers.onFrame(wireEvent.frame)
+        return
+      case 'mission':
+        handlers.onMission?.(wireEvent.frame)
+        return
+      case 'home':
+        handlers.onHome?.(wireEvent.frame)
+        return
+      case 'linkMode':
+        handlers.onLinkMode?.(wireEvent.frame)
+        return
+      case 'unrecognized':
+        handlers.onDecodeError?.()
+        return
     }
-
-    handlers.onFrame(frame)
   }
 
   const detach = () => {
@@ -148,7 +177,7 @@ export function startTelemetryStream(options: StreamOptions, handlers: StreamHan
 
   connect()
 
-  return () => {
+  const stop = () => {
     disposed = true
 
     if (reconnectTimer !== null) {
@@ -161,4 +190,15 @@ export function startTelemetryStream(options: StreamOptions, handlers: StreamHan
     socket = null
     setConnectionState('closed')
   }
+
+  const send = (data: string): boolean => {
+    if (connectionState !== 'open' || socket === null) {
+      return false
+    }
+
+    socket.send(data)
+    return true
+  }
+
+  return { stop, send }
 }

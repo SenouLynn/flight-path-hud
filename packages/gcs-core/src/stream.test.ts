@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { startTelemetryStream, type ConnectionState, type SocketLike } from './stream'
-import type { WireFrame } from './wire'
+import type { HomeWireFrame, LinkModeWireFrame, MissionWireFrame, WireFrame } from './wire'
 
 type Listener = (event: unknown) => void
 
@@ -13,6 +13,7 @@ class FakeSocket implements SocketLike {
   }
 
   public closeCallCount = 0
+  public sentMessages: string[] = []
 
   addEventListener(event: 'open' | 'close' | 'error' | 'message', handler: Listener): void {
     this.listeners[event].add(handler)
@@ -20,6 +21,10 @@ class FakeSocket implements SocketLike {
 
   removeEventListener(event: 'open' | 'close' | 'error' | 'message', handler: Listener): void {
     this.listeners[event].delete(handler)
+  }
+
+  send(data: string): void {
+    this.sentMessages.push(data)
   }
 
   close(): void {
@@ -51,6 +56,45 @@ function message(overrides: Record<string, unknown> = {}) {
   }
 }
 
+function missionMessage(overrides: Record<string, unknown> = {}) {
+  return {
+    data: JSON.stringify({
+      type: 'mission',
+      sysId: 1,
+      compId: 1,
+      status: 'complete',
+      items: [],
+      activeIndex: null,
+      reason: null,
+      ...overrides,
+    }),
+  }
+}
+
+function homeMessage(overrides: Record<string, unknown> = {}) {
+  return {
+    data: JSON.stringify({
+      type: 'home',
+      sysId: 1,
+      compId: 1,
+      lat: 47.3977420,
+      lon: 8.5455940,
+      altMslM: 488,
+      ...overrides,
+    }),
+  }
+}
+
+function linkModeMessage(overrides: Record<string, unknown> = {}) {
+  return {
+    data: JSON.stringify({
+      type: 'linkMode',
+      replayMode: true,
+      ...overrides,
+    }),
+  }
+}
+
 describe('startTelemetryStream', () => {
   afterEach(() => {
     vi.useRealTimers()
@@ -59,7 +103,7 @@ describe('startTelemetryStream', () => {
   it('delivers parsed frames', () => {
     const socket = new FakeSocket()
     const frames: WireFrame[] = []
-    const stop = startTelemetryStream(
+    const { stop } = startTelemetryStream(
       { url: 'ws://test', socketFactory: () => socket },
       { onFrame: (frame) => frames.push(frame) },
     )
@@ -76,7 +120,7 @@ describe('startTelemetryStream', () => {
   it('reports connection state transitions', () => {
     const socket = new FakeSocket()
     const states: ConnectionState[] = []
-    const stop = startTelemetryStream(
+    const { stop } = startTelemetryStream(
       { url: 'ws://test', socketFactory: () => socket },
       { onFrame: () => undefined, onConnectionState: (state) => states.push(state) },
     )
@@ -95,7 +139,7 @@ describe('startTelemetryStream', () => {
     const socket = new FakeSocket()
     let decodeErrors = 0
     const frames: WireFrame[] = []
-    const stop = startTelemetryStream(
+    const { stop } = startTelemetryStream(
       { url: 'ws://test', socketFactory: () => socket },
       { onFrame: (frame) => frames.push(frame), onDecodeError: () => { decodeErrors += 1 } },
     )
@@ -114,7 +158,7 @@ describe('startTelemetryStream', () => {
   it('reconnects with capped exponential backoff after a close', () => {
     vi.useFakeTimers()
     const sockets: FakeSocket[] = []
-    const stop = startTelemetryStream(
+    const { stop } = startTelemetryStream(
       {
         url: 'ws://test',
         socketFactory: () => {
@@ -152,7 +196,7 @@ describe('startTelemetryStream', () => {
   it('resets the backoff once a connection opens', () => {
     vi.useFakeTimers()
     const sockets: FakeSocket[] = []
-    const stop = startTelemetryStream(
+    const { stop } = startTelemetryStream(
       {
         url: 'ws://test',
         socketFactory: () => {
@@ -181,7 +225,7 @@ describe('startTelemetryStream', () => {
   it('stops cleanly: no reconnect, listeners detached, socket closed', () => {
     vi.useFakeTimers()
     const sockets: FakeSocket[] = []
-    const stop = startTelemetryStream(
+    const { stop } = startTelemetryStream(
       {
         url: 'ws://test',
         socketFactory: () => {
@@ -202,5 +246,108 @@ describe('startTelemetryStream', () => {
     sockets[0].emit('close')
     vi.advanceTimersByTime(5000)
     expect(sockets).toHaveLength(1)
+  })
+
+  it('dispatches mission, home, and linkMode frames to their matching handlers only', () => {
+    const socket = new FakeSocket()
+    const frames: WireFrame[] = []
+    const missions: MissionWireFrame[] = []
+    const homes: HomeWireFrame[] = []
+    const linkModes: LinkModeWireFrame[] = []
+    let decodeErrors = 0
+    const { stop } = startTelemetryStream(
+      { url: 'ws://test', socketFactory: () => socket },
+      {
+        onFrame: (frame) => frames.push(frame),
+        onMission: (frame) => missions.push(frame),
+        onHome: (frame) => homes.push(frame),
+        onLinkMode: (frame) => linkModes.push(frame),
+        onDecodeError: () => { decodeErrors += 1 },
+      },
+    )
+
+    socket.emit('open')
+    socket.emit('message', missionMessage())
+    socket.emit('message', homeMessage())
+    socket.emit('message', linkModeMessage())
+
+    expect(missions).toHaveLength(1)
+    expect(missions[0].status).toBe('complete')
+    expect(homes).toHaveLength(1)
+    expect(homes[0].lat).toBeCloseTo(47.397742)
+    expect(linkModes).toHaveLength(1)
+    expect(linkModes[0].replayMode).toBe(true)
+    expect(frames).toHaveLength(0)
+    expect(decodeErrors).toBe(0)
+
+    stop()
+  })
+
+  it('skips undefined mission/home/linkMode handlers without erroring or falling back to onDecodeError', () => {
+    const socket = new FakeSocket()
+    const frames: WireFrame[] = []
+    let decodeErrors = 0
+    const { stop } = startTelemetryStream(
+      { url: 'ws://test', socketFactory: () => socket },
+      { onFrame: (frame) => frames.push(frame), onDecodeError: () => { decodeErrors += 1 } },
+    )
+
+    socket.emit('open')
+    expect(() => socket.emit('message', missionMessage())).not.toThrow()
+    expect(() => socket.emit('message', homeMessage())).not.toThrow()
+    expect(() => socket.emit('message', linkModeMessage())).not.toThrow()
+
+    expect(frames).toHaveLength(0)
+    expect(decodeErrors).toBe(0)
+
+    stop()
+  })
+
+  it('send() returns false and does not call the socket before open', () => {
+    const socket = new FakeSocket()
+    const { stop, send } = startTelemetryStream(
+      { url: 'ws://test', socketFactory: () => socket },
+      { onFrame: () => undefined },
+    )
+
+    const result = send('{"type":"requestMission"}')
+
+    expect(result).toBe(false)
+    expect(socket.sentMessages).toHaveLength(0)
+
+    stop()
+  })
+
+  it('send() calls through to the socket and returns true once open', () => {
+    const socket = new FakeSocket()
+    const { stop, send } = startTelemetryStream(
+      { url: 'ws://test', socketFactory: () => socket },
+      { onFrame: () => undefined },
+    )
+
+    socket.emit('open')
+    const result = send('{"type":"requestMission"}')
+
+    expect(result).toBe(true)
+    expect(socket.sentMessages).toEqual(['{"type":"requestMission"}'])
+
+    stop()
+  })
+
+  it('send() returns false and does not call the socket after close', () => {
+    const socket = new FakeSocket()
+    const { stop, send } = startTelemetryStream(
+      { url: 'ws://test', socketFactory: () => socket },
+      { onFrame: () => undefined },
+    )
+
+    socket.emit('open')
+    socket.emit('close')
+    const result = send('{"type":"requestMission"}')
+
+    expect(result).toBe(false)
+    expect(socket.sentMessages).toHaveLength(0)
+
+    stop()
   })
 })

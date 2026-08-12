@@ -17,10 +17,17 @@ export {
 } from './geodesy'
 
 export {
+  encodeRequestMission,
+  parseWireEvent,
   parseWireFrame,
   parseWireMessage,
   systemKey,
+  type HomeWireFrame,
+  type LinkModeWireFrame,
+  type MissionItemWire,
+  type MissionWireFrame,
   type TelemetrySample,
+  type WireEvent,
   type WireFrame,
 } from './wire'
 
@@ -47,6 +54,7 @@ export {
   startTelemetryStream,
   type ConnectionState,
   type SocketLike,
+  type StreamHandle,
   type StreamHandlers,
   type StreamOptions,
 } from './stream'
@@ -80,3 +88,16 @@ export {
   type VideoHealthState,
   type VideoStatsSample,
 } from './video'
+
+export {
+  EMPTY_MISSION,
+  missionPlanFromFrame,
+  type MissionItem,
+  type MissionPlan,
+  type MissionStatus,
+} from './mission'
+
+export {
+  homeFromWireFrame,
+  type HomePosition,
+} from './home'
