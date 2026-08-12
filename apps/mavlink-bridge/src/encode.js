@@ -71,7 +71,7 @@ export function encodeMissionAck({ sysId, compId, targetSystemId, targetComponen
 /**
  * Decode a MISSION_REQUEST_LIST or MISSION_REQUEST_INT v1 frame — the reverse of
  * this module's own encoders, used only by the mission mock responder
- * (sampleSender.js), which plays the vehicle's side of the handshake and needs to
+ * (mockFleet.js), which plays the vehicle's side of the handshake and needs to
  * read back what the bridge just sent it. Deliberately scoped to exactly these two
  * message IDs and to one frame per datagram (unlike normalize.js's general
  * multi-frame parser), since that is all the bridge ever sends per call.
@@ -97,12 +97,29 @@ export function decodeMissionRequest(datagram) {
 
   const payload = datagram.subarray(6, 6 + payloadLength)
 
-  if (msgId === MISSION_REQUEST_LIST_MSG_ID) {
-    return { messageName: 'MISSION_REQUEST_LIST' }
+  /*
+   * The target fields matter as soon as more than one vehicle answers on the same
+   * link: without them a mock hosting two vehicles cannot tell which one was asked,
+   * so both reply and the second answer overwrites the first in missionRouter's
+   * per-system cache — under the wrong key. Note the two messages put them at
+   * different offsets (seq comes first in MISSION_REQUEST_INT); the encoders above
+   * are the reference for both layouts.
+   */
+  if (msgId === MISSION_REQUEST_LIST_MSG_ID && payload.length >= 2) {
+    return {
+      messageName: 'MISSION_REQUEST_LIST',
+      targetSystem: payload.readUInt8(0),
+      targetComponent: payload.readUInt8(1),
+    }
   }
 
   if (msgId === MISSION_REQUEST_INT_MSG_ID && payload.length >= 4) {
-    return { messageName: 'MISSION_REQUEST_INT', seq: payload.readUInt16LE(0) }
+    return {
+      messageName: 'MISSION_REQUEST_INT',
+      seq: payload.readUInt16LE(0),
+      targetSystem: payload.readUInt8(2),
+      targetComponent: payload.readUInt8(3),
+    }
   }
 
   return null

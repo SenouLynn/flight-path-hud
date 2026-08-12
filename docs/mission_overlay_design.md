@@ -228,7 +228,7 @@ zero).
   drop-and-re-request, and the ArduPilot spurious-ack quirk — no real timers
   or sockets.
 - **Mock producer — a real binary responder, not a JSON shortcut.**
-  `sampleSender.js` currently mocks telemetry via JSON envelopes
+  the mock fleet currently mocks telemetry via JSON envelopes
   (`normalize.js`'s `tryParseJsonEnvelope` path); the binary *decoder* is
   only exercised by hand-built buffers in `normalize.test.js`, never by the
   live mock, because the bridge has only ever decoded, not encoded. Mission

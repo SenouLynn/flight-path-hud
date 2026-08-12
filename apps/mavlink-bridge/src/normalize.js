@@ -466,7 +466,7 @@ export function parseIncomingDatagram(rawBuffer, nowMs = Date.now()) {
 let mockOutboundSequence = 0
 
 /**
- * Encode a MISSION_COUNT reply — used only by the mission mock (sampleSender.js),
+ * Encode a MISSION_COUNT reply — used only by the mission mock (mockFleet.js),
  * which plays the vehicle's side of the handshake this bridge initiates. Not used
  * by the bridge's own runtime, which only ever decodes this message.
  */

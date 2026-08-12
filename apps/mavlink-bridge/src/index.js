@@ -100,7 +100,7 @@ function reportSourceConflicts() {
   core.takeSourceConflicts().forEach(({ system, sources }) => {
     console.warn(`[mavlink-bridge] WARNING: system ${system} is transmitting from ${sources.length} sources: ${sources.join(', ')}`)
     console.warn('[mavlink-bridge] They merge into one aircraft with contradictory telemetry (expect a sawtooth track).')
-    console.warn('[mavlink-bridge] If these are duplicate senders, stop the extras:  pkill -f sampleSender.js')
+    console.warn('[mavlink-bridge] If these are duplicate senders, stop the extras:  pkill -f mockFleetRunner.js')
   })
 }
 

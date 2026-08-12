@@ -9,7 +9,7 @@ Video mirrors the telemetry split exactly:
 
 | layer | telemetry | video |
 | --- | --- | --- |
-| producer / relay | `apps/mavlink-bridge` (+ `sampleSender.js`) | `apps/video-bridge` |
+| producer / relay | `apps/mavlink-bridge` (+ `mockFleetRunner.js`) | `apps/video-bridge` |
 | pure logic | `gcs-core` folds | `gcs-core/src/video.ts` health folds |
 | consumer UI | `apps/gcs` panels | `apps/gcs/src/video/` |
 

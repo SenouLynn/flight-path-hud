@@ -54,6 +54,72 @@ The entries below were reconstructed from the initial implementation (commits `9
 `355baff`) and documented on 2026-07-23. Dates reflect when each decision was first made in
 the code.
 
+## ADR-0028: Multi-node may proceed while every node is synthetic
+
+- **Status:** Accepted
+- **Date:** 2026-08-12
+- **Deciders:** team
+- **Amends:** [ADR-0026](#adr-0026-multi-node-awareness-is-a-separate-phase-gated-on-single-node-validation)
+
+### Context
+ADR-0026 gated multi-node work on the single-node system being validated against
+real hardware or SITL, and recorded "widen presentation now, since the data is
+already per-system" as the rejected alternative. The reasoning holds: building on
+an unvalidated core multiplies every unproven assumption by the number of nodes.
+
+What that ADR did not separate is *producing* a second node from *presenting* one.
+The three bugs it cites as justification — a decoder reading the wrong payload
+offsets, a sequence field overflowing a consumer's validator, two senders merging
+into one contradictory aircraft — are all failures a second synthetic node
+provokes on a desk, cheaply and repeatably. Writing one immediately surfaced a
+fourth of the same kind: `decodeMissionRequest` discarded `target_system`, so any
+second vehicle would have answered mission requests addressed to its neighbour and
+the reply would have been cached under the wrong system key. That defect was
+latent in the single-node system and unreachable by single-node testing.
+
+So the gate as written blocks a class of work that *serves* the goal it protects.
+
+### Decision
+Multi-node work may proceed **while every node on the link is synthetic**.
+
+The hardware gate is unchanged in substance and still binds:
+
+1. **Producer and domain logic — unblocked.** Additional mock nodes, per-node
+   flight profiles, per-node identity and roster folds. All pure, all tested in
+   isolation, all exercising the real protocol.
+2. **Presentation — still gated as before.** No multi-node UI ships against a
+   synthetic-only picture; the map and sidebar stay single-node.
+3. **Any claim involving a real source — still gated.** Real hardware or SITL
+   remains the precondition for calling multi-node validated, and for building the
+   UI that implies it.
+
+`NodeIdentity` lands now rather than later, as ADR-0026 anticipated it would need
+to: `sysId:compId` is a MAVLink concept, and `NodeSummary` is a derived projection
+over the existing per-system folds — no new accumulated state, nothing new to
+bound or evict.
+
+### Consequences
+- ✅ The synthetic fleet becomes a validation instrument rather than a liability:
+  it found the mission-targeting defect before any second real vehicle could.
+- ✅ The pattern ADR-0026 prescribes is followed exactly — logic in isolation,
+  tested hard, integrated against a portable mock, presentation last.
+- ✅ Single-stream operation is preserved as a first-class mode
+  (`MAVLINK_BRIDGE_MOCK_NODES`), so the single-node system stays testable alone.
+- ⚠️ The gate is now conditional rather than absolute, which is a weaker thing to
+  hold a line with. Mitigated by naming the three tiers explicitly above.
+- ⚠️ Presentation assumptions still accumulate untested, exactly as ADR-0026
+  accepted. Unchanged by this amendment.
+
+### Alternatives considered
+- Leave ADR-0026 absolute and hand-modify the existing mock into a figure eight —
+  rejected: it forfeits the multi-node exercise entirely and would have left the
+  `target_system` defect in place until real hardware hit it.
+- Supersede ADR-0026 outright — rejected: the hardware gate is the part that has
+  earned its keep, and nothing here challenges it.
+- Build the fleet UI at the same time — rejected: that is precisely the
+  "presentation against a synthetic picture" ADR-0026 warns about, and it proves
+  nothing about either layer.
+
 ## ADR-0027: One narrow outbound capability — a read-only mission request
 
 - **Status:** Accepted
@@ -105,7 +171,7 @@ nothing about its shape invites widening later.
 
 ## ADR-0026: Multi-node awareness is a separate phase, gated on single-node validation
 
-- **Status:** Accepted
+- **Status:** Accepted — scope amended by [ADR-0028](#adr-0028-multi-node-may-proceed-while-every-node-is-synthetic)
 - **Date:** 2026-08-10
 - **Deciders:** team
 

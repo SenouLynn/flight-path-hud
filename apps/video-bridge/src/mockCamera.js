@@ -1,7 +1,7 @@
 /**
  * Mock camera: a moving test pattern served as `multipart/x-mixed-replace`.
  *
- * This is the video analogue of `sampleSender.js` — a stand-in so the GCS video
+ * This is the video analogue of the MAVLink mock fleet — a stand-in so the GCS video
  * path can be built and watched with no capture hardware and no media server.
  *
  * Frames are PNGs encoded here rather than by ffmpeg, so the whole thing runs on

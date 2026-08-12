@@ -42,12 +42,55 @@ test('encodeMissionAck defaults to MAV_MISSION_ACCEPTED', () => {
 
 test('decodeMissionRequest round-trips encodeMissionRequestList', () => {
   const frame = encodeMissionRequestList({ sysId: 255, compId: 190, targetSystemId: 1, targetComponentId: 1 })
-  assert.deepEqual(decodeMissionRequest(frame), { messageName: 'MISSION_REQUEST_LIST' })
+  assert.deepEqual(decodeMissionRequest(frame), {
+    messageName: 'MISSION_REQUEST_LIST',
+    targetSystem: 1,
+    targetComponent: 1,
+  })
 })
 
 test('decodeMissionRequest round-trips encodeMissionRequestInt, including seq', () => {
   const frame = encodeMissionRequestInt({ sysId: 255, compId: 190, targetSystemId: 1, targetComponentId: 1, seq: 9 })
-  assert.deepEqual(decodeMissionRequest(frame), { messageName: 'MISSION_REQUEST_INT', seq: 9 })
+  assert.deepEqual(decodeMissionRequest(frame), {
+    messageName: 'MISSION_REQUEST_INT',
+    seq: 9,
+    targetSystem: 1,
+    targetComponent: 1,
+  })
+})
+
+/*
+ * The offsets differ between the two messages, and getting them wrong is silent:
+ * a request for vehicle 2 that decodes as vehicle 1 still looks like a valid
+ * frame. Distinct values everywhere so a transposed read cannot pass.
+ */
+test('decodeMissionRequest reads the target of a non-default system', () => {
+  const list = encodeMissionRequestList({ sysId: 255, compId: 190, targetSystemId: 2, targetComponentId: 7 })
+  assert.deepEqual(decodeMissionRequest(list), {
+    messageName: 'MISSION_REQUEST_LIST',
+    targetSystem: 2,
+    targetComponent: 7,
+  })
+
+  const int = encodeMissionRequestInt({ sysId: 255, compId: 190, targetSystemId: 3, targetComponentId: 5, seq: 260 })
+  assert.deepEqual(decodeMissionRequest(int), {
+    messageName: 'MISSION_REQUEST_INT',
+    // 260 > 255: proves seq is read as a uint16 and has not been confused with
+    // the single-byte target fields that follow it.
+    seq: 260,
+    targetSystem: 3,
+    targetComponent: 5,
+  })
+})
+
+/* 0 is MAVLink broadcast, not "absent" — it has to survive decoding as a real value. */
+test('decodeMissionRequest preserves a broadcast target of 0', () => {
+  const frame = encodeMissionRequestList({ sysId: 255, compId: 190, targetSystemId: 0, targetComponentId: 0 })
+  assert.deepEqual(decodeMissionRequest(frame), {
+    messageName: 'MISSION_REQUEST_LIST',
+    targetSystem: 0,
+    targetComponent: 0,
+  })
 })
 
 test('decodeMissionRequest rejects a corrupted CRC', () => {

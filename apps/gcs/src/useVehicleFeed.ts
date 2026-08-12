@@ -18,6 +18,7 @@ import {
   mergeVehicleState,
   missionPlanFromFrame,
   startTelemetryStream,
+  summarizeNodes,
   systemKey,
   toDecodeErrorEntry,
   toLogEntry,
@@ -25,6 +26,7 @@ import {
   type HomePosition,
   type LogEntry,
   type MissionPlan,
+  type NodeSummary,
   type SocketLike,
   type StreamHandle,
   type TrackConfig,
@@ -83,15 +85,22 @@ export interface VehicleFeedState {
   replayMode: boolean | null
   /** Recent raw messages, newest last. Published on a timer, not per frame. */
   log: LogEntry[]
+  /**
+   * Every node on the link, not just the active one — the transport-neutral view
+   * a fleet picture consumes. Derived from the same per-system folds below rather
+   * than accumulated separately, and published on a timer (see NODE_PUBLISH_MS).
+   */
+  nodes: NodeSummary[]
   /** Ask the bridge for the active system's current mission plan. */
   requestMission: (sysId: number, compId: number) => void
 }
 
 /**
- * The log is published on its own timer, so it is held as separate state.
- * `requestMission` is a stable callback, not fold-derived state.
+ * The log and the node roster are each published on their own timer, so they are
+ * held as separate state. `requestMission` is a stable callback, not fold-derived
+ * state.
  */
-type FeedSnapshot = Omit<VehicleFeedState, 'log' | 'requestMission'>
+type FeedSnapshot = Omit<VehicleFeedState, 'log' | 'nodes' | 'requestMission'>
 
 const INITIAL: FeedSnapshot = {
   vehicle: null,
@@ -117,6 +126,22 @@ const LOG_MAX_ENTRIES = 500
  */
 const LOG_PUBLISH_MS = 150
 /**
+ * The node roster publishes on a timer too, for two independent reasons — either
+ * on its own would be enough:
+ *
+ * 1. `publish()` below only fires for the system currently on screen. With a
+ *    system explicitly selected, every other node's frames are deliberately
+ *    skipped, so a frame-driven roster would be permanently stale for exactly the
+ *    nodes a roster exists to show.
+ * 2. Staleness is derived from elapsed time, not from arrivals. A node going
+ *    quiet has to visibly age — and that is by definition when no frames are
+ *    coming in, so nothing frame-driven can express it.
+ *
+ * Slower than the log's cadence: this is a roster of a handful of rows whose
+ * freshness bands are measured in seconds, not a scrolling message list.
+ */
+const NODE_PUBLISH_MS = 500
+/**
  * Per-system state is bounded per system (600 ENU points, a capped trail, one
  * sample) but the number of *systems* was not. Anything cycling sysIds — a
  * misconfigured relay, a replay of several flights — would accumulate buffers
@@ -140,6 +165,7 @@ export function useVehicleFeed({
 }: VehicleFeedOptions): VehicleFeedState {
   const [snapshot, setSnapshot] = useState<FeedSnapshot>(INITIAL)
   const [log, setLog] = useState<LogEntry[]>([])
+  const [nodes, setNodes] = useState<NodeSummary[]>([])
 
   // Read the selection per frame so changing it never tears down the socket.
   const selectedRef = useRef(selectedSystem)
@@ -291,6 +317,15 @@ export function useVehicleFeed({
       setLog(logEntries)
     }, LOG_PUBLISH_MS)
 
+    /*
+     * Recomputed from the live `vehicles` fold rather than accumulated, so there
+     * is no second copy of node state to bound or keep in step — the TTL sweep
+     * below is still the only thing that decides which nodes exist.
+     */
+    const nodeTimer = setInterval(() => {
+      setNodes(summarizeNodes(vehicles.values(), Date.now()))
+    }, NODE_PUBLISH_MS)
+
     const sweepTimer = setInterval(() => {
       const staleBeforeMs = Date.now() - SYSTEM_TTL_MS
 
@@ -311,13 +346,15 @@ export function useVehicleFeed({
 
     return () => {
       clearInterval(logTimer)
+      clearInterval(nodeTimer)
       clearInterval(sweepTimer)
       stream.stop()
       streamRef.current = null
       setSnapshot(INITIAL)
       setLog([])
+      setNodes([])
     }
   }, [url, trackConfig])
 
-  return { ...snapshot, log, requestMission }
+  return { ...snapshot, log, nodes, requestMission }
 }
