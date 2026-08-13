@@ -11,17 +11,21 @@ interface Props {
   connectionState: ConnectionState
   replayMode: boolean | null
   onSend: (actor: string, draft: GuidedRepositionDraft) => boolean
+  latitude: string
+  longitude: string
+  onCoordinatesChange: (latitude: string, longitude: string) => void
+  pickingOnMap: boolean
+  onToggleMapPicking: () => void
 }
 
 const numberValue = (value: string) => value.trim() === '' ? Number.NaN : Number(value)
 
 export function GuidedRepositionPanel({ vehicle, flightState, status, connectionState,
-  replayMode, onSend }: Props) {
+  replayMode, onSend, latitude, longitude, onCoordinatesChange, pickingOnMap,
+  onToggleMapPicking }: Props) {
   const [actor, setActor] = useState('')
   const [confirmedFor, setConfirmedFor] = useState<string | null>(null)
   const [submittedFor, setSubmittedFor] = useState<string | null>(null)
-  const [latitude, setLatitude] = useState('')
-  const [longitude, setLongitude] = useState('')
   const [altitude, setAltitude] = useState('')
   const [arrivalRadius, setArrivalRadius] = useState('8')
   const [altitudeTolerance, setAltitudeTolerance] = useState('5')
@@ -48,16 +52,20 @@ export function GuidedRepositionPanel({ vehicle, flightState, status, connection
   const pending = status?.status === 'awaitingAck' || status?.status === 'awaitingObservation'
 
   const useCurrentPosition = () => {
-    if (vehicle?.latDeg !== null && vehicle?.latDeg !== undefined) setLatitude(String(vehicle.latDeg))
-    if (vehicle?.lonDeg !== null && vehicle?.lonDeg !== undefined) setLongitude(String(vehicle.lonDeg))
+    if (vehicle?.latDeg !== null && vehicle?.latDeg !== undefined
+      && vehicle?.lonDeg !== null && vehicle?.lonDeg !== undefined) {
+      onCoordinatesChange(String(vehicle.latDeg), String(vehicle.lonDeg))
+    }
     if (vehicle?.altRelM !== null && vehicle?.altRelM !== undefined) setAltitude(String(vehicle.altRelM))
   }
 
   return <section className="panel guided-panel">
     <h2>Guided reposition · isolated SITL</h2>
     <button type="button" className="segment" onClick={useCurrentPosition} disabled={vehicle === null || vehicle.latDeg === null || vehicle.lonDeg === null}>Use current position</button>
-    <label className="control"><span>Latitude</span><input value={latitude} onChange={e => setLatitude(e.target.value)} inputMode="decimal" /></label>
-    <label className="control"><span>Longitude</span><input value={longitude} onChange={e => setLongitude(e.target.value)} inputMode="decimal" /></label>
+    <button type="button" className={pickingOnMap ? 'segment active' : 'segment'} onClick={onToggleMapPicking}>{pickingOnMap ? 'Cancel map pick' : 'Pick on map'}</button>
+    {pickingOnMap ? <p className="map-pick-hint">Click the map to set the draft target · Esc cancels</p> : null}
+    <label className="control"><span>Latitude</span><input value={latitude} onChange={e => onCoordinatesChange(e.target.value, longitude)} inputMode="decimal" /></label>
+    <label className="control"><span>Longitude</span><input value={longitude} onChange={e => onCoordinatesChange(latitude, e.target.value)} inputMode="decimal" /></label>
     <label className="control"><span>Relative altitude (m)</span><input value={altitude} onChange={e => setAltitude(e.target.value)} inputMode="decimal" /></label>
     <label className="control"><span>Arrival radius (m, max 120)</span><input value={arrivalRadius} onChange={e => setArrivalRadius(e.target.value)} inputMode="decimal" /></label>
     <label className="control"><span>Altitude tolerance (m, max 20)</span><input value={altitudeTolerance} onChange={e => setAltitudeTolerance(e.target.value)} inputMode="decimal" /></label>

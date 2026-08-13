@@ -11,7 +11,7 @@
 
 import { guidedModeFor, trackLengthM, type VideoHealth } from '@flight-path-hud/gcs-core'
 import { IDLE_VIDEO_HEALTH } from '@flight-path-hud/gcs-core'
-import { useMemo, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { HudPanel } from './hud/HudPanel'
 import { MapControls, TILTED_PITCH_DEG } from './map/MapControls'
 import { MapPanel, type MapHandle } from './map/MapPanel'
@@ -58,6 +58,9 @@ export function NodeView({
   const [follow, setFollow] = useState(true)
   const [trackUp, setTrackUp] = useState(false)
   const [tilted, setTilted] = useState(false)
+  const [pickingGuidedTarget, setPickingGuidedTarget] = useState(false)
+  const [guidedLatitude, setGuidedLatitude] = useState('')
+  const [guidedLongitude, setGuidedLongitude] = useState('')
   const mapHandleRef = useRef<MapHandle | null>(null)
 
   // Video URL and health live here so the sidebar can show them alongside the
@@ -142,6 +145,20 @@ export function NodeView({
   )
 
   const vehicle = feed.vehicle
+  useEffect(() => {
+    setPickingGuidedTarget(false)
+    setGuidedLatitude('')
+    setGuidedLongitude('')
+  }, [selectedSystem])
+
+  const guidedTarget = useMemo(() => {
+    const latDeg = Number(guidedLatitude)
+    const lonDeg = Number(guidedLongitude)
+    return guidedLatitude.trim() !== '' && guidedLongitude.trim() !== ''
+      && Number.isFinite(latDeg) && Number.isFinite(lonDeg)
+      && latDeg >= -90 && latDeg <= 90 && lonDeg >= -180 && lonDeg <= 180
+      ? { latDeg, lonDeg } : null
+  }, [guidedLatitude, guidedLongitude])
 
   return (
     <div className="gcs-layout">
@@ -266,6 +283,14 @@ export function NodeView({
                   onUserPitch={() => setTilted(false)}
                   mission={feed.mission}
                   home={feed.home}
+                  guidedTarget={guidedTarget}
+                  pickingGuidedTarget={pickingGuidedTarget}
+                  onPickGuidedTarget={(latDeg, lonDeg) => {
+                    setGuidedLatitude(latDeg.toFixed(7))
+                    setGuidedLongitude(lonDeg.toFixed(7))
+                    setPickingGuidedTarget(false)
+                  }}
+                  onCancelGuidedTargetPick={() => setPickingGuidedTarget(false)}
                 />
                 <MapControls
                   basemaps={BASEMAPS}
@@ -300,7 +325,15 @@ export function NodeView({
                   status={feed.guidedReposition} connectionState={feed.connectionState}
                   replayMode={feed.replayMode}
                   onSend={(actor, draft) => vehicle !== null
-                    && feed.sendGuidedReposition(vehicle.sysId, vehicle.compId, actor, draft)} />
+                    && feed.sendGuidedReposition(vehicle.sysId, vehicle.compId, actor, draft)}
+                  latitude={guidedLatitude} longitude={guidedLongitude}
+                  onCoordinatesChange={(latitude, longitude) => {
+                    setGuidedLatitude(latitude)
+                    setGuidedLongitude(longitude)
+                    setPickingGuidedTarget(false)
+                  }}
+                  pickingOnMap={pickingGuidedTarget}
+                  onToggleMapPicking={() => setPickingGuidedTarget(previous => !previous)} />
               </div>
             ) : null}
           </div>

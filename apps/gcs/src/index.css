@@ -756,6 +756,24 @@ body {
   border: none;
 }
 
+.guided-target-marker {
+  width: 24px;
+  height: 24px;
+  border: 2px solid var(--warn);
+  border-radius: 50%;
+  background:
+    linear-gradient(var(--warn), var(--warn)) center / 2px 100% no-repeat,
+    linear-gradient(90deg, var(--warn), var(--warn)) center / 100% 2px no-repeat;
+  box-shadow: 0 0 0 2px rgba(13, 17, 23, 0.85);
+  pointer-events: none;
+}
+
+.map-pick-hint {
+  margin: 0 0 6px;
+  color: var(--accent);
+  font-size: 10px;
+}
+
 /*
  * Plain text, not an SVG like the two markers above — this one has content
  * (the seq number) to lay out, and centering text in a circle is simplest as

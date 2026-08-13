@@ -77,6 +77,14 @@ export function createHomeMarkerElement(): HTMLElement {
   return element
 }
 
+/** Crosshair-style provisional target; choosing it never implies transmission. */
+export function createGuidedTargetMarkerElement(): HTMLElement {
+  const element = document.createElement('div')
+  element.classList.add('guided-target-marker')
+  element.setAttribute('aria-label', 'Draft Guided target')
+  return element
+}
+
 /**
  * A numbered badge, not a data-driven circle layer: MapLibre can only draw
  * `text-field` symbols against server-hosted glyph PBFs (a `glyphs` URL in the

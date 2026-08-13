@@ -22,6 +22,7 @@ import type { TileSource } from './tileSource'
 import {
   buildStyle,
   createHomeMarkerElement,
+  createGuidedTargetMarkerElement,
   createVehicleMarkerElement,
   createWaypointMarkerElement,
   emptyFeature,
@@ -60,6 +61,11 @@ interface MapPanelProps {
    * clears any marker left over from whichever system was shown before.
    */
   home?: HomePosition | null
+  /** Provisional command target. Display only; it is never transmitted here. */
+  guidedTarget?: { latDeg: number, lonDeg: number } | null
+  pickingGuidedTarget?: boolean
+  onPickGuidedTarget?: (latDeg: number, lonDeg: number) => void
+  onCancelGuidedTargetPick?: () => void
 }
 
 /** Imperative surface for chrome that lives outside this component. */
@@ -150,6 +156,10 @@ export const MapPanel = forwardRef<MapHandle, MapPanelProps>(function MapPanel(
     onUserPitch,
     mission = EMPTY_MISSION,
     home = null,
+    guidedTarget = null,
+    pickingGuidedTarget = false,
+    onPickGuidedTarget,
+    onCancelGuidedTargetPick,
   },
   handleRef,
 ) {
@@ -157,6 +167,7 @@ export const MapPanel = forwardRef<MapHandle, MapPanelProps>(function MapPanel(
   const mapRef = useRef<maplibregl.Map | null>(null)
   const markerRef = useRef<maplibregl.Marker | null>(null)
   const homeMarkerRef = useRef<maplibregl.Marker | null>(null)
+  const guidedTargetMarkerRef = useRef<maplibregl.Marker | null>(null)
   // Waypoint number badges, keyed by seq — DOM markers, not a style layer, so
   // they survive a basemap swap untouched (see createWaypointMarkerElement).
   const waypointMarkersRef = useRef<Map<number, maplibregl.Marker>>(new Map())
@@ -174,8 +185,10 @@ export const MapPanel = forwardRef<MapHandle, MapPanelProps>(function MapPanel(
   missionRef.current = mission
 
   // The map outlives any render, so its listeners read handlers through refs.
-  const handlersRef = useRef({ onCameraGrab, onUserPitch })
-  handlersRef.current = { onCameraGrab, onUserPitch }
+  const handlersRef = useRef({ onCameraGrab, onUserPitch, onPickGuidedTarget, onCancelGuidedTargetPick })
+  handlersRef.current = { onCameraGrab, onUserPitch, onPickGuidedTarget, onCancelGuidedTargetPick }
+  const pickingGuidedTargetRef = useRef(pickingGuidedTarget)
+  pickingGuidedTargetRef.current = pickingGuidedTarget
 
   // Rotation belongs to the map, but the button that resets it lives in the
   // chrome outside. Exposing one method keeps MapLibre from leaking upward.
@@ -234,6 +247,19 @@ export const MapPanel = forwardRef<MapHandle, MapPanelProps>(function MapPanel(
       }
     })
 
+    const pickTarget = (event: maplibregl.MapMouseEvent) => {
+      if (pickingGuidedTargetRef.current) {
+        handlersRef.current.onPickGuidedTarget?.(event.lngLat.lat, event.lngLat.lng)
+      }
+    }
+    const cancelTargetPick = (event: KeyboardEvent) => {
+      if (event.key === 'Escape' && pickingGuidedTargetRef.current) {
+        handlersRef.current.onCancelGuidedTargetPick?.()
+      }
+    }
+    map.on('click', pickTarget)
+    document.addEventListener('keydown', cancelTargetPick)
+
     map.on('load', () => {
       loadedRef.current = true
       addOverlayLayers(map)
@@ -262,10 +288,13 @@ export const MapPanel = forwardRef<MapHandle, MapPanelProps>(function MapPanel(
       canvas.removeEventListener('mousedown', grab)
       canvas.removeEventListener('touchstart', grab)
       observer.disconnect()
+      map.off('click', pickTarget)
+      document.removeEventListener('keydown', cancelTargetPick)
       map.remove()
       mapRef.current = null
       markerRef.current = null
       homeMarkerRef.current = null
+      guidedTargetMarkerRef.current = null
       waypointMarkersRef.current.forEach((marker) => marker.remove())
       waypointMarkersRef.current = new Map()
       loadedRef.current = false
@@ -274,6 +303,11 @@ export const MapPanel = forwardRef<MapHandle, MapPanelProps>(function MapPanel(
     // Style is swapped in its own effect; this must run exactly once.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
+
+  useEffect(() => {
+    const canvas = mapRef.current?.getCanvas()
+    if (canvas !== undefined) canvas.style.cursor = pickingGuidedTarget ? 'crosshair' : ''
+  }, [pickingGuidedTarget])
 
   // Swap the basemap. setStyle replaces sources and layers, so the track is re-added.
   useEffect(() => {
@@ -491,6 +525,23 @@ export const MapPanel = forwardRef<MapHandle, MapPanelProps>(function MapPanel(
       homeMarkerRef.current.setLngLat(position)
     }
   }, [home])
+
+  useEffect(() => {
+    const map = mapRef.current
+    if (map === null || guidedTarget === null) {
+      guidedTargetMarkerRef.current?.remove()
+      guidedTargetMarkerRef.current = null
+      return
+    }
+    const position = toLngLat(guidedTarget.latDeg, guidedTarget.lonDeg)
+    if (guidedTargetMarkerRef.current === null) {
+      guidedTargetMarkerRef.current = new maplibregl.Marker({
+        element: createGuidedTargetMarkerElement(), anchor: 'center',
+      }).setLngLat(position).addTo(map)
+    } else {
+      guidedTargetMarkerRef.current.setLngLat(position)
+    }
+  }, [guidedTarget])
 
   return <div ref={containerRef} className="map-panel" />
 })
