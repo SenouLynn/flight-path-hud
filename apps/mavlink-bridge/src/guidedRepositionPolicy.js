@@ -12,13 +12,18 @@ function validatesEnvelope(request, vehicleType) {
   const e = request.safetyEnvelope
   if (e === null || typeof e !== 'object'
     || ![e.minLatitudeDeg, e.maxLatitudeDeg, e.minLongitudeDeg, e.maxLongitudeDeg,
-      e.minRelativeAltitudeM, e.maxRelativeAltitudeM].every(finite)
+      e.minRelativeAltitudeM, e.maxRelativeAltitudeM, e.maxArrivalRadiusM,
+      e.maxAltitudeToleranceM].every(finite)
     || e.minLatitudeDeg > e.maxLatitudeDeg || e.minLongitudeDeg > e.maxLongitudeDeg
     || e.minRelativeAltitudeM > e.maxRelativeAltitudeM) return false
   if (request.latitudeDeg < e.minLatitudeDeg || request.latitudeDeg > e.maxLatitudeDeg
     || request.longitudeDeg < e.minLongitudeDeg || request.longitudeDeg > e.maxLongitudeDeg
     || request.relativeAltitudeM < e.minRelativeAltitudeM
     || request.relativeAltitudeM > e.maxRelativeAltitudeM) return false
+  if (!finite(request.arrivalRadiusM) || request.arrivalRadiusM <= 0
+    || request.arrivalRadiusM > e.maxArrivalRadiusM
+    || !finite(request.altitudeToleranceM) || request.altitudeToleranceM <= 0
+    || request.altitudeToleranceM > e.maxAltitudeToleranceM) return false
   return vehicleType !== MAV_TYPE_FIXED_WING
     || (finite(e.maxLoiterRadiusM) && e.maxLoiterRadiusM > 0
       && request.loiterRadiusM <= e.maxLoiterRadiusM)
@@ -51,8 +56,10 @@ export function prepareGuidedReposition({ request, flightState, gcsSysId = 255, 
       loiterRadiusM: request.loiterRadiusM, loiterDirection: request.loiterDirection })
     return { accepted: true, reason: null, command: { requestId: request.requestId,
       sysId: request.sysId, compId: request.compId, vehicleType: flightState.vehicleType,
+      guidedCustomMode: guidedMode,
       latitudeDeg: request.latitudeDeg, longitudeDeg: request.longitudeDeg,
       relativeAltitudeM: request.relativeAltitudeM,
+      arrivalRadiusM: request.arrivalRadiusM, altitudeToleranceM: request.altitudeToleranceM,
       loiterRadiusM: request.loiterRadiusM ?? null, loiterDirection: request.loiterDirection ?? null,
       safetyEnvelope: { ...request.safetyEnvelope },
       actor: request.actor, requestedAtMs: request.timestampMs,

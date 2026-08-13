@@ -4,10 +4,12 @@ import { prepareGuidedReposition } from './guidedRepositionPolicy.js'
 
 const request = (overrides = {}) => ({ type: 'guidedReposition', requestId: 'guided-1',
   sysId: 1, compId: 1, latitudeDeg: 35, longitudeDeg: -80, relativeAltitudeM: 25,
+  arrivalRadiusM: 5, altitudeToleranceM: 2,
   actor: 'sitl-guided-controller', timestampMs: 1000, confirmation: true,
   safetyCase: 'isolated-sitl-guided', safetyEnvelope: { minLatitudeDeg: 34.99,
     maxLatitudeDeg: 35.01, minLongitudeDeg: -80.01, maxLongitudeDeg: -79.99,
-    minRelativeAltitudeM: 10, maxRelativeAltitudeM: 120 }, ...overrides })
+    minRelativeAltitudeM: 10, maxRelativeAltitudeM: 120, maxArrivalRadiusM: 20,
+    maxAltitudeToleranceM: 10 }, ...overrides })
 
 test('prepares distinct portable Copter and Plane commands without sending', () => {
   const copter = prepareGuidedReposition({ request: request(),
@@ -36,6 +38,8 @@ test('fails closed unless identity, attestation, arm state, and vehicle-specific
     [request(), { ...state, customMode: 5 }, /Guided mode/],
     [request({ loiterRadiusM: 50 }), state, /does not accept/],
     [request({ latitudeDeg: 36 }), state, /safety envelope/],
+    [request({ arrivalRadiusM: 25 }), state, /safety envelope/],
+    [request({ altitudeToleranceM: 11 }), state, /safety envelope/],
     [request({ safetyEnvelope: null }), state, /safety envelope/],
   ]
   for (const [candidate, flightState, reason] of cases) {

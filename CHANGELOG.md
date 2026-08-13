@@ -22,6 +22,9 @@
   `COMMAND_INT` encoding, explicit relative-home coordinates and safety envelope,
   already-armed/Guided preconditions, and distinct Copter/Plane loiter semantics.
   It is intentionally not connected to the live bridge.
+- Added its disabled isolated-SITL transaction state machine with exact-target ACK
+  correlation, horizontal plus relative-altitude arrival observation, zero retries
+  by default, state-escape failure, bounded timeouts, and passive lifecycle replay.
 
 - Added the portable Stage 3 mission-replacement protocol and state-machine
   foundation, including exact-target correlation, bounded retries, final ACK,
