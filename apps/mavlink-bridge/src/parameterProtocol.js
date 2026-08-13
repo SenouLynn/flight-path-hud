@@ -1,8 +1,10 @@
 import { buildMavlinkV1Frame, computeFrameCrc } from './mavlinkFrame.js'
 
 export const PARAM_REQUEST_READ_MSG_ID = 20
+export const PARAM_REQUEST_LIST_MSG_ID = 21
 export const PARAM_VALUE_MSG_ID = 22
 const PARAM_REQUEST_READ_CRC_EXTRA = 214
+const PARAM_REQUEST_LIST_CRC_EXTRA = 159
 const PARAM_ID_LENGTH = 16
 let outboundSequence = 0
 
@@ -33,6 +35,14 @@ export function encodeParameterRequestRead({
   outboundSequence = (outboundSequence + 1) % 256
   return buildMavlinkV1Frame(PARAM_REQUEST_READ_MSG_ID, payload, {
     sequence: outboundSequence, sysId, compId, crcExtra: PARAM_REQUEST_READ_CRC_EXTRA,
+  })
+}
+
+export function encodeParameterRequestList({ sysId, compId, targetSystemId, targetComponentId }) {
+  const payload = Buffer.from([targetSystemId, targetComponentId])
+  outboundSequence = (outboundSequence + 1) % 256
+  return buildMavlinkV1Frame(PARAM_REQUEST_LIST_MSG_ID, payload, {
+    sequence: outboundSequence, sysId, compId, crcExtra: PARAM_REQUEST_LIST_CRC_EXTRA,
   })
 }
 

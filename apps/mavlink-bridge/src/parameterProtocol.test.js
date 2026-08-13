@@ -1,6 +1,14 @@
 import assert from 'node:assert/strict'
 import test from 'node:test'
-import { decodeParameterRequestRead, encodeParameterRequestRead } from './parameterProtocol.js'
+import { computeFrameCrc } from './mavlinkFrame.js'
+import { decodeParameterRequestRead, encodeParameterRequestList, encodeParameterRequestRead } from './parameterProtocol.js'
+
+test('list request is a CRC-correct exact-target MAVLink frame', () => {
+  const frame = encodeParameterRequestList({ sysId: 255, compId: 190, targetSystemId: 2, targetComponentId: 1 })
+  assert.equal(frame[5], 21)
+  assert.deepEqual([...frame.subarray(6, 8)], [2, 1])
+  assert.equal(frame.readUInt16LE(8), computeFrameCrc(frame, 1, 8, 159))
+})
 
 test('name lookup encodes an exact target and MAVLink -1 index sentinel', () => {
   const frame = encodeParameterRequestRead({

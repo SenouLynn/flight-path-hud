@@ -187,6 +187,10 @@ Identical concurrent target/query pairs are rejected because MAVLink
 This is a read transaction only. It does not enable `PARAM_SET` or any browser
 control authority.
 
+Use `{"type":"requestParameterList","requestId":"parameters-1","sysId":1,"compId":1}`
+to retrieve the full target-scoped parameter set. Progress frames contain counts
+and the latest value; the completed frame contains the index-ordered set.
+
 ## Decoded messages
 
 `HEARTBEAT` (0), `PARAM_VALUE` (22), `GPS_RAW_INT` (24), `ATTITUDE` (30),
