@@ -3,6 +3,7 @@ import { observesGuidedTarget } from './guidedRepositionObservation.js'
 import { MAV_CMD_DO_REPOSITION } from './guidedRepositionProtocol.js'
 
 const key = (sysId, compId) => `${sysId}:${compId}`
+const validId = (value) => Number.isInteger(value) && value > 0 && value <= 255
 
 /** Disabled, isolated-SITL transaction layer; intentionally not registered by index.js. */
 export function createGuidedRepositionRouter({ send, canSend, getFlightState,
@@ -13,8 +14,8 @@ export function createGuidedRepositionRouter({ send, canSend, getFlightState,
   const emit = (frame) => { cache.set(frame.requestId, frame); recordEvent(frame); return frame }
   const failure = (request, reason) => ({ type: 'guidedReposition',
     requestId: typeof request?.requestId === 'string' ? request.requestId : null,
-    sysId: Number.isInteger(request?.sysId) ? request.sysId : null,
-    compId: Number.isInteger(request?.compId) ? request.compId : null,
+    sysId: validId(request?.sysId) ? request.sysId : null,
+    compId: validId(request?.compId) ? request.compId : null,
     status: 'failed', ackResult: null, observed: false, attempts: 0,
     horizontalDistanceM: null, altitudeErrorM: null, reason, updatedAtMs: now() })
   const remove = (requestId, item) => {

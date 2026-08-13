@@ -1,0 +1,14 @@
+{
+  "type": "guidedReposition",
+  "requestId": "guided-1",
+  "sysId": 1,
+  "compId": 1,
+  "status": "complete",
+  "ackResult": 0,
+  "observed": true,
+  "attempts": 1,
+  "horizontalDistanceM": 1.2,
+  "altitudeErrorM": 0.4,
+  "reason": null,
+  "updatedAtMs": 1800000400000
+}

@@ -69,11 +69,16 @@ The initial vertical slice is complete:
 - mode-change and arm/disarm lifecycle frames have strict producer schemas and
   exact command payload vectors; and
 - ordered mode-change and arm/disarm traces define ACK, observation, timeout,
-  stale-route, and passive-replay behavior.
+  stale-route, and passive-replay behavior; and
+- strict schemas now cover every current protocol-v0 server family and all
+  thirteen client-command families, including the bridge-only parameter,
+  message-request, message-interval, mission-upload, and generic-command
+  lifecycles.
 
 Expand by operational risk rather than mechanically translating every test:
 
-1. Add schemas for the remaining bridge frame and client-command families.
+1. Extend the strict schemas whenever a new server frame or client command is
+   introduced; no current protocol-v0 family is intentionally omitted.
 2. Move more pure HUD calculations into shared vectors, prioritizing sign,
    coordinate-frame, unit, and fallback behavior.
 3. Add golden bytes for the remaining safety-sensitive command encoders.

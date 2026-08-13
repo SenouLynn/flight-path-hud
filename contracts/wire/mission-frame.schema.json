@@ -7,8 +7,8 @@
   "required": ["type", "sysId", "compId", "status", "items", "activeIndex", "reason"],
   "properties": {
     "type": { "const": "mission" },
-    "sysId": { "type": "integer", "minimum": 1, "maximum": 255 },
-    "compId": { "type": "integer", "minimum": 1, "maximum": 255 },
+    "sysId": { "type": ["integer", "null"], "minimum": 0, "maximum": 255 },
+    "compId": { "type": ["integer", "null"], "minimum": 0, "maximum": 255 },
     "status": { "enum": ["pending", "complete", "failed"] },
     "items": { "type": "array", "items": { "$ref": "#/$defs/item" }, "maxItems": 65535 },
     "activeIndex": { "type": ["integer", "null"], "minimum": 0, "maximum": 65535 },

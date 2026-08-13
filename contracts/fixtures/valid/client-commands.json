@@ -1,0 +1,26 @@
+[
+  { "type": "requestMission", "sysId": 1, "compId": 1 },
+  { "type": "requestParameter", "requestId": "parameter-1", "sysId": 1, "compId": 1, "name": "LOG_DISARMED" },
+  { "type": "requestParameterList", "requestId": "parameter-list-1", "sysId": 1, "compId": 1 },
+  { "type": "requestMessage", "requestId": "message-1", "sysId": 1, "compId": 1, "messageName": "HOME_POSITION" },
+  { "type": "setMessageInterval", "requestId": "interval-1", "sysId": 1, "compId": 1, "messageName": "ATTITUDE", "intervalUs": 200000 },
+  { "type": "writeParameter", "requestId": "write-1", "sysId": 1, "compId": 1, "name": "LOG_DISARMED", "value": 1, "actor": "operator", "timestampMs": 1800000000000, "confirmation": true },
+  {
+    "type": "uploadMission", "requestId": "upload-1", "sysId": 1, "compId": 1,
+    "actor": "operator", "timestampMs": 1800000000000, "confirmation": true,
+    "policy": "clearThenReplace",
+    "items": [{ "command": 16, "frameId": 6, "current": true, "autocontinue": true, "latDegE7": -353632610, "lonDegE7": 1491652300, "altM": 20 }]
+  },
+  { "type": "commandRequest", "requestId": "command-1", "sysId": 1, "compId": 1, "family": "example", "actor": "operator", "timestampMs": 1800000000000, "confirmation": true, "params": {} },
+  { "type": "setMode", "requestId": "mode-1", "sysId": 1, "compId": 1, "mode": "GUIDED", "actor": "operator", "timestampMs": 1800000000000, "confirmation": true },
+  { "type": "setArmed", "requestId": "arm-1", "sysId": 1, "compId": 1, "arm": true, "actor": "operator", "timestampMs": 1800000000000, "confirmation": true, "safetyCase": "sitl-no-propulsion" },
+  {
+    "type": "guidedReposition", "requestId": "guided-1", "sysId": 1, "compId": 1,
+    "latitudeDeg": -35.3631, "longitudeDeg": 149.1654, "relativeAltitudeM": 20,
+    "arrivalRadiusM": 5, "altitudeToleranceM": 2, "actor": "operator",
+    "timestampMs": 1800000000000, "confirmation": true, "safetyCase": "isolated-sitl-guided",
+    "safetyEnvelope": { "minLatitudeDeg": -35.37, "maxLatitudeDeg": -35.35, "minLongitudeDeg": 149.15, "maxLongitudeDeg": 149.18, "minRelativeAltitudeM": 5, "maxRelativeAltitudeM": 120, "maxArrivalRadiusM": 20, "maxAltitudeToleranceM": 10 }
+  },
+  { "type": "guidedTakeoff", "requestId": "takeoff-1", "sysId": 1, "compId": 1, "relativeAltitudeM": 10, "altitudeToleranceM": 2, "actor": "operator", "timestampMs": 1800000000000, "confirmation": true, "safetyCase": "isolated-sitl-guided" },
+  { "type": "guidedLand", "requestId": "land-1", "sysId": 1, "compId": 1, "actor": "operator", "timestampMs": 1800000000000, "confirmation": true, "safetyCase": "isolated-sitl-guided" }
+]

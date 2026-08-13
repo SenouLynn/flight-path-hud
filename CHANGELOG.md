@@ -1,5 +1,12 @@
 # Changelog
 
+- Completed strict protocol-v0 schema coverage for every current server frame
+  and all thirteen bridge client-command families, including mission items,
+  Guided safety envelopes, and bridge-only lifecycle outputs. Raw MAVLink
+  injection remains outside the contract.
+- Normalized malformed Guided-reposition and message-request identities at the
+  producer boundary instead of echoing invalid values into failure frames.
+
 - Added strict portable producer schemas and exact MAVLink payload vectors for
   mode change and standard arm/disarm, including a zero force-arm parameter.
 - Added language-neutral mode/arm lifecycle traces for ACK, observation,

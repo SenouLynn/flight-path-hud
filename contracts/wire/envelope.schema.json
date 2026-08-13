@@ -12,6 +12,7 @@
     { "$ref": "mode-change-frame.schema.json" },
     { "$ref": "arm-disarm-frame.schema.json" },
     { "$ref": "guided-takeoff-frame.schema.json" },
-    { "$ref": "guided-land-frame.schema.json" }
+    { "$ref": "guided-land-frame.schema.json" },
+    { "$ref": "bridge-lifecycle-frame.schema.json" }
   ]
 }

@@ -1,0 +1,7 @@
+{
+  "type": "rawMavlink",
+  "requestId": "unsafe-1",
+  "sysId": 1,
+  "compId": 1,
+  "bytes": "deadbeef"
+}

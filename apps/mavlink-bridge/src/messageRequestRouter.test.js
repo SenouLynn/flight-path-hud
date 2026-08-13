@@ -36,6 +36,14 @@ test('allowlist, replay, route, duplicate, and target ambiguity send no unsafe p
   const h=setup(); h.request(); assert.match(h.request({requestId:'r2'}).reason,/already pending/); assert.equal(h.sent.length,1)
 })
 
+test('malformed request metadata is normalized in failure frames', () => {
+  const frame = setup().request({ requestId: 42, sysId: 999, messageName: 242 })
+  assert.equal(frame.status, 'failed')
+  assert.equal(frame.requestId, null)
+  assert.equal(frame.sysId, null)
+  assert.equal(frame.messageName, null)
+})
+
 test('recorded terminal state replays passively', () => {
   const {router,sent}=setup({live:false}); const event={type:'messageRequest',requestId:'old',status:'complete'}
   assert.deepEqual(router.ingestRecordedEvent(event),event); assert.deepEqual(router.snapshotForNewClient(),[event]); assert.equal(sent.length,0)

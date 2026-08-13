@@ -1,0 +1,113 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://flight-path-hud.local/contracts/wire/bridge-lifecycle-frame.schema.json",
+  "title": "Bridge-only protocol v0 lifecycle frame",
+  "oneOf": [
+    { "$ref": "#/$defs/parameterRead" },
+    { "$ref": "#/$defs/parameterList" },
+    { "$ref": "#/$defs/parameterWrite" },
+    { "$ref": "#/$defs/messageRequest" },
+    { "$ref": "#/$defs/messageInterval" },
+    { "$ref": "#/$defs/missionUpload" },
+    { "$ref": "#/$defs/commandStatus" }
+  ],
+  "$defs": {
+    "paramValue": {
+      "type": "object", "additionalProperties": false,
+      "required": ["value", "paramCount", "paramIndex", "paramId", "paramType"],
+      "properties": {
+        "value": { "type": "number" }, "paramCount": { "type": "integer", "minimum": 0, "maximum": 65535 },
+        "paramIndex": { "type": "integer", "minimum": 0, "maximum": 65535 },
+        "paramId": { "type": "string", "minLength": 1, "maxLength": 16 },
+        "paramType": { "type": "integer", "minimum": 1, "maximum": 10 }
+      }
+    },
+    "parameterRead": {
+      "type": "object", "additionalProperties": false,
+      "required": ["type", "requestId", "sysId", "compId", "name", "index", "status", "value", "reason", "updatedAtMs"],
+      "properties": {
+        "type": { "const": "parameterRead" }, "requestId": { "type": ["string", "null"] },
+        "sysId": { "type": ["integer", "null"], "minimum": 1, "maximum": 255 }, "compId": { "type": ["integer", "null"], "minimum": 1, "maximum": 255 },
+        "name": { "type": ["string", "null"] }, "index": { "type": ["integer", "null"] },
+        "status": { "enum": ["pending", "complete", "failed"] }, "value": { "oneOf": [{ "$ref": "#/$defs/paramValue" }, { "type": "null" }] },
+        "reason": { "type": ["string", "null"] }, "attempts": { "type": "integer", "minimum": 1 }, "updatedAtMs": { "type": "number" }
+      }
+    },
+    "parameterList": {
+      "type": "object", "additionalProperties": false,
+      "required": ["type", "requestId", "sysId", "compId", "status", "receivedCount", "expectedCount", "parameters", "reason", "updatedAtMs"],
+      "properties": {
+        "type": { "const": "parameterList" }, "requestId": { "type": ["string", "null"] },
+        "sysId": { "type": ["integer", "null"], "minimum": 1, "maximum": 255 }, "compId": { "type": ["integer", "null"], "minimum": 1, "maximum": 255 },
+        "status": { "enum": ["pending", "complete", "failed"] }, "receivedCount": { "type": "integer", "minimum": 0, "maximum": 65535 },
+        "expectedCount": { "type": ["integer", "null"], "minimum": 0, "maximum": 65535 },
+        "parameters": { "type": "array", "maxItems": 65535, "items": { "$ref": "#/$defs/paramValue" } },
+        "latest": { "oneOf": [{ "$ref": "#/$defs/paramValue" }, { "type": "null" }] },
+        "attempts": { "type": "integer", "minimum": 1 }, "reason": { "type": ["string", "null"] }, "updatedAtMs": { "type": "number" }
+      }
+    },
+    "parameterWrite": {
+      "type": "object", "additionalProperties": false,
+      "required": ["type", "requestId", "sysId", "compId", "name", "requestedValue", "actor", "requestedAtMs", "confirmation", "status", "observedValue", "reason", "updatedAtMs"],
+      "properties": {
+        "type": { "const": "parameterWrite" }, "requestId": { "type": ["string", "null"] },
+        "sysId": { "type": ["integer", "null"], "minimum": 1, "maximum": 255 }, "compId": { "type": ["integer", "null"], "minimum": 1, "maximum": 255 },
+        "name": { "type": ["string", "null"] }, "requestedValue": { "type": ["number", "null"] },
+        "actor": { "type": ["string", "null"] }, "requestedAtMs": { "type": ["number", "null"] }, "confirmation": { "type": "boolean" },
+        "status": { "enum": ["pending", "complete", "failed"] }, "observedValue": { "type": ["number", "null"] },
+        "paramType": { "type": "integer", "minimum": 1, "maximum": 10 }, "attempts": { "type": "integer", "minimum": 1 },
+        "reason": { "type": ["string", "null"] }, "updatedAtMs": { "type": "number" }
+      }
+    },
+    "messageRequest": {
+      "type": "object", "additionalProperties": false,
+      "required": ["type", "requestId", "sysId", "compId", "messageName", "status", "ackResult", "response", "reason", "updatedAtMs"],
+      "properties": {
+        "type": { "const": "messageRequest" }, "requestId": { "type": ["string", "null"] },
+        "sysId": { "type": ["integer", "null"], "minimum": 1, "maximum": 255 }, "compId": { "type": ["integer", "null"], "minimum": 1, "maximum": 255 },
+        "messageName": { "type": ["string", "null"] }, "status": { "enum": ["pending", "complete", "failed"] },
+        "ackResult": { "type": ["integer", "null"], "minimum": 0, "maximum": 255 }, "response": { "type": ["object", "null"] },
+        "reason": { "type": ["string", "null"] }, "updatedAtMs": { "type": "number" }
+      }
+    },
+    "messageInterval": {
+      "type": "object", "additionalProperties": false,
+      "required": ["type", "requestId", "sysId", "compId", "messageName", "intervalUs", "status", "ackResult", "observed", "reason", "updatedAtMs"],
+      "properties": {
+        "type": { "const": "messageInterval" }, "requestId": { "type": ["string", "null"] },
+        "sysId": { "type": ["integer", "null"], "minimum": 1, "maximum": 255 }, "compId": { "type": ["integer", "null"], "minimum": 1, "maximum": 255 },
+        "messageName": { "type": ["string", "null"] },
+        "intervalUs": { "type": ["integer", "null"] },
+        "status": { "enum": ["awaitingAck", "awaitingObservation", "complete", "failed"] },
+        "ackResult": { "type": ["integer", "null"], "minimum": 0, "maximum": 255 }, "observed": { "type": "boolean" },
+        "reason": { "type": ["string", "null"] }, "updatedAtMs": { "type": "number" }
+      }
+    },
+    "missionUpload": {
+      "type": "object", "additionalProperties": false,
+      "required": ["type", "requestId", "sysId", "compId", "actor", "requestedAtMs", "confirmation", "policy", "itemCount", "status", "requestedCount", "reason", "updatedAtMs"],
+      "properties": {
+        "type": { "const": "missionUpload" }, "requestId": { "type": ["string", "null"] },
+        "sysId": { "type": ["integer", "null"], "minimum": 1, "maximum": 255 }, "compId": { "type": ["integer", "null"], "minimum": 1, "maximum": 255 },
+        "actor": { "type": ["string", "null"] }, "requestedAtMs": { "type": ["number", "null"] }, "confirmation": { "type": "boolean" },
+        "policy": { "enum": ["clearThenReplace", null] }, "itemCount": { "type": ["integer", "null"], "minimum": 0 },
+        "status": { "enum": ["rejected", "idle", "clearing", "uploading", "awaitingReadback", "complete", "failed"] },
+        "requestedCount": { "type": "integer", "minimum": 0, "maximum": 65535 }, "reason": { "type": ["string", "null"] },
+        "updatedAtMs": { "type": "number" }
+      }
+    },
+    "commandStatus": {
+      "type": "object", "additionalProperties": false,
+      "required": ["type", "requestId", "sysId", "compId", "family", "actor", "requestedAtMs", "confirmation", "status", "reason", "updatedAtMs"],
+      "properties": {
+        "type": { "const": "commandStatus" }, "requestId": { "type": ["string", "null"] },
+        "sysId": { "type": ["integer", "null"], "minimum": 1, "maximum": 255 }, "compId": { "type": ["integer", "null"], "minimum": 1, "maximum": 255 },
+        "family": { "type": ["string", "null"] }, "actor": { "type": ["string", "null"] }, "requestedAtMs": { "type": ["number", "null"] },
+        "confirmation": { "type": "boolean" }, "command": { "type": "integer", "minimum": 0, "maximum": 65535 },
+        "status": { "enum": ["rejected", "requested", "transmitted", "retrying", "acknowledged", "failed", "timedOut"] },
+        "result": { "type": ["integer", "null"], "minimum": 0, "maximum": 255 }, "attempts": { "type": "integer", "minimum": 1 },
+        "reason": { "type": ["string", "null"] }, "updatedAtMs": { "type": "number" }
+      }
+    }
+  }
+}

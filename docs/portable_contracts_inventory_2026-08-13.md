@@ -37,6 +37,13 @@ The strict producer schema and tolerant consumer are separate contracts. Trying
 to make one schema express both would either bless bridge output containing
 unknown fields or falsely claim the current consumer rejects additive fields.
 
+The protocol-v0 inventory is now schema-complete. The server envelope includes
+telemetry; flight, mission, home, and link state; Guided/mode/arm lifecycles; and
+the bridge-only parameter, message, mission-upload, and generic-command
+lifecycles. A separate strict union covers all thirteen client commands accepted
+by the current routers. Raw MAVLink injection is deliberately absent and has an
+explicit invalid fixture.
+
 ## Portable and implementation-local tests
 
 Pure resolver cases under `packages/hud-ui/src/logic` are portable; heading is

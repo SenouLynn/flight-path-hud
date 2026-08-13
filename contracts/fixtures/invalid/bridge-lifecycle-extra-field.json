@@ -1,0 +1,14 @@
+{
+  "type": "messageInterval",
+  "requestId": "interval-invalid",
+  "sysId": 1,
+  "compId": 1,
+  "messageName": "ATTITUDE",
+  "intervalUs": 200000,
+  "status": "complete",
+  "ackResult": 0,
+  "observed": true,
+  "reason": null,
+  "updatedAtMs": 1800000000060,
+  "rawCommand": 511
+}

@@ -1,0 +1,11 @@
+{
+  "type": "mission",
+  "sysId": 1,
+  "compId": 1,
+  "status": "complete",
+  "items": [
+    { "seq": 0, "command": 16, "current": true, "autocontinue": true, "latDeg": 91, "lonDeg": 149.16523, "altM": 20 }
+  ],
+  "activeIndex": 0,
+  "reason": null
+}

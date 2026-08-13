@@ -67,6 +67,13 @@ test('dual gates, policy, routes, duplicate IDs, and target concurrency fail clo
   assert.match(h.request({ requestId: 'guided-2' }).reason, /already pending/)
 })
 
+test('malformed target identities are normalized in failure frames', () => {
+  const frame = harness().request({ sysId: 999, compId: -1 })
+  assert.equal(frame.status, 'failed')
+  assert.equal(frame.sysId, null)
+  assert.equal(frame.compId, null)
+})
+
 test('negative ACK, state escape, timeouts, and route loss fail closed with no default retry', () => {
   const rejected = harness(); rejected.request()
   assert.equal(rejected.router.ingestEnvelope(ack(1, 3)).ackResult, 3)

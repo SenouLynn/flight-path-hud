@@ -29,7 +29,7 @@
     "requestMission": {
       "type": "object", "additionalProperties": false,
       "required": ["type", "sysId", "compId"],
-      "properties": { "type": { "const": "requestMission" }, "sysId": { "type": "integer", "minimum": 1, "maximum": 255 }, "compId": { "type": "integer", "minimum": 1, "maximum": 255 } }
+      "properties": { "type": { "const": "requestMission" }, "sysId": { "type": "integer", "minimum": 0, "maximum": 255 }, "compId": { "type": "integer", "minimum": 0, "maximum": 255 } }
     },
     "requestParameter": {
       "type": "object", "additionalProperties": false,

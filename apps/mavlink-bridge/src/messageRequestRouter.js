@@ -5,7 +5,7 @@ const id = (v) => Number.isInteger(v) && v > 0 && v <= 255
 export function createMessageRequestRouter({ send, canSend, isLive = () => true, recordEvent = () => {}, now = Date.now, timeoutMs = 3000 } = {}) {
   const pending = new Map(), targets = new Map(), cache = new Map()
   const emit = (f) => { cache.set(f.requestId, f); recordEvent(f); return f }
-  const fail = (m, reason) => ({ type: 'messageRequest', requestId: m?.requestId ?? null, sysId: id(m?.sysId) ? m.sysId : null, compId: id(m?.compId) ? m.compId : null, messageName: m?.messageName ?? null, status: 'failed', ackResult: null, response: null, reason, updatedAtMs: now() })
+  const fail = (m, reason) => ({ type: 'messageRequest', requestId: typeof m?.requestId === 'string' ? m.requestId : null, sysId: id(m?.sysId) ? m.sysId : null, compId: id(m?.compId) ? m.compId : null, messageName: typeof m?.messageName === 'string' ? m.messageName : null, status: 'failed', ackResult: null, response: null, reason, updatedAtMs: now() })
   const finish = (requestId, item) => {
     if (item.ackResult === null || item.response === null) return emit(item)
     pending.delete(requestId); targets.delete(key(item.sysId, item.compId))
