@@ -54,6 +54,90 @@ The entries below were reconstructed from the initial implementation (commits `9
 `355baff`) and documented on 2026-07-23. Dates reflect when each decision was first made in
 the code.
 
+## ADR-0032: Borrow mature GCS boundaries; make contracts and evidence the portable unit
+
+- **Status:** Accepted
+- **Date:** 2026-08-13
+- **Deciders:** team
+- **Related:** [ADR-0020](#adr-0020-multi-target-gcs-via-ports-and-adapters),
+  [ADR-0022](#adr-0022-recordreplay-is-the-bridges-second-ingress-adapter),
+  [ADR-0030](#adr-0030-udp-mission-replies-are-routed-by-mavlink-system-not-sender-recency),
+  [GCS architecture precedents](gcs_architecture_precedents.md), and
+  [portable-contracts handoff](portable_contracts_handoff_2026-08-13.md)
+
+### Context
+
+QGroundControl and Mission Planner already demonstrate mature ways to organize
+MAVLink transports, multi-vehicle state, missions, commands, metadata, replay,
+simulation, and UI. QGC provides the clearer domain precedent through transport
+interfaces, per-vehicle aggregates, dedicated managers, metadata-backed Facts,
+and mock links. Mission Planner provides the stronger operational precedent
+through deep ArduPilot behavior, log workflows, SITL, diagnostics, and broad
+hardware compatibility. Neither project's primary portability boundary is a
+language-neutral behavioral contract: each largely carries behavior inside its
+native application/runtime.
+
+This repository already has a process and potential language boundary between
+the MAVLink bridge and its clients. Future targets may include React/Phoenix,
+C++/ImGui, or embedded renderers, and the hardware stack is intentionally not
+fixed. Porting framework-specific tests would duplicate interpretations at the
+riskiest byte, unit, sign, fallback, and state-transition boundaries.
+
+### Decision
+
+Adopt the following mature-GCS patterns:
+
+- transport/link identity remains separate from vehicle identity;
+- state and operations are scoped to an explicit vehicle rather than a global
+  active-vehicle authority;
+- related mission, command, parameter, link-health, and flight-state behavior may
+  converge incrementally under bounded per-vehicle aggregates;
+- common metadata can be refined by firmware and vehicle-class overrides, then
+  constrained by local safety policy;
+- mocks, replay, and SITL enter through the same production seams as live data;
+  and
+- operational evidence complements rather than yields to unit-level purity.
+
+Do **not** make the whole current runtime the portability unit. Make the
+versioned contracts and conformance evidence portable: JSON schemas, semantic
+field metadata, known-answer vectors, golden MAVLink bytes, ordered state-machine
+traces, and named capability/lifecycle ports. Implement ports idiomatically in
+each language instead of generating all runtime architecture from an IDL.
+
+Avoid a global transport singleton, implicit most-recent/active target routing,
+and one giant mutable current-state object spanning raw protocol, normalization,
+derived calculations, and presentation.
+
+### Consequences
+
+- ✅ Future runtimes can prove equivalence against shared evidence before a full
+  port or hardware commitment.
+- ✅ The design incorporates patterns proven by mature GCS applications without
+  copying their framework or accumulated coupling.
+- ✅ Firmware- and vehicle-specific behavior remains expressible without
+  weakening common contracts or hiding differences in the UI.
+- ✅ Per-vehicle aggregation provides a path away from repeated bridge router
+  fan-out while retaining explicit target and safety boundaries.
+- ⚠️ Schemas and metadata are not sufficient: behavioral vectors, byte fixtures,
+  state-machine traces, and SITL evidence must be maintained too.
+- ⚠️ Some tests remain intentionally implementation-specific, especially React,
+  QML/ImGui-equivalent rendering, socket lifecycle, and filesystem behavior.
+- ⚠️ Contract versioning and tolerant-consumer semantics require explicit design
+  before the existing WebSocket shape can be called stable.
+
+### Alternatives considered
+
+- Port QGroundControl's Qt object model directly — rejected: it prematurely
+  chooses the runtime and makes the application, not its behavior, portable.
+- Follow Mission Planner's central connection/current-state shape — rejected: it
+  offers convenient access but weakens explicit target, layer, and port
+  boundaries needed for later translation.
+- Translate all bridge JavaScript and tests to TypeScript first — rejected as the
+  portability strategy: TypeScript improves local ergonomics but does not encode
+  fixed-width bytes, cross-language behavior, or process-boundary validation.
+- Use schemas alone — rejected: they cannot fully express byte layout, units,
+  coordinate frames, fallback behavior, state transitions, or float tolerance.
+
 ## ADR-0031: Linux containers are the SITL baseline; native macOS is best-effort
 
 - **Status:** Accepted
