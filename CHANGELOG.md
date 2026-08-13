@@ -3,6 +3,11 @@
 - Added read-only per-target flight-state observation for the Stage 4 safety
   foundation, retaining raw HEARTBEAT mode/system fields and rejecting stale
   state for future command pre/post-condition checks.
+- Added a disabled-by-default, disarmed-only mode-change transaction with
+  vehicle-specific allowlists, exact-target ACK correlation, HEARTBEAT
+  post-condition verification, bounded retries, and passive lifecycle replay.
+- Added mixed Copter/Plane mode-change SITL acceptance proving disarmed-only
+  `LOITER` transitions, peer isolation, and restoration to `STABILIZE`/`MANUAL`.
 
 - Added the portable Stage 3 mission-replacement protocol and state-machine
   foundation, including exact-target correlation, bounded retries, final ACK,

@@ -136,8 +136,13 @@ from shared message names.
 Foundation in progress: HEARTBEAT decoding now retains portable numeric
 `base_mode`, `custom_mode`, vehicle/autopilot type, and system status, plus the
 standard armed bit. A per-target freshness tracker refuses to use stale state.
-Vehicle-specific mode interpretation and every state-changing command remain
-disabled until the policy and operator-confirmation layers consume this state.
+Vehicle-specific mode interpretation remains explicit rather than inferred.
+A disabled-by-default mode transaction consumes this state with explicit confirmation,
+fresh and disarmed preconditions, exact-target ACK correlation, and HEARTBEAT
+post-condition verification. The initial allowlists contain only Copter
+`STABILIZE`/`LOITER` and Plane `MANUAL`/`LOITER`. Mixed-SITL acceptance passed
+with both vehicles disarmed, target-isolation checks, and restoration to each
+vehicle's original custom mode. Arm/disarm and Guided operations remain unimplemented.
 
 These are state-changing and potentially safety-critical. Add only after a command policy,
 operator confirmation UX, target identity display, current-mode/armed-state verification,

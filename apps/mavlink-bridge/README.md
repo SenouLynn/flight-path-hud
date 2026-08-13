@@ -205,6 +205,7 @@ per-run cap above.
 | `MAVLINK_BRIDGE_ENABLE_MESSAGE_INTERVAL` | `0` | `1` enables allowlisted, target-scoped stream interval changes |
 | `MAVLINK_BRIDGE_ENABLE_PARAMETER_WRITE` | `0` | `1` enables narrowly allowlisted parameter writes |
 | `MAVLINK_BRIDGE_ENABLE_MISSION_UPLOAD` | `0` | `1` enables confirmed full mission replacement; keep disabled outside isolated validation |
+| `MAVLINK_BRIDGE_ENABLE_MODE_CHANGE` | `0` | `1` enables the disarmed-only Copter/Plane mode allowlist for isolated SITL validation |
 | `MAVLINK_BRIDGE_SAMPLE_PORT` | `14549` | Sample sender's single-instance lock |
 
 ## Envelope shape
@@ -222,6 +223,15 @@ the exact target, standard `armed` bit, raw numeric `baseMode`/`customMode`,
 vehicle/autopilot type, system status, and bridge observation time. Mode names
 are intentionally not inferred across vehicle classes. State older than three
 seconds is excluded from late-client snapshots and future command preconditions.
+
+Mode changes remain disabled by default and have no browser control. When enabled
+for isolated SITL, `setMode` requires a unique request ID, exact target, actor,
+timestamp, explicit confirmation, a fresh disarmed `flightState`, and a mode in
+the observed vehicle type's allowlist. Completion requires both the exact-target
+`COMMAND_ACK` and a HEARTBEAT reporting the requested custom mode.
+Run the reversible acceptance with `pnpm sitl-test:mode-change`; it exercises
+both vehicles one at a time and restores their original modes in cleanup. Remove
+the stopped stack with `pnpm sitl-test:mode-change:down`.
 
 Malformed datagrams are dropped and counted in `decodeErrorCount`.
 

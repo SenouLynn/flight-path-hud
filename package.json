@@ -13,6 +13,8 @@
     "sitl-test:parameter-write:down": "docker compose -f apps/mavlink-bridge/sitl/compose.yml -f apps/mavlink-bridge/sitl/compose.parameter-write.yml down",
     "sitl-test:mission-upload": "docker compose -f apps/mavlink-bridge/sitl/compose.yml -f apps/mavlink-bridge/sitl/compose.mission-upload.yml up --build --abort-on-container-exit --exit-code-from mission-upload-controller",
     "sitl-test:mission-upload:down": "docker compose -f apps/mavlink-bridge/sitl/compose.yml -f apps/mavlink-bridge/sitl/compose.mission-upload.yml down",
+    "sitl-test:mode-change": "docker compose -f apps/mavlink-bridge/sitl/compose.yml -f apps/mavlink-bridge/sitl/compose.mode-change.yml up --build --abort-on-container-exit --exit-code-from mode-change-controller",
+    "sitl-test:mode-change:down": "docker compose -f apps/mavlink-bridge/sitl/compose.yml -f apps/mavlink-bridge/sitl/compose.mode-change.yml down",
     "dev:hud": "pnpm --filter @flight-path-hud/hud dev",
     "build:hud": "pnpm --filter @flight-path-hud/hud build",
     "lint:hud": "pnpm --filter @flight-path-hud/hud lint",

@@ -124,6 +124,17 @@ completion three times, and that replay emits no MAVLink packets. Mission conten
 and restoration are established by the live acceptance controller; the lifecycle
 fixture intentionally contains no mission coordinates.
 
+`pnpm sitl-test:mode-change` validates the first Stage 4 operation while both
+vehicles remain disarmed. It changes Copter from `STABILIZE` to `LOITER` and
+Plane from `MANUAL` to `LOITER`, one exact target at a time, requires both
+`COMMAND_ACK` and the requested HEARTBEAT custom mode, proves the peer remains
+unchanged and disarmed, and restores both original modes in cleanup.
+
+Acceptance passed on 2026-08-13 against ArduPilot 4.6.2. Both targets accepted
+`MAV_CMD_DO_SET_MODE`, reported `LOITER`, preserved peer isolation, and returned
+to custom mode `0` (`STABILIZE` for Copter, `MANUAL` for Plane). Neither vehicle
+armed during the scenario.
+
 ## Acceptance checklist
 
 1. The GCS fleet roster lists `1:1` and `2:1`, with no bridge decode errors for
