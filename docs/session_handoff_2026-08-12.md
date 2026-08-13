@@ -145,10 +145,11 @@ The mixed-SITL acceptance checklist passed:
 Two UI/replay follow-ups identified during acceptance were resolved on
 2026-08-13:
 
-- Active waypoints retain the yellow state fill but now carry a strong ring in
-  their vehicle's identity colour. This preserves both meanings when mission-home
-  item zero overlaps a stationary vehicle marker and separates Plane's amber
-  identity from active yellow.
+- ArduPilot's idle `MISSION_CURRENT=0` is retained as protocol state but no
+  longer presented as an actively navigated waypoint: mission-home item zero
+  keeps its vehicle identity colour and the Active readout shows `—`. Actual
+  active items (`seq > 0`) retain the yellow state fill plus a strong ring in
+  their vehicle's identity colour.
 - Standalone replay now passively folds captured `MISSION_COUNT` and
   `MISSION_ITEM_INT` transactions into cached overlays. It emits no outbound
   MAVLink, leaves mission loading disabled, and does not change live unsolicited
@@ -164,7 +165,9 @@ startup-latency note in `ardupilot_sitl_testing.md` for candidate changes.
 
 ## Recommended next milestone
 
-After the checklist above, add a **separate test-only SITL motion scenario**.
+The acceptance checklist above is complete. The next milestone is a **separate
+test-only SITL motion scenario**, specified in
+[the motion-scenario planning handoff](sitl_motion_scenario_handoff_2026-08-13.md).
 Use real ArduPilot mission/mode control from an explicit validation script or
 authorized GCS workflow; do not inject synthetic positions through the bridge.
 That scenario should make both vehicles move enough to exercise map trails and
@@ -179,9 +182,10 @@ the staged approach in [mavlink_command_validation.md](mavlink_command_validatio
 Treat swarm behavior as a **coordination domain above individual vehicles**, not
 as another fleet-map feature or a larger mission download. Follow this sequence:
 
-1. Finish mixed-SITL acceptance and capture/replay evidence.
-2. Add a real SITL motion scenario for each vehicle independently.
-3. Validate narrowly scoped control primitives in SITL: mode changes,
+1. ~~Finish mixed-SITL acceptance and capture/replay evidence.~~ Completed
+   2026-08-13.
+2. **Next:** add a real SITL motion scenario for each vehicle independently.
+3. Then validate narrowly scoped control primitives in SITL: mode changes,
    arm/disarm, takeoff where applicable, mission start/stop, and failsafe
    observation.
 4. Introduce a coordination model: group membership, leader/follower roles,
