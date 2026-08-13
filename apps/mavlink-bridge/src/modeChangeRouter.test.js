@@ -3,11 +3,11 @@ import test from 'node:test'
 import { createModeChangeRouter } from './modeChangeRouter.js'
 import { MAV_CMD_DO_SET_MODE } from './modeChangeProtocol.js'
 
-function harness({ enabled = true, live = true, route = true, state = {} } = {}) {
+function harness({ enabled = true, allowGuided = false, live = true, route = true, state = {} } = {}) {
   let nowMs = 1000
   const sent = [], recorded = []
   let flightState = { armed: false, customMode: 0, vehicleType: 2, ...state }
-  const router = createModeChangeRouter({ enabled: () => enabled, isLive: () => live,
+  const router = createModeChangeRouter({ enabled: () => enabled, allowGuided: () => allowGuided, isLive: () => live,
     canSend: () => route, getFlightState: () => flightState,
     send: (sysId, compId, buffer) => { sent.push({ sysId, compId, buffer }); return true },
     recordEvent: (frame) => recorded.push(frame), now: () => nowMs,
@@ -45,6 +45,14 @@ test('vehicle type selects distinct Copter and Plane mode allowlists', () => {
   assert.equal(frame.customMode, 12)
   assert.equal(frame.status, 'awaitingAck')
   assert.match(harness({ state: { vehicleType: 1 } }).request({ mode: 'STABILIZE' }).reason, /allowlisted/)
+})
+
+test('GUIDED staging has a separate isolated-SITL policy gate', () => {
+  assert.match(harness().request({ mode: 'GUIDED' }).reason, /isolated SITL/)
+  const copter = harness({ allowGuided: true }).request({ mode: 'GUIDED' })
+  assert.equal(copter.customMode, 4); assert.equal(copter.status, 'awaitingAck')
+  const plane = harness({ allowGuided: true, state: { vehicleType: 1 } }).request({ mode: 'GUIDED' })
+  assert.equal(plane.customMode, 15); assert.equal(plane.status, 'awaitingAck')
 })
 
 test('policy rejects unsafe requests without sending', () => {

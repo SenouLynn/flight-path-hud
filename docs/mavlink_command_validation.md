@@ -157,10 +157,10 @@ non-SITL enablement. A sanitized 12-event fixture deterministically replays the
 four accepted arm/disarm lifecycles, including ACK and armed-state observation,
 without transmitting MAVLink. Live Guided operations remain unimplemented.
 
-The first Guided foundation is implemented but deliberately disconnected from the
-live bridge. A pure policy prepares a position-only `MAV_CMD_DO_REPOSITION` encoded
-as `COMMAND_INT` in `MAV_FRAME_GLOBAL_RELATIVE_ALT_INT`. A transport-injected state
-machine exists for isolated testing, but `index.js` does not instantiate it. It
+The first Guided operation is registered exclusively behind a feature gate plus
+the isolated-SITL environment gate. A pure policy prepares position-only
+`MAV_CMD_DO_REPOSITION` encoded as `COMMAND_INT` in
+`MAV_FRAME_GLOBAL_RELATIVE_ALT_INT`. It
 requires fresh supported ArduPilot identity, an already-armed vehicle already in
 the correct vehicle-specific Guided custom mode (Copter `4`, Plane `15`), operator
 identity and confirmation, an isolated-SITL attestation, and a caller-supplied
@@ -170,8 +170,11 @@ rejects those Plane-only controls. The command never requests an implicit mode
 change. The transaction requires an exact-target successful ACK plus normalized
 `GLOBAL_POSITION_INT` within explicit horizontal and relative-altitude tolerances;
 it fails if the target disarms, leaves Guided mode, loses its route, or times out,
-and defaults to zero retries. Runtime registration and separate Copter/Plane live
-SITL acceptance scenarios remain before this can be enabled.
+and defaults to zero retries. Separate live ArduPilot 4.6.2 SITL acceptance passed:
+Copter moved 22.9 m into its bounded arrival volume and Plane moved 194.3 m into
+its larger loiter arrival volume; both commands received successful ACKs, the peer
+remained armed in its own Guided mode, and cleanup disarmed both simulators. No
+browser or non-SITL enablement exists.
 
 These are state-changing and potentially safety-critical. Add only after a command policy,
 operator confirmation UX, target identity display, current-mode/armed-state verification,

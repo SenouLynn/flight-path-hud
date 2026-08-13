@@ -3,15 +3,15 @@ import { encodeModeChange, MAV_CMD_DO_SET_MODE } from './modeChangeProtocol.js'
 const MAV_TYPE_FIXED_WING = 1
 const MAV_TYPE_QUADROTOR = 2
 const MODE_POLICIES = new Map([
-  [MAV_TYPE_QUADROTOR, new Map([['STABILIZE', 0], ['LOITER', 5]])],
-  [MAV_TYPE_FIXED_WING, new Map([['MANUAL', 0], ['LOITER', 12]])],
+  [MAV_TYPE_QUADROTOR, new Map([['STABILIZE', 0], ['GUIDED', 4], ['LOITER', 5]])],
+  [MAV_TYPE_FIXED_WING, new Map([['MANUAL', 0], ['LOITER', 12], ['GUIDED', 15]])],
 ])
 const validId = (value) => Number.isInteger(value) && value > 0 && value <= 255
 const key = (sysId, compId) => `${sysId}:${compId}`
 
 /** Disarmed-only, exact-target mode transition with ACK and HEARTBEAT post-condition. */
 export function createModeChangeRouter({ send, canSend, getFlightState,
-  enabled = () => false, isLive = () => true, recordEvent = () => {}, now = Date.now,
+  enabled = () => false, allowGuided = () => false, isLive = () => true, recordEvent = () => {}, now = Date.now,
   ackTimeoutMs = 3000, observationTimeoutMs = 5000, maxRetries = 1,
   gcsSysId = 255, gcsCompId = 190 } = {}) {
   const pending = new Map(), targets = new Map(), cache = new Map()
@@ -46,6 +46,7 @@ export function createModeChangeRouter({ send, canSend, getFlightState,
       if (state === null || state === undefined) return failure(m, 'fresh HEARTBEAT state is required')
       if (state.armed) return failure(m, 'mode changes are limited to disarmed vehicles')
       const policy = MODE_POLICIES.get(state.vehicleType)
+      if (m.mode === 'GUIDED' && !allowGuided()) return failure(m, 'GUIDED mode staging requires isolated SITL enablement')
       if (policy === undefined || !policy.has(m.mode)) return failure(m, 'mode is not allowlisted for observed vehicle type')
       const customMode = policy.get(m.mode)
       if (state.customMode === customMode) return failure(m, 'vehicle is already in requested mode')

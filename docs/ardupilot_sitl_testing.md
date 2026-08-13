@@ -157,6 +157,18 @@ vehicles' arm-then-disarm histories, require successful ACK and HEARTBEAT armed-
 observation, verify disarm is each target's final state, and prove replay emits no
 MAVLink.
 
+`pnpm sitl-test:guided-reposition` validates distinct airborne Guided semantics.
+The disposable setup performs Copter Guided takeoff and Plane AUTO takeoff, returns
+Plane to Guided, and waits until both exact targets are armed and airborne. The
+bridge then sends a bounded position-only `MAV_CMD_DO_REPOSITION` to one target at
+a time and requires successful ACK plus `GLOBAL_POSITION_INT` arrival while the
+peer remains armed in its own Guided mode.
+
+Acceptance passed on 2026-08-13 against ArduPilot 4.6.2. Copter moved 22.9 m into
+an 8 m horizontal arrival volume; Plane moved 194.3 m into its 100 m loiter arrival
+volume with an explicit 75 m clockwise loiter radius. Both commands were accepted,
+and disposable-SITL cleanup force-disarmed both vehicles with accepted ACKs.
+
 ## Acceptance checklist
 
 1. The GCS fleet roster lists `1:1` and `2:1`, with no bridge decode errors for

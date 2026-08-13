@@ -16,6 +16,7 @@ import { createMissionUploadRouter } from './missionUploadRouter.js'
 import { createFlightStateTracker } from './flightStateTracker.js'
 import { createModeChangeRouter } from './modeChangeRouter.js'
 import { createArmDisarmRouter } from './armDisarmRouter.js'
+import { createGuidedRepositionRouter } from './guidedRepositionRouter.js'
 
 const UDP_HOST = process.env.MAVLINK_BRIDGE_UDP_HOST ?? '0.0.0.0'
 const UDP_PORT = Number.parseInt(process.env.MAVLINK_BRIDGE_UDP_PORT ?? '14550', 10)
@@ -97,10 +98,16 @@ const missionUploadRouter = createMissionUploadRouter({ send:(s,c,b)=>ingress.se
   isLive:()=>typeof ingress.sendTo==='function', enabled:()=>process.env.MAVLINK_BRIDGE_ENABLE_MISSION_UPLOAD==='1', recordEvent:e=>recorder?.recordEvent(e) })
 const modeChangeRouter = createModeChangeRouter({ send:(s,c,b)=>ingress.sendTo?.(s,c,b), canSend:(s,c)=>ingress.hasRoute?.(s,c)===true,
   getFlightState:(s,c)=>flightStateTracker.getFreshState(s,c), isLive:()=>typeof ingress.sendTo==='function',
-  enabled:()=>process.env.MAVLINK_BRIDGE_ENABLE_MODE_CHANGE==='1', recordEvent:e=>recorder?.recordEvent(e) })
+  enabled:()=>process.env.MAVLINK_BRIDGE_ENABLE_MODE_CHANGE==='1',
+  allowGuided:()=>process.env.MAVLINK_BRIDGE_ENABLE_GUIDED_REPOSITION==='1'
+    && process.env.MAVLINK_BRIDGE_COMMAND_ENVIRONMENT==='sitl', recordEvent:e=>recorder?.recordEvent(e) })
 const armDisarmRouter = createArmDisarmRouter({ send:(s,c,b)=>ingress.sendTo?.(s,c,b), canSend:(s,c)=>ingress.hasRoute?.(s,c)===true,
   getFlightState:(s,c)=>flightStateTracker.getFreshState(s,c), isLive:()=>typeof ingress.sendTo==='function',
   enabled:()=>process.env.MAVLINK_BRIDGE_ENABLE_ARM_DISARM==='1',
+  isIsolatedSitl:()=>process.env.MAVLINK_BRIDGE_COMMAND_ENVIRONMENT==='sitl', recordEvent:e=>recorder?.recordEvent(e) })
+const guidedRepositionRouter = createGuidedRepositionRouter({ send:(s,c,b)=>ingress.sendTo?.(s,c,b), canSend:(s,c)=>ingress.hasRoute?.(s,c)===true,
+  getFlightState:(s,c)=>flightStateTracker.getFreshState(s,c), isLive:()=>typeof ingress.sendTo==='function',
+  enabled:()=>process.env.MAVLINK_BRIDGE_ENABLE_GUIDED_REPOSITION==='1',
   isIsolatedSitl:()=>process.env.MAVLINK_BRIDGE_COMMAND_ENVIRONMENT==='sitl', recordEvent:e=>recorder?.recordEvent(e) })
 
 const MISSION_MESSAGE_NAMES = new Set(['MISSION_COUNT', 'MISSION_ITEM_INT', 'MISSION_CURRENT', 'MISSION_ACK', 'MISSION_REQUEST', 'MISSION_REQUEST_INT'])
@@ -171,6 +178,8 @@ const stopIngress = ingress.start((datagram, meta) => {
     if (modeFrame !== null) publish(modeFrame)
     const armFrame = armDisarmRouter.ingestEnvelope(envelope)
     if (armFrame !== null) publish(armFrame)
+    const guidedFrame = guidedRepositionRouter.ingestEnvelope(envelope)
+    if (guidedFrame !== null) publish(guidedFrame)
     if (envelope.messageName === 'COMMAND_ACK') {
       const frame = commandRouter.ingestEnvelope(envelope)
       if (frame !== null) publish(frame)
@@ -219,6 +228,8 @@ const stopIngress = ingress.start((datagram, meta) => {
   if (modeFrame !== null) publish(modeFrame)
   const armFrame = armDisarmRouter.ingestRecordedEvent(event)
   if (armFrame !== null) publish(armFrame)
+  const guidedFrame = guidedRepositionRouter.ingestRecordedEvent(event)
+  if (guidedFrame !== null) publish(guidedFrame)
 })
 
 wsServer.on('listening', () => {
@@ -244,6 +255,7 @@ wsServer.on('connection', (ws) => {
   flightStateTracker.snapshot().forEach((frame) => ws.send(JSON.stringify(frame)))
   modeChangeRouter.snapshotForNewClient().forEach((frame) => ws.send(JSON.stringify(frame)))
   armDisarmRouter.snapshotForNewClient().forEach((frame) => ws.send(JSON.stringify(frame)))
+  guidedRepositionRouter.snapshotForNewClient().forEach((frame) => ws.send(JSON.stringify(frame)))
 
   ws.on('message', (raw) => {
     let message = null
@@ -279,6 +291,8 @@ wsServer.on('connection', (ws) => {
       if (modeFrame !== null) publish(modeFrame)
       const armFrame = armDisarmRouter.handleClientMessage(message)
       if (armFrame !== null) publish(armFrame)
+      const guidedFrame = guidedRepositionRouter.handleClientMessage(message)
+      if (guidedFrame !== null) publish(guidedFrame)
     } catch (error) {
       console.error(`[mavlink-bridge] client message rejected: ${error?.message ?? error}`)
     }
@@ -296,6 +310,7 @@ const missionTickTimer = setInterval(() => {
   missionUploadRouter.tick().forEach(publish)
   modeChangeRouter.tick().forEach(publish)
   armDisarmRouter.tick().forEach(publish)
+  guidedRepositionRouter.tick().forEach(publish)
 }, 100)
 
 async function shutdown() {

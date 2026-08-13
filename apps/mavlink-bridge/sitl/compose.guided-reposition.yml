@@ -1,0 +1,35 @@
+services:
+  bridge:
+    environment:
+      MAVLINK_BRIDGE_ENABLE_GUIDED_REPOSITION: "1"
+      MAVLINK_BRIDGE_COMMAND_ENVIRONMENT: "sitl"
+  copter:
+    environment:
+      MISSION_FILE: /scenario/copter-motion.waypoints
+      CONTROLLER_HOST: guided-flight-setup
+      CONTROLLER_PORT: "14611"
+    volumes:
+      - ./copter-motion.waypoints:/scenario/copter-motion.waypoints:ro
+  plane:
+    environment:
+      CUSTOM_LOCATION: "-35.3660000,149.1615000,584,270"
+      MISSION_FILE: /scenario/plane-motion.waypoints
+      CONTROLLER_HOST: guided-flight-setup
+      CONTROLLER_PORT: "14612"
+    volumes:
+      - ./plane-motion.waypoints:/scenario/plane-motion.waypoints:ro
+  guided-flight-setup:
+    build: .
+    entrypoint: ["python3", "/scenario/guided_flight_setup.py"]
+    volumes:
+      - ./guided_flight_setup.py:/scenario/guided_flight_setup.py:ro
+    depends_on: [bridge, copter, plane]
+    stop_grace_period: 20s
+  guided-reposition-controller:
+    image: node:22-bookworm-slim
+    working_dir: /workspace
+    entrypoint: ["node", "apps/mavlink-bridge/sitl/guided_reposition_controller.js"]
+    volumes:
+      - ../../..:/workspace:ro
+    depends_on: [bridge, guided-flight-setup]
+    stop_grace_period: 20s

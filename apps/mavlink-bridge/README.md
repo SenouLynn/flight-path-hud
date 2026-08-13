@@ -207,7 +207,8 @@ per-run cap above.
 | `MAVLINK_BRIDGE_ENABLE_MISSION_UPLOAD` | `0` | `1` enables confirmed full mission replacement; keep disabled outside isolated validation |
 | `MAVLINK_BRIDGE_ENABLE_MODE_CHANGE` | `0` | `1` enables the disarmed-only Copter/Plane mode allowlist for isolated SITL validation |
 | `MAVLINK_BRIDGE_ENABLE_ARM_DISARM` | `0` | Requires `1` plus `MAVLINK_BRIDGE_COMMAND_ENVIRONMENT=sitl`; enables standard, never-forced arm/disarm validation |
-| `MAVLINK_BRIDGE_COMMAND_ENVIRONMENT` | *(unset)* | Must equal `sitl` for arm/disarm; no production value enables it |
+| `MAVLINK_BRIDGE_ENABLE_GUIDED_REPOSITION` | `0` | Requires `1` plus `MAVLINK_BRIDGE_COMMAND_ENVIRONMENT=sitl`; enables bounded Copter/Plane Guided reposition validation |
+| `MAVLINK_BRIDGE_COMMAND_ENVIRONMENT` | *(unset)* | Must equal `sitl` for arm/disarm and Guided reposition; no production value enables them |
 | `MAVLINK_BRIDGE_SAMPLE_PORT` | `14549` | Sample sender's single-instance lock |
 
 ## Envelope shape
@@ -262,9 +263,8 @@ node apps/mavlink-bridge/src/curateArmDisarmFixture.js \
   apps/mavlink-bridge/test-fixtures/mixed-sitl-arm-disarm-v2.jsonl
 ```
 
-Guided reposition currently exists as a transport-free portable policy, codec, and
-transaction state machine; it is not registered with the WebSocket or UDP bridge
-and has no runtime enablement variable. The boundary uses position-only
+Guided reposition is registered only behind both isolated-SITL runtime gates and
+has no browser control or production enablement. The boundary uses position-only
 `MAV_CMD_DO_REPOSITION` in `COMMAND_INT`
 with an explicit relative-to-home frame and no implicit mode transition. It requires
 an already-armed supported ArduPilot vehicle already in its vehicle-specific Guided
@@ -275,6 +275,13 @@ explicit horizontal and relative-altitude tolerances. Disarming or leaving the
 vehicle-specific Guided mode fails the transaction. Retries default to zero. Copter
 rejects Plane loiter controls; Plane requires an explicit positive loiter radius and
 direction plus an envelope ceiling for that radius.
+
+Run `pnpm sitl-test:guided-reposition` for separate airborne Copter and Plane
+acceptance flows. The disposable-SITL setup performs Copter Guided takeoff and
+Plane AUTO takeoff before returning Plane to Guided; the bridge then repositions
+one exact target at a time, verifies arrival and peer isolation, and the setup
+force-disarms both simulated vehicles during unconditional container cleanup.
+Remove the stopped stack with `pnpm sitl-test:guided-reposition:down`.
 
 Malformed datagrams are dropped and counted in `decodeErrorCount`.
 

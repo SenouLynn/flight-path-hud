@@ -25,6 +25,9 @@
 - Added its disabled isolated-SITL transaction state machine with exact-target ACK
   correlation, horizontal plus relative-altitude arrival observation, zero retries
   by default, state-escape failure, bounded timeouts, and passive lifecycle replay.
+- Registered Guided reposition behind dual isolated-SITL gates and added separate
+  Copter/Plane airborne acceptance flows. Real ArduPilot 4.6.2 SITL proved target
+  arrival, peer isolation, distinct Plane loiter semantics, and cleanup disarm.
 
 - Added the portable Stage 3 mission-replacement protocol and state-machine
   foundation, including exact-target correlation, bounded retries, final ACK,
