@@ -1,0 +1,75 @@
+{
+  "defaults": {
+    "target": { "sysId": 1, "compId": 1 },
+    "connectionState": "open",
+    "replayMode": false,
+    "nowMs": 2000,
+    "flightState": {
+      "armed": false,
+      "customMode": 0,
+      "vehicleType": 2,
+      "autopilotType": 3,
+      "observedAtMs": 1900
+    },
+    "actor": "operator",
+    "confirmedFor": "[1,1,\"operator\",10,2]",
+    "altitudeM": 10,
+    "altitudeToleranceM": 2,
+    "relativeAltitudeM": 0,
+    "modeStatus": null,
+    "armStatus": null,
+    "takeoffStatus": null,
+    "landStatus": null
+  },
+  "steps": [
+    {
+      "name": "confirmed exact target may enter Guided",
+      "overrides": {},
+      "expected": { "confirmed": true, "canEnterGuided": true }
+    },
+    {
+      "name": "observed Guided state permits arm",
+      "overrides": { "flightState": { "customMode": 4 } },
+      "expected": { "canEnterGuided": false, "canArm": true }
+    },
+    {
+      "name": "observed armed Guided state permits takeoff or land",
+      "overrides": { "flightState": { "customMode": 4, "armed": true }, "relativeAltitudeM": 10 },
+      "expected": { "canTakeoff": true, "canLand": true, "canDisarm": false }
+    },
+    {
+      "name": "verified touchdown permits final disarm",
+      "overrides": {
+        "flightState": { "customMode": 4, "armed": true },
+        "relativeAltitudeM": 0.5,
+        "landStatus": { "status": "complete", "touchdownAltitudeM": 0.75 }
+      },
+      "expected": { "landed": true, "canDisarm": true }
+    },
+    {
+      "name": "target change consumes prior confirmation",
+      "overrides": { "target": { "sysId": 2, "compId": 1 } },
+      "expected": { "confirmed": false, "canEnterGuided": false, "reason": "Confirm the exact target and isolated-SITL workflow" }
+    },
+    {
+      "name": "operator change consumes prior confirmation",
+      "overrides": { "actor": "other-operator" },
+      "expected": { "confirmed": false, "canEnterGuided": false, "reason": "Confirm the exact target and isolated-SITL workflow" }
+    },
+    {
+      "name": "pending lifecycle blocks every next action",
+      "overrides": { "modeStatus": { "status": "awaitingAck" } },
+      "expected": { "busy": true, "canEnterGuided": false, "reason": "A workflow command is pending" }
+    },
+    {
+      "name": "replay blocks every command",
+      "overrides": { "replayMode": true },
+      "expected": { "canEnterGuided": false, "reason": "Commands are disabled during replay" }
+    },
+    {
+      "name": "Guided state escape while armed fails closed",
+      "overrides": { "flightState": { "customMode": 0, "armed": true }, "takeoffStatus": { "status": "failed" } },
+      "expected": { "inGuided": false, "canArm": false, "canTakeoff": false, "canLand": false, "canDisarm": false }
+    }
+  ]
+}

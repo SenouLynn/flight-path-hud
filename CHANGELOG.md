@@ -5,7 +5,8 @@
 - Added language-neutral mode/arm lifecycle traces for ACK, observation,
   timeout, stale-route, and passive-replay behavior.
 - Moved Guided workflow eligibility from React into a pure, tested `gcs-core`
-  resolver without changing the bridge's isolated-SITL authority gates.
+  resolver with a portable ordered trace and exact-target confirmation binding,
+  without changing the bridge's isolated-SITL authority gates.
 
 - Added an isolated-SITL ArduCopter operator workflow for verified GUIDED entry,
   standard arm/disarm, altitude-observed Guided takeoff, and the existing bounded

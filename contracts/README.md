@@ -90,14 +90,10 @@ Expand by operational risk rather than mechanically translating every test:
 The reusable eligibility policy for Guided entry, arming, takeoff, landing, and
 final disarm now lives in the pure `gcs-core` workflow resolver. React retains
 only form state, confirmation consumption, and command dispatch. The resolver
-has known-answer tests for valid progress, replay/staleness, supported identity,
-pending commands, input bounds, touchdown verification, and final disarm
-eligibility.
-
-Before a second implementation consumes the full sequence, add a
-language-neutral ordered trace covering explicit target binding, operator
-confirmation consumption, command failures/timeouts, state escape, and replay.
-Do not encode React button state itself as the portable contract.
+consumes a language-neutral ordered trace covering valid progress, exact-target
+and operator confirmation binding, replay/staleness, supported identity, pending
+or failed commands, input bounds, state escape, touchdown verification, and
+final disarm eligibility. React button state is not part of the contract.
 
 Rendering, socket/process lifecycle, filesystem behavior, and framework wiring
 remain implementation-specific unless a pure domain seam is extracted.

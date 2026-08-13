@@ -18,11 +18,10 @@ export function GuidedWorkflowPanel({ vehicle, flightState, connectionState, rep
   const [actor, setActor] = useState(''), [altitude, setAltitude] = useState('10')
   const [tolerance, setTolerance] = useState('2'), [confirmedFor, setConfirmedFor] = useState<string | null>(null)
   const target = vehicle ? `${vehicle.sysId}:${vehicle.compId}` : '—'
-  const confirmationKey = `${target}|${actor.trim()}|${altitude}|${tolerance}`
-  const confirmed = confirmedFor === confirmationKey
   const altitudeM = Number(altitude), toleranceM = Number(tolerance)
-  const workflow = resolveGuidedWorkflow({ connectionState, replayMode, nowMs: Date.now(), flightState,
-    actor, confirmed, altitudeM, altitudeToleranceM: toleranceM,
+  const workflow = resolveGuidedWorkflow({ target: vehicle ? { sysId: vehicle.sysId, compId: vehicle.compId } : null,
+    connectionState, replayMode, nowMs: Date.now(), flightState,
+    actor, confirmedFor, altitudeM, altitudeToleranceM: toleranceM,
     relativeAltitudeM: vehicle?.altRelM ?? null, modeStatus, armStatus, takeoffStatus, landStatus })
   const consume = (sent: boolean) => { if (sent) setConfirmedFor(null) }
   const statuses = [modeStatus, armStatus, takeoffStatus, landStatus].filter((value) => value !== null)
@@ -33,7 +32,7 @@ export function GuidedWorkflowPanel({ vehicle, flightState, connectionState, rep
     <label className="control"><span>Operator identity</span><input value={actor} onChange={e => setActor(e.target.value)} autoComplete="off" /></label>
     <label className="control"><span>Takeoff altitude (m, 2–120)</span><input value={altitude} onChange={e => setAltitude(e.target.value)} inputMode="decimal" /></label>
     <label className="control"><span>Altitude tolerance (m, 0.5–10)</span><input value={tolerance} onChange={e => setTolerance(e.target.value)} inputMode="decimal" /></label>
-    <label className="guided-confirm"><input type="checkbox" checked={confirmed} onChange={e => setConfirmedFor(e.target.checked ? confirmationKey : null)} />
+    <label className="guided-confirm"><input type="checkbox" checked={workflow.confirmed} onChange={e => setConfirmedFor(e.target.checked ? workflow.confirmationKey : null)} />
       <span>I confirm exact target {target}, isolated SITL, and no propulsion hardware.</span></label>
     <div className="guided-workflow-actions">
       <button className="segment" disabled={!workflow.canEnterGuided} onClick={() => consume(onSetGuided(actor))}>1 · Enter GUIDED</button>

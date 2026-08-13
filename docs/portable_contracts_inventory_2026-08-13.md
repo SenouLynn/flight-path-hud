@@ -27,8 +27,11 @@ The next risk-ordered slice adds strict mode-change and arm/disarm lifecycle
 schemas, exact `COMMAND_LONG` payload vectors, and shared ordered traces for ACK,
 post-condition observation, timeout, stale-route, and passive-replay behavior.
 The standard arm/disarm vector fixes parameter 2 at zero, preserving the
-project's prohibition on forced arming. Guided workflow eligibility is now a
-pure `gcs-core` resolver rather than React-local policy.
+project’s prohibition on forced arming. Guided workflow eligibility is now a
+pure `gcs-core` resolver rather than React-local policy. Its ordered portable
+trace binds confirmation to the exact target, operator, and takeoff bounds and
+covers normal progression, pending commands, replay, state escape, touchdown,
+and final disarm eligibility.
 
 The strict producer schema and tolerant consumer are separate contracts. Trying
 to make one schema express both would either bless bridge output containing

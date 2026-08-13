@@ -137,5 +137,5 @@ export {
 } from './guidedReposition'
 
 export { encodeSetGuidedRequest, encodeSetArmedRequest, encodeGuidedTakeoffRequest,
-  encodeGuidedLandRequest, resolveGuidedWorkflow } from './guidedWorkflow'
+  encodeGuidedLandRequest, guidedWorkflowConfirmationKey, resolveGuidedWorkflow } from './guidedWorkflow'
 export type { GuidedWorkflowState, GuidedWorkflowStateInput } from './guidedWorkflow'

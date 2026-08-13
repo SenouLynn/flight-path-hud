@@ -30,6 +30,7 @@ export const encodeGuidedLandRequest = (request: RequestBase): string => JSON.st
 type LifecycleStatus = { status: string } | null
 
 export interface GuidedWorkflowStateInput {
+  target: { sysId: number; compId: number } | null
   connectionState: 'idle' | 'connecting' | 'open' | 'closed' | 'error'
   replayMode: boolean | null
   nowMs: number
@@ -41,7 +42,7 @@ export interface GuidedWorkflowStateInput {
     observedAtMs: number
   } | null
   actor: string
-  confirmed: boolean
+  confirmedFor: string | null
   altitudeM: number
   altitudeToleranceM: number
   relativeAltitudeM: number | null
@@ -52,6 +53,8 @@ export interface GuidedWorkflowStateInput {
 }
 
 export interface GuidedWorkflowState {
+  confirmationKey: string | null
+  confirmed: boolean
   reason: string | null
   busy: boolean
   fresh: boolean
@@ -66,9 +69,25 @@ export interface GuidedWorkflowState {
 
 const pending = (value: LifecycleStatus) => value?.status === 'awaitingAck' || value?.status === 'awaitingObservation'
 
+/** Stable, collision-safe binding for the exact target, operator, and takeoff bounds being confirmed. */
+export function guidedWorkflowConfirmationKey(input: {
+  target: { sysId: number; compId: number } | null
+  actor: string
+  altitudeM: number
+  altitudeToleranceM: number
+}): string | null {
+  if (input.target === null || !validTarget(input.target.sysId) || !validTarget(input.target.compId)
+    || !input.actor.trim() || !Number.isFinite(input.altitudeM)
+    || !Number.isFinite(input.altitudeToleranceM)) return null
+  return JSON.stringify([input.target.sysId, input.target.compId, input.actor.trim(),
+    input.altitudeM, input.altitudeToleranceM])
+}
+
 /** Pure operator-workflow policy. Transport, React state, and command emission stay outside this seam. */
 export function resolveGuidedWorkflow(input: GuidedWorkflowStateInput): GuidedWorkflowState {
   const state = input.flightState
+  const confirmationKey = guidedWorkflowConfirmationKey(input)
+  const confirmed = confirmationKey !== null && input.confirmedFor === confirmationKey
   const fresh = state !== null && Number.isFinite(input.nowMs)
     && input.nowMs - state.observedAtMs <= GUIDED_STATE_FRESH_MS
   const guidedMode = state === null ? null : guidedModeFor(state.vehicleType)
@@ -90,12 +109,12 @@ export function resolveGuidedWorkflow(input: GuidedWorkflowStateInput): GuidedWo
   else if (!fresh) reason = 'Fresh HEARTBEAT state required'
   else if (state?.autopilotType !== 3 || state.vehicleType !== 2) reason = 'This workflow currently supports ArduCopter only'
   else if (!input.actor.trim()) reason = 'Operator identity required'
-  else if (!input.confirmed) reason = 'Confirm the exact target and isolated-SITL workflow'
+  else if (!confirmed) reason = 'Confirm the exact target and isolated-SITL workflow'
   else if (busy) reason = 'A workflow command is pending'
 
   const common = reason === null
   return {
-    reason, busy, fresh, inGuided, landed,
+    confirmationKey, confirmed, reason, busy, fresh, inGuided, landed,
     canEnterGuided: common && state?.armed === false && !inGuided,
     canArm: common && state?.armed === false && inGuided,
     canTakeoff: common && state?.armed === true && inGuided && validTakeoff,
