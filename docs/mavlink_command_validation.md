@@ -142,9 +142,18 @@ fresh and disarmed preconditions, exact-target ACK correlation, and HEARTBEAT
 post-condition verification. The initial allowlists contain only Copter
 `STABILIZE`/`LOITER` and Plane `MANUAL`/`LOITER`. Mixed-SITL acceptance passed
 with both vehicles disarmed, target-isolation checks, and restoration to each
-vehicle's original custom mode. Arm/disarm and Guided operations remain unimplemented.
+vehicle's original custom mode. Arm/disarm live validation and Guided operations remain.
 A sanitized 12-event lifecycle fixture deterministically replays all four accepted
 mode transitions without outbound traffic.
+
+Arm/disarm is validated in isolated mixed Copter/Plane SITL. It has
+dual feature/environment gates, requires an exact `sitl-no-propulsion` safety case,
+fresh supported ArduPilot state, explicit operator metadata and confirmation, and
+correlates both ACK and the HEARTBEAT armed bit. Forced arm/disarm is impossible in
+the codec and arming has no retry by default. The acceptance controller proved
+standard arming, exact-target peer isolation, immediate verified disarm, and final
+disarmed cleanup for both vehicles. It remains dual-gated with no browser or
+non-SITL enablement. Guided operations remain unimplemented.
 
 These are state-changing and potentially safety-critical. Add only after a command policy,
 operator confirmation UX, target identity display, current-mode/armed-state verification,

@@ -140,6 +140,17 @@ events from the four accepted transitions. Regression tests reconstruct the
 vehicle-specific `LOITER` and restored mode outcomes, require successful ACK and
 HEARTBEAT observation in every terminal frame, and prove replay emits no MAVLink.
 
+`pnpm sitl-test:arm-disarm` validates standard, never-forced arming behind both
+the feature and isolated-SITL environment gates. The controller waits for stable
+disarmed HEARTBEAT and position readiness, arms one exact target with zero command
+retries, verifies the peer remains disarmed, immediately disarms and verifies the
+target, then verifies both vehicles disarmed again in unconditional cleanup.
+
+Acceptance passed on 2026-08-13 against ArduPilot 4.6.2. Copter and Plane each
+accepted standard `MAV_CMD_COMPONENT_ARM_DISARM`, reported the armed HEARTBEAT bit,
+preserved peer isolation, and immediately accepted and reported disarm. No force
+magic was transmitted, and final cleanup verified both vehicles disarmed.
+
 ## Acceptance checklist
 
 1. The GCS fleet roster lists `1:1` and `2:1`, with no bridge decode errors for

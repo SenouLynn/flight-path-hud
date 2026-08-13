@@ -10,6 +10,12 @@
   `LOITER` transitions, peer isolation, and restoration to `STABILIZE`/`MANUAL`.
 - Added a sanitized deterministic fixture for all four accepted mode-change
   lifecycles, including ACK and HEARTBEAT post-condition evidence.
+- Added the isolated-SITL-only arm/disarm safety boundary with dual runtime gates,
+  explicit no-propulsion attestation, fresh-state checks, zero-retry arming,
+  forced-command prohibition, ACK/state verification, and passive replay.
+- Added mixed Copter/Plane arm-disarm SITL acceptance with stable readiness,
+  zero-retry standard arming, peer isolation, immediate verified disarm, and
+  unconditional final disarmed-state verification.
 
 - Added the portable Stage 3 mission-replacement protocol and state-machine
   foundation, including exact-target correlation, bounded retries, final ACK,

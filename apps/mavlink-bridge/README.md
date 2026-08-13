@@ -206,6 +206,8 @@ per-run cap above.
 | `MAVLINK_BRIDGE_ENABLE_PARAMETER_WRITE` | `0` | `1` enables narrowly allowlisted parameter writes |
 | `MAVLINK_BRIDGE_ENABLE_MISSION_UPLOAD` | `0` | `1` enables confirmed full mission replacement; keep disabled outside isolated validation |
 | `MAVLINK_BRIDGE_ENABLE_MODE_CHANGE` | `0` | `1` enables the disarmed-only Copter/Plane mode allowlist for isolated SITL validation |
+| `MAVLINK_BRIDGE_ENABLE_ARM_DISARM` | `0` | Requires `1` plus `MAVLINK_BRIDGE_COMMAND_ENVIRONMENT=sitl`; enables standard, never-forced arm/disarm validation |
+| `MAVLINK_BRIDGE_COMMAND_ENVIRONMENT` | *(unset)* | Must equal `sitl` for arm/disarm; no production value enables it |
 | `MAVLINK_BRIDGE_SAMPLE_PORT` | `14549` | Sample sender's single-instance lock |
 
 ## Envelope shape
@@ -240,6 +242,17 @@ node apps/mavlink-bridge/src/curateModeChangeFixture.js \
   apps/mavlink-bridge/recordings/<successful-session>.jsonl \
   apps/mavlink-bridge/test-fixtures/mixed-sitl-mode-change-v2.jsonl
 ```
+
+Arm/disarm is a separate higher-consequence family and remains disabled. Even in
+isolated SITL it requires both runtime gates, a fresh supported ArduPilot vehicle
+state, exact target, actor, timestamp, explicit confirmation, and the exact
+`sitl-no-propulsion` safety case. The codec never emits the MAVLink force magic;
+completion requires both ACK and the requested HEARTBEAT armed bit. Arming has
+zero retries by default. There is no browser control or non-SITL enablement.
+Run the isolated reversible acceptance with `pnpm sitl-test:arm-disarm`. It waits
+for stable disarmed position/state readiness, arms only one target, verifies the
+peer stays disarmed, immediately disarms, and verifies both targets disarmed in
+unconditional cleanup. Remove the stack with `pnpm sitl-test:arm-disarm:down`.
 
 Malformed datagrams are dropped and counted in `decodeErrorCount`.
 
