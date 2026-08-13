@@ -164,6 +164,12 @@ bridge then sends a bounded position-only `MAV_CMD_DO_REPOSITION` to one target 
 a time and requires successful ACK plus `GLOBAL_POSITION_INT` arrival while the
 peer remains armed in its own Guided mode.
 
+Use `pnpm sitl-test:guided-reposition:ui` for operator-facing validation of the
+same scenario. This keeps the airborne setup and dual bridge gates but disables
+the automated reposition controller, then starts the browser GCS on port 5174.
+Wait for the setup-ready log before sending and tear it down afterward with
+`pnpm sitl-test:guided-reposition:down`.
+
 Acceptance passed on 2026-08-13 against ArduPilot 4.6.2. Copter moved 22.9 m into
 an 8 m horizontal arrival volume; Plane moved 194.3 m into its 100 m loiter arrival
 volume with an explicit 75 m clockwise loiter radius. Both commands were accepted,

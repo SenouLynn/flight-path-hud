@@ -180,6 +180,16 @@ their distinct Copter/Plane policy fields, successful ACKs, and horizontal plus
 relative-altitude arrival measurements. Regression tests replay it deterministically
 without emitting MAVLink.
 
+The GCS now exposes the first operator-facing boundary for this operation. Its
+single-node panel displays the exact `sysId:compId`, observed vehicle type,
+armed state, and raw current/required Guided modes. Sending is possible only on
+an open non-replay link with a fresh allowlisted ArduPilot HEARTBEAT, valid
+vehicle-specific bounded inputs, operator identity, and a confirmation that is
+cleared whenever the target or movement changes. Lifecycle results remain
+correlated to that exact target and are displayed through arrival or failure.
+The bridge's isolated-SITL feature and environment gates remain authoritative;
+this browser surface does not enable either gate or introduce a non-SITL path.
+
 These are state-changing and potentially safety-critical. Add only after a command policy,
 operator confirmation UX, target identity display, current-mode/armed-state verification,
 and negative tests are in place. Guided-mode actions require distinct Copter and Plane SITL

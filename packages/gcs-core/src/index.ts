@@ -23,6 +23,9 @@ export {
   parseWireMessage,
   systemKey,
   type HomeWireFrame,
+  type FlightStateWireFrame,
+  type GuidedRepositionStatus,
+  type GuidedRepositionWireFrame,
   type LinkModeWireFrame,
   type MissionItemWire,
   type MissionWireFrame,
@@ -117,3 +120,13 @@ export {
   type NodeKind,
   type NodeSummary,
 } from './nodes'
+
+export {
+  GUIDED_STATE_FRESH_MS,
+  EMPTY_GUIDED_REPOSITION,
+  encodeGuidedRepositionRequest,
+  guidedModeFor,
+  guidedRepositionGate,
+  type GuidedRepositionDraft,
+  type GuidedRepositionGateInput,
+} from './guidedReposition'

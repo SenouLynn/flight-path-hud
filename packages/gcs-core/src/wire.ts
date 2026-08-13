@@ -62,11 +62,43 @@ export interface LinkModeWireFrame {
   replayMode: boolean
 }
 
+export interface FlightStateWireFrame {
+  type: 'flightState'
+  sysId: number
+  compId: number
+  armed: boolean
+  baseMode: number
+  customMode: number
+  systemStatus: number
+  vehicleType: number
+  autopilotType: number
+  observedAtMs: number
+}
+
+export type GuidedRepositionStatus = 'awaitingAck' | 'awaitingObservation' | 'complete' | 'failed'
+
+export interface GuidedRepositionWireFrame {
+  type: 'guidedReposition'
+  requestId: string | null
+  sysId: number | null
+  compId: number | null
+  status: GuidedRepositionStatus
+  ackResult: number | null
+  observed: boolean
+  attempts: number
+  horizontalDistanceM: number | null
+  altitudeErrorM: number | null
+  reason: string | null
+  updatedAtMs: number
+}
+
 export type WireEvent =
   | { kind: 'telemetry'; frame: WireFrame }
   | { kind: 'mission'; frame: MissionWireFrame }
   | { kind: 'home'; frame: HomeWireFrame }
   | { kind: 'linkMode'; frame: LinkModeWireFrame }
+  | { kind: 'flightState'; frame: FlightStateWireFrame }
+  | { kind: 'guidedReposition'; frame: GuidedRepositionWireFrame }
   | { kind: 'unrecognized' }
 
 function isObject(value: unknown): value is Record<string, unknown> {
@@ -83,6 +115,10 @@ function isNonNegativeInteger(value: unknown): value is number {
 
 function isUint8(value: unknown): value is number {
   return isNonNegativeInteger(value) && value <= 255
+}
+
+function isUint32(value: unknown): value is number {
+  return isNonNegativeInteger(value) && value <= 0xffffffff
 }
 
 function isNonEmptyString(value: unknown): value is string {
@@ -187,6 +223,8 @@ export function parseWireEvent(data: unknown): WireEvent {
   if (parsed.type === 'linkMode') {
     return parseLinkModeWireFrame(parsed)
   }
+  if (parsed.type === 'flightState') return parseFlightStateWireFrame(parsed)
+  if (parsed.type === 'guidedReposition') return parseGuidedRepositionWireFrame(parsed)
 
   // Fall through to existing telemetry parse for frames without type tag
   const frame = parseWireFrame(parsed)
@@ -195,6 +233,41 @@ export function parseWireEvent(data: unknown): WireEvent {
   }
 
   return { kind: 'unrecognized' }
+}
+
+function parseFlightStateWireFrame(value: Record<string, unknown>): WireEvent {
+  if (!isUint8(value.sysId) || value.sysId === 0 || !isUint8(value.compId) || value.compId === 0
+    || typeof value.armed !== 'boolean'
+    || !isUint8(value.baseMode) || !isUint32(value.customMode) || !isUint8(value.systemStatus)
+    || !isUint8(value.vehicleType) || !isUint8(value.autopilotType)
+    || !isFiniteNumber(value.observedAtMs)) return { kind: 'unrecognized' }
+  return { kind: 'flightState', frame: { type: 'flightState', sysId: value.sysId,
+    compId: value.compId, armed: value.armed, baseMode: value.baseMode as number,
+    customMode: value.customMode as number, systemStatus: value.systemStatus as number,
+    vehicleType: value.vehicleType as number, autopilotType: value.autopilotType as number,
+    observedAtMs: value.observedAtMs as number } }
+}
+
+function nullableFinite(value: unknown): value is number | null {
+  return value === null || isFiniteNumber(value)
+}
+
+function parseGuidedRepositionWireFrame(value: Record<string, unknown>): WireEvent {
+  const statuses: GuidedRepositionStatus[] = ['awaitingAck', 'awaitingObservation', 'complete', 'failed']
+  if ((value.requestId !== null && !isNonEmptyString(value.requestId))
+    || (value.sysId !== null && (!isUint8(value.sysId) || value.sysId === 0))
+    || (value.compId !== null && (!isUint8(value.compId) || value.compId === 0))
+    || !statuses.includes(value.status as GuidedRepositionStatus)
+    || !nullableFinite(value.ackResult) || typeof value.observed !== 'boolean'
+    || !isNonNegativeInteger(value.attempts) || !nullableFinite(value.horizontalDistanceM)
+    || !nullableFinite(value.altitudeErrorM) || (value.reason !== null && typeof value.reason !== 'string')
+    || !isFiniteNumber(value.updatedAtMs)) return { kind: 'unrecognized' }
+  return { kind: 'guidedReposition', frame: { type: 'guidedReposition',
+    requestId: value.requestId as string | null, sysId: value.sysId as number | null,
+    compId: value.compId as number | null, status: value.status as GuidedRepositionStatus,
+    ackResult: value.ackResult, observed: value.observed, attempts: value.attempts,
+    horizontalDistanceM: value.horizontalDistanceM, altitudeErrorM: value.altitudeErrorM,
+    reason: value.reason as string | null, updatedAtMs: value.updatedAtMs } }
 }
 
 function parseMissionWireFrame(value: Record<string, unknown>): WireEvent {

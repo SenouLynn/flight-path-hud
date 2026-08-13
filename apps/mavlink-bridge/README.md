@@ -283,6 +283,14 @@ one exact target at a time, verifies arrival and peer isolation, and the setup
 force-disarms both simulated vehicles during unconditional container cleanup.
 Remove the stopped stack with `pnpm sitl-test:guided-reposition:down`.
 
+For manual browser validation, run `pnpm sitl-test:guided-reposition:ui`. It
+starts the same gated airborne setup in the background, scales the automated
+controller to zero so it cannot compete with the operator, and serves the GCS at
+`http://localhost:5174`. Wait for `guided flight setup ready for both explicit
+targets` in `guided-flight-setup` logs before sending. Stop the foreground GCS
+with Ctrl-C, then use `pnpm sitl-test:guided-reposition:down` to trigger disposable
+SITL cleanup and remove the stack.
+
 Regenerate the successful lifecycle fixture only from a reviewed passing run:
 
 ```bash

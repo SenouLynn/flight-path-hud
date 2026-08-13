@@ -20,6 +20,7 @@ import { BASEMAPS, type TileSource } from './map/tileSource'
 import { formatCoord, formatNumber } from './format'
 import { LinkPanel } from './LinkPanel'
 import { MissionPanel } from './MissionPanel'
+import { GuidedRepositionPanel } from './GuidedRepositionPanel'
 import type { VehicleFeedState } from './useVehicleFeed'
 import { VIEW_OPTIONS, ViewsMenu, type ViewId } from './ViewsMenu'
 
@@ -162,6 +163,12 @@ export function NodeView({
             mapHandleRef.current?.panTo(latDeg, lonDeg)
           }}
         />
+
+        <GuidedRepositionPanel vehicle={vehicle} flightState={feed.flightState}
+          status={feed.guidedReposition} connectionState={feed.connectionState}
+          replayMode={feed.replayMode}
+          onSend={(actor, draft) => vehicle !== null
+            && feed.sendGuidedReposition(vehicle.sysId, vehicle.compId, actor, draft)} />
 
         {visibleViews.video ? (
           <section className="panel">

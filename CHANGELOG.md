@@ -1,5 +1,11 @@
 # Changelog
 
+- Added a target-pinned Guided reposition confirmation panel for isolated SITL,
+  with live armed/Guided-state gating, explicit operator identity and confirmation,
+  bounded Copter/Plane inputs, and correlated lifecycle results.
+- Added a one-command manual Guided reposition UI harness and portable tests for
+  vehicle-specific defaults, confirmation invalidation, and lifecycle feedback.
+
 - Added read-only per-target flight-state observation for the Stage 4 safety
   foundation, retaining raw HEARTBEAT mode/system fields and rejecting stale
   state for future command pre/post-condition checks.

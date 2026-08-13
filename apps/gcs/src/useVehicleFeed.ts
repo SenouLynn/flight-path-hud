@@ -23,6 +23,10 @@ import {
   toDecodeErrorEntry,
   toLogEntry,
   type ConnectionState,
+  encodeGuidedRepositionRequest,
+  type FlightStateWireFrame,
+  type GuidedRepositionDraft,
+  type GuidedRepositionWireFrame,
   type HomePosition,
   type LogEntry,
   type MissionPlan,
@@ -103,6 +107,9 @@ export interface VehicleFeedState {
   nodes: NodeSummary[]
   /** Ask the bridge for the active system's current mission plan. */
   requestMission: (sysId: number, compId: number) => void
+  flightState: FlightStateWireFrame | null
+  guidedReposition: GuidedRepositionWireFrame | null
+  sendGuidedReposition: (sysId: number, compId: number, actor: string, draft: GuidedRepositionDraft) => boolean
 }
 
 /**
@@ -110,7 +117,7 @@ export interface VehicleFeedState {
  * per-system mission map on mission arrival, so all three are held as separate
  * state. `requestMission` is a stable callback, not fold-derived state.
  */
-type FeedSnapshot = Omit<VehicleFeedState, 'log' | 'nodes' | 'missions' | 'requestMission'>
+type FeedSnapshot = Omit<VehicleFeedState, 'log' | 'nodes' | 'missions' | 'requestMission' | 'sendGuidedReposition'>
 
 const INITIAL: FeedSnapshot = {
   vehicle: null,
@@ -124,6 +131,8 @@ const INITIAL: FeedSnapshot = {
   mission: EMPTY_MISSION,
   home: null,
   replayMode: null,
+  flightState: null,
+  guidedReposition: null,
 }
 
 /** Matches the hud harness's live-source window. */
@@ -194,6 +203,11 @@ export function useVehicleFeed({
       streamRef.current?.send(message)
     }
   }, [])
+  const sendGuidedReposition = useCallback((sysId: number, compId: number, actor: string, draft: GuidedRepositionDraft) => {
+    const requestId = globalThis.crypto?.randomUUID?.() ?? `guided-${Date.now()}-${Math.random().toString(16).slice(2)}`
+    return streamRef.current?.send(encodeGuidedRepositionRequest({ requestId, sysId, compId,
+      actor, timestampMs: Date.now(), draft })) ?? false
+  }, [])
 
   useEffect(() => {
     // Per-system folds: two vehicles must never merge into one aircraft.
@@ -205,6 +219,8 @@ export function useVehicleFeed({
     const enuTracks = new Map<string, EnuTrackPoint[]>()
     const missions = new Map<string, MissionPlan>()
     const homes = new Map<string, HomePosition>()
+    const flightStates = new Map<string, FlightStateWireFrame>()
+    const guidedStatuses = new Map<string, GuidedRepositionWireFrame>()
     let frameCount = 0
     let decodeErrorCount = 0
     let connectionState: ConnectionState = 'connecting'
@@ -229,6 +245,8 @@ export function useVehicleFeed({
         mission: missions.get(activeKey) ?? EMPTY_MISSION,
         home: homes.get(activeKey) ?? null,
         replayMode,
+        flightState: flightStates.get(activeKey) ?? null,
+        guidedReposition: guidedStatuses.get(activeKey) ?? null,
       })
     }
 
@@ -313,6 +331,19 @@ export function useVehicleFeed({
           replayMode = frame.replayMode
           setSnapshot((previous) => ({ ...previous, replayMode }))
         },
+        onFlightState: (frame) => {
+          const key = systemKey(frame.sysId, frame.compId)
+          flightStates.set(key, frame)
+          const selected = selectedRef.current
+          if (selected === null || selected === key) publish(selected ?? key)
+        },
+        onGuidedReposition: (frame) => {
+          if (frame.sysId === null || frame.compId === null) return
+          const key = systemKey(frame.sysId, frame.compId)
+          guidedStatuses.set(key, frame)
+          const selected = selectedRef.current
+          if (selected === null || selected === key) publish(selected ?? key)
+        },
         onConnectionState: (state) => {
           connectionState = state
           // The bridge resends linkMode fresh on every new connection ('connecting'
@@ -367,6 +398,8 @@ export function useVehicleFeed({
         enuTracks.delete(key)
         droppedMission = missions.delete(key) || droppedMission
         homes.delete(key)
+        flightStates.delete(key)
+        guidedStatuses.delete(key)
       })
 
       // The roster recomputes from `vehicles` on its own timer, but the published
@@ -390,5 +423,5 @@ export function useVehicleFeed({
     }
   }, [url, trackConfig])
 
-  return { ...snapshot, log, nodes, missions: missionsByKey, requestMission }
+  return { ...snapshot, log, nodes, missions: missionsByKey, requestMission, sendGuidedReposition }
 }

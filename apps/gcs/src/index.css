@@ -232,6 +232,14 @@ body {
   line-height: 1.5;
 }
 
+.guided-panel .segment { margin-bottom: 6px; }
+.guided-confirm { display: flex; gap: 6px; margin: 8px 0; color: var(--text); font-size: 10px; line-height: 1.4; }
+.guided-confirm input { flex: 0 0 auto; margin: 1px 0 0; }
+.guided-send { width: 100%; border-color: var(--warn); color: var(--warn); }
+.guided-result { margin-top: 5px; padding-top: 5px; border-top: 1px solid var(--border); }
+.guided-result.complete strong { color: #6ee7a8; }
+.guided-result.failed strong { color: var(--error); }
+
 
 .connection-state.open { color: #6ee7a8; }
 .connection-state.connecting { color: var(--warn); }

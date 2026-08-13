@@ -9,7 +9,7 @@
  * connection state, and the caller folds.
  */
 
-import { parseWireEvent, type HomeWireFrame, type LinkModeWireFrame, type MissionWireFrame, type WireFrame } from './wire'
+import { parseWireEvent, type FlightStateWireFrame, type GuidedRepositionWireFrame, type HomeWireFrame, type LinkModeWireFrame, type MissionWireFrame, type WireFrame } from './wire'
 
 export type ConnectionState = 'connecting' | 'open' | 'closed' | 'error'
 
@@ -25,6 +25,8 @@ export interface StreamHandlers {
   onMission?: (frame: MissionWireFrame) => void
   onHome?: (frame: HomeWireFrame) => void
   onLinkMode?: (frame: LinkModeWireFrame) => void
+  onFlightState?: (frame: FlightStateWireFrame) => void
+  onGuidedReposition?: (frame: GuidedRepositionWireFrame) => void
   onConnectionState?: (state: ConnectionState) => void
   /** Frames that failed to parse — surfaced so a UI can show a decode-error count. */
   onDecodeError?: () => void
@@ -114,6 +116,12 @@ export function startTelemetryStream(options: StreamOptions, handlers: StreamHan
         return
       case 'linkMode':
         handlers.onLinkMode?.(wireEvent.frame)
+        return
+      case 'flightState':
+        handlers.onFlightState?.(wireEvent.frame)
+        return
+      case 'guidedReposition':
+        handlers.onGuidedReposition?.(wireEvent.frame)
         return
       case 'unrecognized':
         handlers.onDecodeError?.()

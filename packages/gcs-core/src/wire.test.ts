@@ -179,6 +179,26 @@ describe('parseWireEvent', () => {
     expect(event.frame.replayMode).toBe(true)
   })
 
+  it('parses flight state and Guided reposition lifecycle frames', () => {
+    const flight = parseWireEvent(JSON.stringify({ type: 'flightState', sysId: 2, compId: 1,
+      armed: true, baseMode: 129, customMode: 15, systemStatus: 4, vehicleType: 1,
+      autopilotType: 3, observedAtMs: 1000 }))
+    expect(flight.kind).toBe('flightState')
+
+    const guided = parseWireEvent(JSON.stringify({ type: 'guidedReposition', requestId: 'r1',
+      sysId: 2, compId: 1, status: 'awaitingObservation', ackResult: 0, observed: false,
+      attempts: 1, horizontalDistanceM: null, altitudeErrorM: null, reason: null,
+      updatedAtMs: 1100 }))
+    expect(guided.kind).toBe('guidedReposition')
+  })
+
+  it('rejects partial safety-state and Guided lifecycle frames', () => {
+    expect(parseWireEvent(JSON.stringify({ type: 'flightState', sysId: 1, compId: 1,
+      armed: true }))).toEqual({ kind: 'unrecognized' })
+    expect(parseWireEvent(JSON.stringify({ type: 'guidedReposition', requestId: 'r1',
+      sysId: 1, compId: 1, status: 'complete' }))).toEqual({ kind: 'unrecognized' })
+  })
+
   it('returns unrecognized for mission frame with bad status', () => {
     const missionFrame = {
       type: 'mission',
