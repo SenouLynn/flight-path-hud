@@ -1,0 +1,40 @@
+[
+  {
+    "name": "copter-standard-arm",
+    "input": {
+      "sysId": 255,
+      "compId": 190,
+      "targetSystemId": 1,
+      "targetComponentId": 1,
+      "arm": true
+    },
+    "expectedPayloadHex": "0000803f0000000000000000000000000000000000000000000000009001010100",
+    "expected": {
+      "messageId": 76,
+      "armParameter": 1,
+      "forceParameter": 0,
+      "commandId": 400,
+      "targetSystemId": 1,
+      "targetComponentId": 1
+    }
+  },
+  {
+    "name": "plane-standard-disarm",
+    "input": {
+      "sysId": 255,
+      "compId": 190,
+      "targetSystemId": 2,
+      "targetComponentId": 1,
+      "arm": false
+    },
+    "expectedPayloadHex": "000000000000000000000000000000000000000000000000000000009001020100",
+    "expected": {
+      "messageId": 76,
+      "armParameter": 0,
+      "forceParameter": 0,
+      "commandId": 400,
+      "targetSystemId": 2,
+      "targetComponentId": 1
+    }
+  }
+]

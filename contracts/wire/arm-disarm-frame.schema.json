@@ -1,0 +1,25 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://flight-path-hud.local/contracts/wire/arm-disarm-frame.schema.json",
+  "title": "Arm/disarm lifecycle frame (protocol v0 producer contract)",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["type", "requestId", "sysId", "compId", "arm", "actor", "requestedAtMs", "confirmation", "safetyCase", "status", "ackResult", "observed", "attempts", "reason", "updatedAtMs"],
+  "properties": {
+    "type": { "const": "armDisarm" },
+    "requestId": { "type": ["string", "null"], "minLength": 1 },
+    "sysId": { "type": ["integer", "null"], "minimum": 1, "maximum": 255, "x-wire-type": "uint8" },
+    "compId": { "type": ["integer", "null"], "minimum": 1, "maximum": 255, "x-wire-type": "uint8" },
+    "arm": { "type": ["boolean", "null"] },
+    "actor": { "type": ["string", "null"] },
+    "requestedAtMs": { "type": ["number", "null"], "x-wire-type": "float64-ms" },
+    "confirmation": { "type": "boolean" },
+    "safetyCase": { "enum": ["sitl-no-propulsion", null] },
+    "status": { "enum": ["awaitingAck", "awaitingObservation", "complete", "failed"] },
+    "ackResult": { "type": ["integer", "null"], "minimum": 0, "maximum": 255, "x-wire-type": "uint8" },
+    "observed": { "type": "boolean" },
+    "attempts": { "type": "integer", "minimum": 0 },
+    "reason": { "type": ["string", "null"] },
+    "updatedAtMs": { "type": "number", "x-wire-type": "float64-ms" }
+  }
+}

@@ -1,0 +1,40 @@
+[
+  {
+    "name": "copter-guided",
+    "input": {
+      "sysId": 255,
+      "compId": 190,
+      "targetSystemId": 1,
+      "targetComponentId": 1,
+      "customMode": 4
+    },
+    "expectedPayloadHex": "0000803f000080400000000000000000000000000000000000000000b000010100",
+    "expected": {
+      "messageId": 76,
+      "baseMode": 1,
+      "customMode": 4,
+      "commandId": 176,
+      "targetSystemId": 1,
+      "targetComponentId": 1
+    }
+  },
+  {
+    "name": "plane-loiter",
+    "input": {
+      "sysId": 255,
+      "compId": 190,
+      "targetSystemId": 2,
+      "targetComponentId": 1,
+      "customMode": 12
+    },
+    "expectedPayloadHex": "0000803f000040410000000000000000000000000000000000000000b000020100",
+    "expected": {
+      "messageId": 76,
+      "baseMode": 1,
+      "customMode": 12,
+      "commandId": 176,
+      "targetSystemId": 2,
+      "targetComponentId": 1
+    }
+  }
+]

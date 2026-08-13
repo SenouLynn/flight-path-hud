@@ -34,8 +34,10 @@ The MAVLink dialect remains authoritative for standard layouts. Golden vectors
 define the supported project policy and catch ordering, scaling, endianness, and
 width errors. Full frames contain a mutable sequence, so the initial vectors
 compare the exact 35-byte `COMMAND_INT` payload and separately verify normal
-frame CRC tests. Guided takeoff/land vectors likewise compare exact 33-byte
-`COMMAND_LONG` payloads while their implementation-local tests verify CRCs.
+frame CRC tests. Guided takeoff/land, mode-change, and standard arm/disarm
+vectors likewise compare exact 33-byte `COMMAND_LONG` payloads while their
+implementation-local tests verify CRCs. The arm/disarm vectors explicitly
+require the force parameter to be zero.
 
 ## Demonstrating conformance
 
@@ -63,7 +65,11 @@ The initial vertical slice is complete:
   Python runner; and
 - Guided reposition, takeoff, and landing encoders are checked against exact
   MAVLink payload bytes while implementation-local tests verify complete-frame
-  CRCs.
+  CRCs;
+- mode-change and arm/disarm lifecycle frames have strict producer schemas and
+  exact command payload vectors; and
+- ordered mode-change and arm/disarm traces define ACK, observation, timeout,
+  stale-route, and passive-replay behavior.
 
 Expand by operational risk rather than mechanically translating every test:
 
@@ -71,24 +77,27 @@ Expand by operational risk rather than mechanically translating every test:
 2. Move more pure HUD calculations into shared vectors, prioritizing sign,
    coordinate-frame, unit, and fallback behavior.
 3. Add golden bytes for the remaining safety-sensitive command encoders.
-4. Add ordered event traces for command/router state machines and replay
-   snapshots where another implementation needs to reproduce their behavior.
+4. Expand ordered event traces beyond mode-change and arm/disarm where another
+   implementation needs to reproduce command/router and replay behavior.
 5. Name lifecycle/capability ports when a second implementation needs them;
    express those ports idiomatically rather than generating runtime architecture
    from JSON Schema.
 6. Decide and document a protocol-v1 envelope and compatibility policy before
    changing the live WebSocket shape.
 
-### TODO: portable Guided workflow
+### Portable Guided workflow
 
-The browser currently sequences Guided entry, arming, takeoff, reposition,
-landing, and disarming through UI orchestration over independently verified
-command families. If that sequence becomes reusable application behavior,
-extract it into a pure workflow state machine first. Then add a language-neutral
-ordered trace covering valid progress, explicit target binding, operator
-confirmation consumption, failed preconditions, timeouts, state escape, replay,
-touchdown verification, and final disarm eligibility. Do not encode React button
-state itself as the portable contract.
+The reusable eligibility policy for Guided entry, arming, takeoff, landing, and
+final disarm now lives in the pure `gcs-core` workflow resolver. React retains
+only form state, confirmation consumption, and command dispatch. The resolver
+has known-answer tests for valid progress, replay/staleness, supported identity,
+pending commands, input bounds, touchdown verification, and final disarm
+eligibility.
+
+Before a second implementation consumes the full sequence, add a
+language-neutral ordered trace covering explicit target binding, operator
+confirmation consumption, command failures/timeouts, state escape, and replay.
+Do not encode React button state itself as the portable contract.
 
 Rendering, socket/process lifecycle, filesystem behavior, and framework wiring
 remain implementation-specific unless a pure domain seam is extracted.

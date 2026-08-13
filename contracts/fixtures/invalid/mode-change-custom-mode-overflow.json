@@ -1,0 +1,17 @@
+{
+  "type": "modeChange",
+  "requestId": "mode-change-invalid",
+  "sysId": 1,
+  "compId": 1,
+  "mode": "GUIDED",
+  "customMode": 4294967296,
+  "actor": "sitl-mode-change-controller",
+  "requestedAtMs": 1800000200000,
+  "confirmation": true,
+  "status": "complete",
+  "ackResult": 0,
+  "observed": true,
+  "attempts": 1,
+  "reason": null,
+  "updatedAtMs": 1800000200020
+}

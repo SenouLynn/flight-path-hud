@@ -136,4 +136,6 @@ export {
   type GuidedRepositionGateInput,
 } from './guidedReposition'
 
-export { encodeSetGuidedRequest, encodeSetArmedRequest, encodeGuidedTakeoffRequest, encodeGuidedLandRequest } from './guidedWorkflow'
+export { encodeSetGuidedRequest, encodeSetArmedRequest, encodeGuidedTakeoffRequest,
+  encodeGuidedLandRequest, resolveGuidedWorkflow } from './guidedWorkflow'
+export type { GuidedWorkflowState, GuidedWorkflowStateInput } from './guidedWorkflow'

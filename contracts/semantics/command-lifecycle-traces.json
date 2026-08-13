@@ -1,0 +1,107 @@
+[
+  {
+    "family": "modeChange",
+    "request": {
+      "type": "setMode",
+      "requestId": "portable-mode-1",
+      "sysId": 1,
+      "compId": 1,
+      "mode": "LOITER",
+      "actor": "portable-contract",
+      "timestampMs": 900,
+      "confirmation": true
+    },
+    "scenarios": [
+      {
+        "name": "ack-then-observation",
+        "steps": [
+          { "action": "request", "status": "awaitingAck", "sends": 1 },
+          { "action": "ack", "result": 0, "status": "awaitingObservation", "sends": 1 },
+          { "action": "observe", "status": "complete", "sends": 1 }
+        ]
+      },
+      {
+        "name": "ack-timeout",
+        "steps": [
+          { "action": "request", "status": "awaitingAck", "sends": 1 },
+          { "action": "tick", "atMs": 1101, "status": "failed", "reason": "COMMAND_ACK timeout", "sends": 1 }
+        ]
+      },
+      {
+        "name": "observation-timeout",
+        "steps": [
+          { "action": "request", "status": "awaitingAck", "sends": 1 },
+          { "action": "ack", "result": 0, "status": "awaitingObservation", "sends": 1 },
+          { "action": "tick", "atMs": 1201, "status": "failed", "reason": "HEARTBEAT mode observation timeout", "sends": 1 }
+        ]
+      },
+      {
+        "name": "stale-route",
+        "steps": [
+          { "action": "request", "status": "awaitingAck", "sends": 1 },
+          { "action": "dropRoute", "status": null, "sends": 1 },
+          { "action": "tick", "atMs": 1101, "status": "failed", "reason": "target route became stale during mode change", "sends": 1 }
+        ]
+      },
+      {
+        "name": "passive-replay",
+        "steps": [
+          { "action": "replay", "status": "complete", "sends": 0 }
+        ]
+      }
+    ]
+  },
+  {
+    "family": "armDisarm",
+    "request": {
+      "type": "setArmed",
+      "requestId": "portable-arm-1",
+      "sysId": 1,
+      "compId": 1,
+      "arm": true,
+      "actor": "portable-contract",
+      "timestampMs": 900,
+      "confirmation": true,
+      "safetyCase": "sitl-no-propulsion"
+    },
+    "scenarios": [
+      {
+        "name": "ack-then-observation",
+        "steps": [
+          { "action": "request", "status": "awaitingAck", "sends": 1 },
+          { "action": "ack", "result": 0, "status": "awaitingObservation", "sends": 1 },
+          { "action": "observe", "status": "complete", "sends": 1 }
+        ]
+      },
+      {
+        "name": "ack-timeout",
+        "steps": [
+          { "action": "request", "status": "awaitingAck", "sends": 1 },
+          { "action": "tick", "atMs": 1101, "status": "failed", "reason": "COMMAND_ACK timeout", "sends": 1 }
+        ]
+      },
+      {
+        "name": "observation-timeout",
+        "steps": [
+          { "action": "request", "status": "awaitingAck", "sends": 1 },
+          { "action": "ack", "result": 0, "status": "awaitingObservation", "sends": 1 },
+          { "action": "tick", "atMs": 1201, "status": "failed", "reason": "HEARTBEAT armed-state observation timeout", "sends": 1 }
+        ]
+      },
+      {
+        "name": "stale-route",
+        "steps": [
+          { "action": "request", "status": "awaitingAck", "sends": 1 },
+          { "action": "dropRoute", "status": null, "sends": 1 },
+          { "action": "tick", "atMs": 1101, "status": "failed", "reason": "target route became stale during arm/disarm", "sends": 1 }
+        ]
+      },
+      {
+        "name": "passive-replay",
+        "steps": [
+          { "action": "replay", "status": "complete", "sends": 0 }
+        ]
+      }
+    ]
+  }
+]

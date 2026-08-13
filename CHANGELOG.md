@@ -1,5 +1,12 @@
 # Changelog
 
+- Added strict portable producer schemas and exact MAVLink payload vectors for
+  mode change and standard arm/disarm, including a zero force-arm parameter.
+- Added language-neutral mode/arm lifecycle traces for ACK, observation,
+  timeout, stale-route, and passive-replay behavior.
+- Moved Guided workflow eligibility from React into a pure, tested `gcs-core`
+  resolver without changing the bridge's isolated-SITL authority gates.
+
 - Added an isolated-SITL ArduCopter operator workflow for verified GUIDED entry,
   standard arm/disarm, altitude-observed Guided takeoff, and the existing bounded
   map-selected reposition action. Each step remains exact-target, explicitly

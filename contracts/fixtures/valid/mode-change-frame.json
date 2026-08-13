@@ -1,0 +1,17 @@
+{
+  "type": "modeChange",
+  "requestId": "mode-change-01",
+  "sysId": 1,
+  "compId": 1,
+  "mode": "LOITER",
+  "customMode": 5,
+  "actor": "sitl-mode-change-controller",
+  "requestedAtMs": 1800000200000,
+  "confirmation": true,
+  "status": "complete",
+  "ackResult": 0,
+  "observed": true,
+  "attempts": 1,
+  "reason": null,
+  "updatedAtMs": 1800000200020
+}

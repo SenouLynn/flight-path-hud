@@ -1,0 +1,17 @@
+{
+  "type": "armDisarm",
+  "requestId": "arm-disarm-01",
+  "sysId": 1,
+  "compId": 1,
+  "arm": true,
+  "actor": "sitl-arm-disarm-controller",
+  "requestedAtMs": 1800000300000,
+  "confirmation": true,
+  "safetyCase": "sitl-no-propulsion",
+  "status": "complete",
+  "ackResult": 0,
+  "observed": true,
+  "attempts": 1,
+  "reason": null,
+  "updatedAtMs": 1800000300020
+}

@@ -6,14 +6,20 @@ import flightStateSchemaJson from '../../../contracts/wire/flight-state-frame.sc
 import envelopeSchemaJson from '../../../contracts/wire/envelope.schema.json'
 import guidedTakeoffSchemaJson from '../../../contracts/wire/guided-takeoff-frame.schema.json'
 import guidedLandSchemaJson from '../../../contracts/wire/guided-land-frame.schema.json'
+import modeChangeSchemaJson from '../../../contracts/wire/mode-change-frame.schema.json'
+import armDisarmSchemaJson from '../../../contracts/wire/arm-disarm-frame.schema.json'
 import validTelemetry from '../../../contracts/fixtures/valid/telemetry-frame.json'
 import validFlightState from '../../../contracts/fixtures/valid/flight-state-frame.json'
 import validGuidedTakeoff from '../../../contracts/fixtures/valid/guided-takeoff-frame.json'
 import validGuidedLand from '../../../contracts/fixtures/valid/guided-land-frame.json'
+import validModeChange from '../../../contracts/fixtures/valid/mode-change-frame.json'
+import validArmDisarm from '../../../contracts/fixtures/valid/arm-disarm-frame.json'
 import invalidTelemetry from '../../../contracts/fixtures/invalid/telemetry-sequence-overflow.json'
 import invalidFlightState from '../../../contracts/fixtures/invalid/flight-state-zero-system.json'
 import invalidGuidedTakeoff from '../../../contracts/fixtures/invalid/guided-takeoff-negative-error.json'
 import invalidGuidedLand from '../../../contracts/fixtures/invalid/guided-land-fractional-ack.json'
+import invalidModeChange from '../../../contracts/fixtures/invalid/mode-change-custom-mode-overflow.json'
+import invalidArmDisarm from '../../../contracts/fixtures/invalid/arm-disarm-force-safety-case.json'
 import consumerCasesJson from '../../../contracts/fixtures/consumer/telemetry-parser-cases.json'
 import { parseWireFrame } from './wire'
 
@@ -22,20 +28,27 @@ const flightStateSchema = flightStateSchemaJson as AnySchema
 const envelopeSchema = envelopeSchemaJson as AnySchema
 const guidedTakeoffSchema = guidedTakeoffSchemaJson as AnySchema
 const guidedLandSchema = guidedLandSchemaJson as AnySchema
+const modeChangeSchema = modeChangeSchemaJson as AnySchema
+const armDisarmSchema = armDisarmSchemaJson as AnySchema
 
 const ajv = new Ajv2020({ strict: false })
 ajv.addSchema(telemetrySchema)
 ajv.addSchema(flightStateSchema)
 ajv.addSchema(guidedTakeoffSchema)
 ajv.addSchema(guidedLandSchema)
+ajv.addSchema(modeChangeSchema)
+ajv.addSchema(armDisarmSchema)
 const validateTelemetry = ajv.getSchema('https://flight-path-hud.local/contracts/wire/telemetry-frame.schema.json')
 const validateFlightState = ajv.getSchema('https://flight-path-hud.local/contracts/wire/flight-state-frame.schema.json')
 const validateGuidedTakeoff = ajv.getSchema('https://flight-path-hud.local/contracts/wire/guided-takeoff-frame.schema.json')
 const validateGuidedLand = ajv.getSchema('https://flight-path-hud.local/contracts/wire/guided-land-frame.schema.json')
+const validateModeChange = ajv.getSchema('https://flight-path-hud.local/contracts/wire/mode-change-frame.schema.json')
+const validateArmDisarm = ajv.getSchema('https://flight-path-hud.local/contracts/wire/arm-disarm-frame.schema.json')
 const validateEnvelope = ajv.compile(envelopeSchema)
 
 if (validateTelemetry === undefined || validateFlightState === undefined
-  || validateGuidedTakeoff === undefined || validateGuidedLand === undefined) {
+  || validateGuidedTakeoff === undefined || validateGuidedLand === undefined
+  || validateModeChange === undefined || validateArmDisarm === undefined) {
   throw new Error('portable schemas did not register')
 }
 
@@ -49,6 +62,10 @@ describe('portable producer schemas', () => {
     expect(validateGuidedLand(validGuidedLand), JSON.stringify(validateGuidedLand.errors)).toBe(true)
     expect(validateEnvelope(validGuidedTakeoff), JSON.stringify(validateEnvelope.errors)).toBe(true)
     expect(validateEnvelope(validGuidedLand), JSON.stringify(validateEnvelope.errors)).toBe(true)
+    expect(validateModeChange(validModeChange), JSON.stringify(validateModeChange.errors)).toBe(true)
+    expect(validateEnvelope(validModeChange), JSON.stringify(validateEnvelope.errors)).toBe(true)
+    expect(validateArmDisarm(validArmDisarm), JSON.stringify(validateArmDisarm.errors)).toBe(true)
+    expect(validateEnvelope(validArmDisarm), JSON.stringify(validateEnvelope.errors)).toBe(true)
   })
 
   it('rejects fixtures outside fixed-width identity domains', () => {
@@ -56,6 +73,8 @@ describe('portable producer schemas', () => {
     expect(validateFlightState(invalidFlightState)).toBe(false)
     expect(validateGuidedTakeoff(invalidGuidedTakeoff)).toBe(false)
     expect(validateGuidedLand(invalidGuidedLand)).toBe(false)
+    expect(validateModeChange(invalidModeChange)).toBe(false)
+    expect(validateArmDisarm(invalidArmDisarm)).toBe(false)
   })
 })
 

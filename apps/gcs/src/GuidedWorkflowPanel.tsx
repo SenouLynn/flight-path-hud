@@ -1,4 +1,4 @@
-import { GUIDED_STATE_FRESH_MS, guidedModeFor, type ArmDisarmWireFrame, type ConnectionState,
+import { resolveGuidedWorkflow, type ArmDisarmWireFrame, type ConnectionState,
   type FlightStateWireFrame, type GuidedLandWireFrame, type GuidedTakeoffWireFrame, type ModeChangeWireFrame,
   type VehicleState } from '@flight-path-hud/gcs-core'
 import { useState } from 'react'
@@ -13,8 +13,6 @@ interface Props {
   onTakeoff: (actor: string, altitudeM: number, toleranceM: number) => boolean
   onLand: (actor: string) => boolean
 }
-const pending = (value: { status: string } | null) => value?.status === 'awaitingAck' || value?.status === 'awaitingObservation'
-
 export function GuidedWorkflowPanel({ vehicle, flightState, connectionState, replayMode,
   modeStatus, armStatus, takeoffStatus, landStatus, onSetGuided, onSetArmed, onTakeoff, onLand }: Props) {
   const [actor, setActor] = useState(''), [altitude, setAltitude] = useState('10')
@@ -22,23 +20,10 @@ export function GuidedWorkflowPanel({ vehicle, flightState, connectionState, rep
   const target = vehicle ? `${vehicle.sysId}:${vehicle.compId}` : '—'
   const confirmationKey = `${target}|${actor.trim()}|${altitude}|${tolerance}`
   const confirmed = confirmedFor === confirmationKey
-  const guidedMode = flightState ? guidedModeFor(flightState.vehicleType) : null
-  const fresh = flightState !== null && Date.now() - flightState.observedAtMs <= GUIDED_STATE_FRESH_MS
-  const inGuided = guidedMode !== null && flightState?.customMode === guidedMode
-  const busy = pending(modeStatus) || pending(armStatus) || pending(takeoffStatus) || pending(landStatus)
-  const landed = landStatus?.status === 'complete' && (vehicle?.altRelM ?? Number.POSITIVE_INFINITY) <= landStatus.touchdownAltitudeM
-  const common = connectionState === 'open' && replayMode === false && fresh && flightState?.autopilotType === 3
-    && flightState.vehicleType === 2 && actor.trim() !== '' && confirmed && !busy
   const altitudeM = Number(altitude), toleranceM = Number(tolerance)
-  const validTakeoff = altitudeM >= 2 && altitudeM <= 120 && toleranceM >= 0.5 && toleranceM <= 10
-  let reason: string | null = null
-  if (connectionState !== 'open') reason = 'Open telemetry link required'
-  else if (replayMode !== false) reason = replayMode ? 'Commands are disabled during replay' : 'Waiting for live-link mode'
-  else if (!fresh) reason = 'Fresh HEARTBEAT state required'
-  else if (flightState?.autopilotType !== 3 || flightState.vehicleType !== 2) reason = 'This workflow currently supports ArduCopter only'
-  else if (!actor.trim()) reason = 'Operator identity required'
-  else if (!confirmed) reason = 'Confirm the exact target and isolated-SITL workflow'
-  else if (busy) reason = 'A workflow command is pending'
+  const workflow = resolveGuidedWorkflow({ connectionState, replayMode, nowMs: Date.now(), flightState,
+    actor, confirmed, altitudeM, altitudeToleranceM: toleranceM,
+    relativeAltitudeM: vehicle?.altRelM ?? null, modeStatus, armStatus, takeoffStatus, landStatus })
   const consume = (sent: boolean) => { if (sent) setConfirmedFor(null) }
   const statuses = [modeStatus, armStatus, takeoffStatus, landStatus].filter((value) => value !== null)
 
@@ -51,13 +36,13 @@ export function GuidedWorkflowPanel({ vehicle, flightState, connectionState, rep
     <label className="guided-confirm"><input type="checkbox" checked={confirmed} onChange={e => setConfirmedFor(e.target.checked ? confirmationKey : null)} />
       <span>I confirm exact target {target}, isolated SITL, and no propulsion hardware.</span></label>
     <div className="guided-workflow-actions">
-      <button className="segment" disabled={!common || flightState?.armed || inGuided} onClick={() => consume(onSetGuided(actor))}>1 · Enter GUIDED</button>
-      <button className="segment" disabled={!common || !inGuided || flightState?.armed} onClick={() => consume(onSetArmed(actor, true))}>2 · Arm</button>
-      <button className="segment" disabled={!common || !inGuided || !flightState?.armed || !validTakeoff} onClick={() => consume(onTakeoff(actor, altitudeM, toleranceM))}>3 · Take off</button>
-      <button className="segment" disabled={!common || !inGuided || !flightState?.armed} onClick={() => consume(onLand(actor))}>4 · Land</button>
-      <button className="segment danger" disabled={!common || !flightState?.armed || !landed} title={landed ? 'Verified touchdown permits standard disarm' : 'Verified touchdown required'} onClick={() => consume(onSetArmed(actor, false))}>5 · Disarm</button>
+      <button className="segment" disabled={!workflow.canEnterGuided} onClick={() => consume(onSetGuided(actor))}>1 · Enter GUIDED</button>
+      <button className="segment" disabled={!workflow.canArm} onClick={() => consume(onSetArmed(actor, true))}>2 · Arm</button>
+      <button className="segment" disabled={!workflow.canTakeoff} onClick={() => consume(onTakeoff(actor, altitudeM, toleranceM))}>3 · Take off</button>
+      <button className="segment" disabled={!workflow.canLand} onClick={() => consume(onLand(actor))}>4 · Land</button>
+      <button className="segment danger" disabled={!workflow.canDisarm} title={workflow.landed ? 'Verified touchdown permits standard disarm' : 'Verified touchdown required'} onClick={() => consume(onSetArmed(actor, false))}>5 · Disarm</button>
     </div>
-    {reason ? <p className="warn">{reason}</p> : null}
+    {workflow.reason ? <p className="warn">{workflow.reason}</p> : null}
     {statuses.map((status) => <div className={`guided-result ${status.status}`} key={`${status.type}:${status.requestId}`}>
       <div className="stat"><span>{status.type}</span><strong>{status.status}</strong></div>
       {status.reason ? <p className="warn">{status.reason}</p> : null}
