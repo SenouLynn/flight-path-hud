@@ -1,5 +1,8 @@
 # Changelog
 
+- Added target-scoped one-shot `HOME_POSITION` and `GPS_GLOBAL_ORIGIN` requests,
+  correlated against both `COMMAND_ACK` and the expected response message.
+
 - Added target-routed, read-only MAVLink parameter lookup by name or index, with
   portable transaction logic, response correlation, retry/timeout handling, and
   deterministic lifecycle recording/replay.

@@ -187,6 +187,10 @@ Identical concurrent target/query pairs are rejected because MAVLink
 This is a read transaction only. It does not enable `PARAM_SET` or any browser
 control authority.
 
+One-shot `HOME_POSITION` and `GPS_GLOBAL_ORIGIN` reads use
+`{"type":"requestMessage","requestId":"message-1","sysId":1,"compId":1,"messageName":"HOME_POSITION"}`.
+Completion requires both the exact target's `COMMAND_ACK` and requested response.
+
 Use `{"type":"requestParameterList","requestId":"parameters-1","sysId":1,"compId":1}`
 to retrieve the full target-scoped parameter set. Progress frames contain counts
 and the latest value; the completed frame contains the index-ordered set.

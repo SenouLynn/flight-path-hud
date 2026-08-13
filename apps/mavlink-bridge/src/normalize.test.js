@@ -2,7 +2,7 @@ import assert from 'node:assert/strict'
 import test from 'node:test'
 import { computeFrameCrc, crcAccumulate, parseIncomingDatagram, encodeMissionCount, encodeMissionItemInt } from './normalize.js'
 
-const CRC_EXTRA = { 0: 50, 22: 220, 24: 24, 30: 39, 33: 104, 42: 28, 44: 221, 47: 153, 73: 38, 74: 20, 77: 143, 242: 104 }
+const CRC_EXTRA = { 0: 50, 22: 220, 24: 24, 30: 39, 33: 104, 42: 28, 44: 221, 47: 153, 49: 39, 73: 38, 74: 20, 77: 143, 242: 104 }
 
 function buildMavlinkV1Frame(messageId, payload, { sequence = 7, sysId = 1, compId = 1, corruptCrc = false } = {}) {
   const frame = Buffer.alloc(6 + payload.length + 2)
@@ -239,6 +239,13 @@ test('parses HOME_POSITION', () => {
   assert.equal(home.latDegE7, 473977420)
   assert.equal(home.lonDegE7, 85455940)
   assert.equal(home.altMm, 500000)
+})
+
+test('parses GPS_GLOBAL_ORIGIN independently from home', () => {
+  const payload = Buffer.alloc(12)
+  payload.writeInt32LE(-353632610, 0); payload.writeInt32LE(1491652300, 4); payload.writeInt32LE(584000, 8)
+  const origin = parseIncomingDatagram(buildMavlinkV1Frame(49, payload)).envelopes[0].payload.gpsGlobalOrigin
+  assert.deepEqual(origin, { latDegE7:-353632610, lonDegE7:1491652300, altMm:584000 })
 })
 
 test('decodes a MAVLink 2 MISSION_ITEM_INT whose trailing zero bytes were trimmed off the wire', () => {
