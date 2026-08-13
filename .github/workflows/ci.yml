@@ -23,38 +23,41 @@ jobs:
       - name: Check out repository
         uses: actions/checkout@v4
 
+      - name: Set up pnpm
+        uses: pnpm/action-setup@v4
+
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
           node-version: 22
-          cache: npm
+          cache: pnpm
 
       - name: Install dependencies
-        run: npm ci
+        run: pnpm install --frozen-lockfile
 
       - name: Test MAVLink bridge and real-SITL fixtures
-        run: npm run test:bridge
+        run: pnpm test:bridge
 
       - name: Test GCS core
-        run: npm run test:gcs-core
+        run: pnpm test:gcs-core
 
       - name: Test browser GCS
-        run: npm run test:gcs
+        run: pnpm test:gcs
 
       - name: Test shared HUD UI
-        run: npm run test:hud-ui
+        run: pnpm test:hud-ui
 
       - name: Test HUD application
-        run: npm run test:hud
+        run: pnpm test:hud
 
       - name: Lint HUD application
-        run: npm run lint:hud
+        run: pnpm lint:hud
 
       - name: Build browser GCS
-        run: npm run build:gcs
+        run: pnpm build:gcs
 
       - name: Build HUD application
-        run: npm run build:hud
+        run: pnpm build:hud
 
   esp32-native:
     name: ESP32 native logic
@@ -66,4 +69,4 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Run native C++ tests
-        run: npm run test:esp32
+        run: make -C apps/esp32 test

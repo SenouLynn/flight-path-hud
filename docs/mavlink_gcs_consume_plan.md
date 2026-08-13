@@ -108,9 +108,9 @@ A browser GCS page in `apps/hud` that can:
 
 Tasks:
 - Confirm clean baseline in hud app:
-  - `npm run test:hud`
-  - `npm run build:hud`
-  - `npm run lint:hud`
+  - `pnpm test:hud`
+  - `pnpm build:hud`
+  - `pnpm lint:hud`
 - Snapshot current synthetic behavior with a short screen capture.
 - Decide a canonical external stream input for initial integration:
   - UDP stream from SITL.
@@ -303,7 +303,7 @@ the current MAVLink `sysId:compId`.
 - Manual test with bridge disconnected/reconnected.
 - Verify heading, climb, and altitude signs against known expected motion.
 - Verify video stream reconnect behavior and latency indicator sanity.
-- Keep `npm run test:hud`, `npm run build:hud`, and `npm run lint:hud` passing.
+- Keep `pnpm test:hud`, `pnpm build:hud`, and `pnpm lint:hud` passing.
 
 ## Risks and Mitigations
 

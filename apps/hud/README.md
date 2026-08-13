@@ -32,8 +32,8 @@ proven against known-answer replay frames and later ported to C++/ESP32 firmware
 renders both a live mock feed and expected-vs-resolved validation tables.
 
 The future device application starts in [apps/esp32](../esp32). Its C++ core can be run on
-your local machine before it is flashed to a board: `npm run test:esp32` runs host tests and
-`npm run preview:esp32` writes a deterministic SVG preview.
+your local machine before it is flashed to a board: `pnpm test:esp32` runs host tests and
+`pnpm preview:esp32` writes a deterministic SVG preview.
 
 ## Features
 #### Basic Telemetry
@@ -60,13 +60,13 @@ your local machine before it is flashed to a board: `npm run test:esp32` runs ho
 From this directory:
 
 ```bash
-npm install
-npm run dev
+pnpm install
+pnpm dev
 npm test
-npm run build
+pnpm build
 ```
 
-From the repository root, use `npm run dev:hud`, `npm run test:hud`, and the matching
+From the repository root, use `pnpm dev:hud`, `pnpm test:hud`, and the matching
 `build:hud` / `lint:hud` commands.
 
 ## Documentation

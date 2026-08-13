@@ -1,5 +1,9 @@
 # Changelog
 
+- Migrated the JavaScript/TypeScript monorepo from npm to a single pnpm 11
+  workspace and lockfile, with a strict seven-day dependency release quarantine
+  and no initial exceptions.
+
 - Added disabled-by-default, target-scoped MAVLink message-interval configuration
   with bandwidth limits, ACK correlation, and observed-message verification.
 

@@ -7,7 +7,7 @@ when they disagree, ArduPilot's documentation wins.
 
 ## The project scenario
 
-`npm run sitl-test:up` runs three Linux containers:
+`pnpm sitl-test:up` runs three Linux containers:
 
 | Service | Vehicle | MAVLink identity | Purpose |
 | --- | --- | --- | --- |
@@ -49,7 +49,7 @@ flight test.
 From the repository root:
 
 ```bash
-BUILDKIT_PROGRESS=plain npm run sitl-test:up
+BUILDKIT_PROGRESS=plain pnpm sitl-test:up
 ```
 
 The first build downloads ArduPilot and its submodules, installs its supported
@@ -63,21 +63,21 @@ supported SITL baseline (ADR-0031), not a native macOS build.
 
 The bridge container bind-mounts this repository for source access, but its
 `node_modules` live in a Docker-managed volume. This is required on macOS:
-Vite/Rolldown has native bindings, and a Linux `npm ci` must never write into the
+Vite/Rolldown has native bindings, and a Linux `pnpm install --frozen-lockfile` must never write into the
 host's macOS `node_modules` directory. If a previous container run did overwrite
-it, stop the stack and run `npm ci` from the repository root on the Mac, then
+it, stop the stack and run `pnpm install --frozen-lockfile` from the repository root on the Mac, then
 start the GCS again. A missing `@rolldown/binding-darwin-arm64` error means this
 host dependency repair is required.
 
 In a second terminal start the GCS:
 
 ```bash
-npm run dev --workspace @flight-path-hud/gcs
+pnpm --filter @flight-path-hud/gcs dev
 ```
 
 Keep the GCS WebSocket URL at `ws://localhost:8080/telemetry`. Use
-`npm run sitl-test:logs` to follow container output, and stop everything with
-`npm run sitl-test:down`.
+`pnpm sitl-test:logs` to follow container output, and stop everything with
+`pnpm sitl-test:down`.
 
 ## Acceptance checklist
 
@@ -99,7 +99,7 @@ Keep the GCS WebSocket URL at `ws://localhost:8080/telemetry`. Use
    and confirm it recovers without a browser reload.
 5. Stop the stack. Locate the bridge recording in
    `apps/mavlink-bridge/recordings/`, replay it from the repository root with
-   `MAVLINK_BRIDGE_REPLAY_FILE=recordings/<file> npm run replay:bridge`, and
+   `MAVLINK_BRIDGE_REPLAY_FILE=recordings/<file> pnpm replay:bridge`, and
    confirm the same two-node roster and cached mission overlays appear. Replay
    passively folds captured `MISSION_COUNT`/`MISSION_ITEM_INT` transactions; it
    sends no mission requests or acknowledgements and keeps mission loading
@@ -113,7 +113,7 @@ The several-second delay before the GCS connects and the vehicles appear is not
 primarily MAVLink throughput. It currently comes from three deliberate or
 incidental startup stages:
 
-- The Compose bridge runs `npm ci` on every container start before opening its
+- The Compose bridge runs `pnpm install --frozen-lockfile` on every container start before opening its
   WebSocket. With a warm dependency volume this still took about four seconds in
   the 2026-08-13 validation run.
 - While the bridge is unavailable, the browser retries with exponential delays

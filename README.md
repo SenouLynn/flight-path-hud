@@ -3,12 +3,12 @@ What started out as an instrument build-out for use on an ESP32 board evolved in
 
 **GCS Validation Harness:**
 ```bash
-npm run gcs:mock
+pnpm gcs:mock
 ```
 
 **Trajectory Projection Instrument Validation Harness:**
 ```bash
-npm run dev:hud
+pnpm dev:hud
 ```
 
 **Ramblings:**
@@ -88,8 +88,15 @@ Establish central observability mechanism for tracking statefulness of remote no
 Install dependencies once:
 
 ```bash
-npm ci
+corepack enable
+pnpm install --frozen-lockfile
 ```
+
+The repository pins pnpm in `package.json` and uses one root `pnpm-lock.yaml`.
+Dependency resolution enforces a strict seven-day release quarantine for direct
+and transitive packages. Resolution also fails when registry publish-time
+metadata is missing. Any exception must name an exact package/version in
+`pnpm-workspace.yaml` and document why bypassing the quarantine is necessary.
 
 ### GCS mock mode
 
@@ -97,7 +104,7 @@ The deterministic development harness starts the browser GCS, MAVLink bridge,
 synthetic two-vehicle fleet, and mock video source:
 
 ```bash
-npm run gcs:mock
+pnpm gcs:mock
 ```
 
 ### GCS mixed-SITL mode
@@ -108,17 +115,17 @@ the browser GCS. Open the Vite address it prints (normally
 `http://localhost:5174`) and use `ws://localhost:8080/telemetry`.
 
 ```bash
-npm run gcs:sitl-test
+pnpm gcs:sitl-test
 ```
 
 Stop the detached simulator stack after the GCS exits:
 
 ```bash
-npm run sitl-test:down
+pnpm sitl-test:down
 ```
 
-For attached Compose output or diagnostics, use `npm run sitl-test:up` or
-`npm run sitl-test:logs`. The first SITL build compiles ArduPilot and is intentionally
+For attached Compose output or diagnostics, use `pnpm sitl-test:up` or
+`pnpm sitl-test:logs`. The first SITL build compiles ArduPilot and is intentionally
 large; Docker caches the result locally. Docker Desktop Linux/arm64 containers
 are the supported path on Apple Silicon Macs. Native macOS SITL is best-effort.
 
@@ -128,10 +135,10 @@ does not arm a vehicle or start AUTO mode.
 ### Checks and maintenance
 
 ```bash
-npm run build:gcs
-npm run test:gcs-core
-npm run test:bridge
-npm run clean:recordings -- --dry-run
+pnpm build:gcs
+pnpm test:gcs-core
+pnpm test:bridge
+pnpm clean:recordings -- --dry-run
 ```
 
 ## Documentation

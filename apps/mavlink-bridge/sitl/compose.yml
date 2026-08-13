@@ -2,10 +2,10 @@ services:
   bridge:
     image: node:22-bookworm-slim
     working_dir: /workspace
-    command: sh -c "npm ci && npm run start --workspace @flight-path-hud/mavlink-bridge"
+    command: sh -c "corepack enable && pnpm install --frozen-lockfile && pnpm --filter @flight-path-hud/mavlink-bridge start"
     volumes:
       - ../../..:/workspace
-      # `npm ci` runs in Linux. Keep its native dependencies out of the host
+      # `pnpm install` runs in Linux. Keep its native dependencies out of the host
       # bind mount so it cannot replace macOS Rolldown/Vite bindings used by the
       # browser GCS.
       - bridge_node_modules:/workspace/node_modules

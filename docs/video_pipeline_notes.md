@@ -46,7 +46,7 @@ GCS speaks only WHEP and the abstraction is real rather than aspirational.
   rather than by ffmpeg, so it runs on a stock Node install.
 
 ```bash
-npm run mock:video     # http://localhost:8090/stream
+pnpm mock:video     # http://localhost:8090/stream
 ```
 
 Then enable **Video** in the GCS Views menu. Verified end to end: 45 frames in

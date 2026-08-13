@@ -11,10 +11,10 @@
     "test": "vitest run"
   },
   "dependencies": {
-    "@flight-path-hud/gcs-core": "*",
+    "@flight-path-hud/gcs-core": "workspace:*",
     "react": "^19.2.7",
     "react-dom": "^19.2.7",
-    "@flight-path-hud/hud-ui": "*",
+    "@flight-path-hud/hud-ui": "workspace:*",
     "maplibre-gl": "^5.9.0"
   },
   "devDependencies": {

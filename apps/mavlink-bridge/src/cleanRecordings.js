@@ -5,9 +5,9 @@
  * bridge runs. This is the same policy on demand — for reclaiming space without
  * starting anything, or for wiping the directory outright.
  *
- *   npm run clean:recordings                 # apply the normal retention policy
- *   npm run clean:recordings -- --all        # delete every recording
- *   npm run clean:recordings -- --dry-run    # report only, delete nothing
+ *   pnpm clean:recordings                 # apply the normal retention policy
+ *   pnpm clean:recordings -- --all        # delete every recording
+ *   pnpm clean:recordings -- --dry-run    # report only, delete nothing
  */
 
 import fs from 'node:fs'
@@ -23,7 +23,7 @@ const deleteAll = args.includes('--all')
 const dryRun = args.includes('--dry-run')
 
 /*
- * Announce the mode before doing anything. Nested `npm run` swallows `--` flags,
+ * Announce the mode before doing anything. Nested package scripts may swallow `--` flags,
  * and a --dry-run that silently became a real delete is exactly the failure this
  * line makes impossible to miss.
  */

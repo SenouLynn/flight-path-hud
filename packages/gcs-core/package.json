@@ -16,6 +16,6 @@
     "vitest": "^4.1.10"
   },
   "dependencies": {
-    "@flight-path-hud/hud-ui": "*"
+    "@flight-path-hud/hud-ui": "workspace:*"
   }
 }

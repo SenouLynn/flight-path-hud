@@ -20,8 +20,8 @@ replay are interchangeable ingress adapters (ADR-0022).
 From the repository root:
 
 ```bash
-npm run start:bridge     # bridge (records by default)
-npm run sample:bridge    # synthetic vehicle, if you have no real one
+pnpm start:bridge     # bridge (records by default)
+pnpm sample:bridge    # synthetic vehicle, if you have no real one
 ```
 
 Defaults: UDP `0.0.0.0:14550`, WebSocket `ws://localhost:8080/telemetry`.
@@ -37,9 +37,9 @@ The repository includes a reproducible **ArduCopter + ArduPlane** scenario for
 validating the bridge against real binary MAVLink v2, rather than the JSON mock:
 
 ```bash
-npm run sitl-test:up
+pnpm sitl-test:up
 # separate terminal
-npm run dev --workspace @flight-path-hud/gcs
+pnpm --filter @flight-path-hud/gcs dev
 ```
 
 `sitl-test:up` builds the pinned ArduPilot 4.6.2 image and starts the bridge plus
@@ -52,9 +52,9 @@ selected system, not the other vehicle.
 Stop one service (for example `docker compose -f apps/mavlink-bridge/sitl/compose.yml
 stop plane`): it should become stale and leave the roster while Copter remains
 live. Restart it with `start plane` and verify recovery without reloading the
-browser. The bridge records the run; use `npm run sitl-test:down`, then replay its new
-recording through `npm run replay:bridge` and verify the same two-node roster and
-mission overlays. `npm run sitl-test:logs` follows Compose logs.
+browser. The bridge records the run; use `pnpm sitl-test:down`, then replay its new
+recording through `pnpm replay:bridge` and verify the same two-node roster and
+mission overlays. `pnpm sitl-test:logs` follows Compose logs.
 
 This validates one simulated mixed-fleet scenario only; it is not a field or
 arbitrary-fleet validation claim.
@@ -112,13 +112,13 @@ Behaviour worth knowing:
 To run without writing anything:
 
 ```bash
-MAVLINK_BRIDGE_RECORD=0 npm run start:bridge
+MAVLINK_BRIDGE_RECORD=0 pnpm start:bridge
 ```
 
 ## Replay
 
 ```bash
-MAVLINK_BRIDGE_REPLAY_FILE=recordings/session-<timestamp>.jsonl npm run replay:bridge
+MAVLINK_BRIDGE_REPLAY_FILE=recordings/session-<timestamp>.jsonl pnpm replay:bridge
 ```
 
 Replays with the original inter-packet pacing and no vehicle, sender or UDP socket
@@ -144,7 +144,7 @@ node apps/mavlink-bridge/src/curateMotionFixture.js \
 
 The curator retains representative raw MAVLink rather than decoded envelopes,
 rebases timestamps deterministically, and removes repetitive simulator traffic.
-Run `npm run test:bridge` after curating; do not promote an arbitrary or failed
+Run `pnpm test:bridge` after curating; do not promote an arbitrary or failed
 recording merely because it is newest.
 
 Note: a recording is read fully into memory on replay, so it is bounded by the
@@ -214,7 +214,7 @@ garbage rather than an error.
 ## Tests
 
 ```bash
-npm run test:bridge
+pnpm test:bridge
 ```
 
 Covers the CRC against the published CRC-16/MCRF4XX check vector, frame decoding,

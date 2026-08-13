@@ -15,7 +15,7 @@
     "react": "^19.2.7",
     "react-dom": "^19.2.7",
     "react-router-dom": "^7.18.1",
-    "@flight-path-hud/hud-ui": "*"
+    "@flight-path-hud/hud-ui": "workspace:*"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",

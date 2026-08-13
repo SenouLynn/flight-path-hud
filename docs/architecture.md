@@ -110,10 +110,10 @@ The Vitest suites in `*.test.ts` assert the same properties programmatically.
 
 ## Tooling
 
-- **Build:** Vite 8 + React 19 + TypeScript 6. `npm run build` = `tsc -b && vite build`.
-- **Dev server:** `npm run dev`.
-- **Tests:** Vitest 4. `npm test` (run once) / `npm run test:watch`.
-- **Lint:** `npm run lint` (flat-config ESLint + typescript-eslint).
+- **Build:** Vite 8 + React 19 + TypeScript 6. `pnpm build` = `tsc -b && vite build`.
+- **Dev server:** `pnpm dev`.
+- **Tests:** Vitest 4. `pnpm test` (run once) / `pnpm test:watch`.
+- **Lint:** `pnpm lint` (flat-config ESLint + typescript-eslint).
 
 ## Known issues / conventions to watch
 
