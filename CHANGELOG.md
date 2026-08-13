@@ -190,10 +190,9 @@ tagged release exists.
   TypeScript, and ESP32-native tests plus GCS/HUD builds on pull requests and
   pushes to `main`. The fast real-SITL motion fixture runs through
   `test:bridge`; resource-heavy live Docker SITL remains a manual evidence gate.
-- **Mixed-SITL session handoff.**
-  [docs/session_handoff_2026-08-12.md](docs/session_handoff_2026-08-12.md)
-  records the completed smoke run, remaining acceptance evidence, platform
-  constraints, and the recommended motion-validation follow-on.
+- **Mixed-SITL acceptance record.** The completed smoke run, platform
+  constraints, and motion-validation evidence are retained in the standing
+  [SITL runbook](docs/ardupilot_sitl_testing.md).
 - **Per-node fleet-map recenter control.** Each roster row now has a crosshair
   beside its visibility eye that centers the fleet camera on that vehicle without
   opening its detail view or changing the current zoom.

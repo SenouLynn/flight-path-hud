@@ -66,10 +66,12 @@ start:
   system alongside `nodes`, so a plan belonging to a node nobody has selected is
   no longer invisible.
 
-The next evidence boundary is real SITL motion: both vehicle types must move
-under an explicit test-only control workflow while their tracks and instruments
-remain independent. Browser command authority remains out of scope for that
-scenario.
+The real-SITL motion boundary also passed on 2026-08-13. A separate disposable
+scenario moved both vehicle types under explicit test-only control while their
+tracks, instruments, missions, and replay state remained independent. Its
+sanitized fixture is part of the ordinary bridge regression suite. Browser
+authority was introduced later only through separately gated isolated-SITL
+command workflows; field-connected systems remain receive-only.
 
 ## What would actually change
 

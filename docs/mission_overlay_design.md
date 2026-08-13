@@ -1,9 +1,7 @@
 # Mission overlay design
 
-**Status:** implemented (`mission-overlay-ui` branch).
+**Status:** implemented.
 **Date:** 2026-08-11
-**Closes out:** the remainder of [Phase 5](mavlink_gcs_consume_plan.md#phase-5-map-and-mission-visualization-2-to-3-days)
-(mission overlay, home point marker) in the MAVLink GCS consume plan.
 
 ## What this is
 
@@ -14,10 +12,8 @@ protocol.
 
 ## 1. Scope: the receive-only carve-out
 
-The GCS has been receive-only from the start — the bridge has never had a
-send socket, and `docs/mavlink_gcs_consume_plan.md`'s Scope section lists
-"sending commands (arm, mode, mission upload, parameter writes)" as
-explicitly out of scope. Reading a mission requires the GCS to ask for it:
+At the time this capability was introduced, the GCS had been receive-only and
+the bridge had never had a send socket. Reading a mission requires the GCS to ask for it:
 `MISSION_REQUEST_LIST` and `MISSION_REQUEST_INT` are outbound messages to the
 vehicle. This is the bridge's first outbound byte, ever.
 
@@ -26,18 +22,10 @@ mission request, fired only when the operator explicitly clicks "Load
 mission." No automatic requests on connect, no polling, no other outbound
 message type. Home position stays passive-only (§2) — it is observed, never
 requested. The vehicle's state is queried; its behavior is never changed.
-Arm, mode change, mission upload/write, and parameter write remain entirely
-out of scope — nothing here is a step toward them.
-
-**Documentation obligations, tracked as their own line items in the plan
-below, not folded into other changes:**
-- A new **ADR-0027**, dedicated to this decision alone: what crosses the
-  line (a read-only query) and what doesn't (anything that changes vehicle
-  behavior).
-- An in-place edit to the "Out of scope" bullet in
-  `docs/mavlink_gcs_consume_plan.md`, naming this exception and linking
-  ADR-0027, so that section stays accurate instead of quietly wrong.
-- The outbound send path is one narrowly named function
+At this boundary, arm, mode change, mission upload/write, and parameter write
+remained out of scope; their later isolated-SITL validation is governed by
+[the command roadmap](mavlink_command_validation.md), not by this mission-read
+carve-out. The outbound send path remains one narrowly named function
   (`requestMission()`), not a generic "send to vehicle" capability — nothing
   about its shape invites widening later.
 

@@ -17,6 +17,12 @@ known fields, drops unknown sections/keys, and drops non-finite inner numerics.
 Tagged parsers reject malformed known fields and return `unrecognized`; they do
 not throw. Unknown keys are generally ignored.
 
+The first follow-on slice adds strict producer contracts for the Copter Guided
+takeoff and landing lifecycle frames introduced by the verified isolated-SITL
+workflow. Their exact `COMMAND_LONG` payloads join Guided reposition in the
+golden-vector layer; UI sequencing and live safety gates remain
+implementation-local, backed by router tests and SITL evidence.
+
 The strict producer schema and tolerant consumer are separate contracts. Trying
 to make one schema express both would either bless bridge output containing
 unknown fields or falsely claim the current consumer rejects additive fields.

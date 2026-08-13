@@ -63,7 +63,7 @@ the code.
   [ADR-0022](#adr-0022-recordreplay-is-the-bridges-second-ingress-adapter),
   [ADR-0030](#adr-0030-udp-mission-replies-are-routed-by-mavlink-system-not-sender-recency),
   [GCS architecture precedents](gcs_architecture_precedents.md), and
-  [portable-contracts handoff](portable_contracts_handoff_2026-08-13.md)
+  [portable contract pack](../contracts/README.md)
 
 ### Context
 
@@ -390,10 +390,9 @@ bound or evict.
 - **Deciders:** team
 
 ### Context
-The GCS has been receive-only from the start: the bridge has never had a send
-socket, and the [consume plan](./mavlink_gcs_consume_plan.md)'s Scope section lists
-"sending commands (arm, mode, mission upload, parameter writes)" as explicitly out
-of scope. Reading a mission requires the GCS to ask for it — `MISSION_REQUEST_LIST`
+The GCS had been receive-only from the start and the bridge had never had a send
+socket. Sending commands (arm, mode, mission upload, and parameter writes) was
+explicitly out of scope. Reading a mission requires the GCS to ask for it — `MISSION_REQUEST_LIST`
 and `MISSION_REQUEST_INT` are outbound messages to the vehicle. This is the
 bridge's first outbound byte, ever, and needed an explicit line drawn around it
 before writing any code, not after.
@@ -705,8 +704,8 @@ so the claim was never exercised. The web-side ports in
 [streamPorts.ts](../apps/hud/src/stream/streamPorts.ts) were referenced only by their own
 tests — defined, not load-bearing.
 
-The [consume plan](./mavlink_gcs_consume_plan.md) makes a second adapter a phase-exit
-guardrail, and Phase 6 wants deterministic replay. Live-stream debugging had no reproduction
+The ports-and-adapters design requires a second adapter as real evidence, and
+deterministic replay was the selected one. Live-stream debugging had no reproduction
 path: diagnosing a duplicate-sender fault meant rebuilding throwaway capture harnesses.
 
 ### Decision
@@ -766,7 +765,7 @@ Model video as a first-class sidecar under the same ports-and-adapters strategy 
 
 Related architecture and plan details are tracked in:
 - [docs/gcs_runtime_blueprint.md](./gcs_runtime_blueprint.md)
-- [docs/mavlink_gcs_consume_plan.md](./mavlink_gcs_consume_plan.md)
+- [docs/video_pipeline_notes.md](./video_pipeline_notes.md)
 
 ### Consequences
 - ✅ Video can be added without coupling camera transport details into domain telemetry logic.
@@ -807,8 +806,8 @@ Adopt a hexagonal (ports-and-adapters) structure for MAVLink ingest and publish 
 - Implement UDP SITL and WebSocket adapters first, with serial/file replay as planned follow-on
   adapters.
 
-The implementation plan is tracked in
-[docs/mavlink_gcs_consume_plan.md](./mavlink_gcs_consume_plan.md).
+The deployment profiles and current adapter model are documented in
+[docs/gcs_runtime_blueprint.md](./gcs_runtime_blueprint.md).
 
 ### Consequences
 - ✅ Web/cloud and Pi-local deployment can share one domain core.

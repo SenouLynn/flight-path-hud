@@ -1,0 +1,38 @@
+[
+  {
+    "name": "copter-guided-takeoff-12m",
+    "command": "guidedTakeoff",
+    "input": {
+      "sysId": 255,
+      "compId": 190,
+      "targetSystemId": 1,
+      "targetComponentId": 1,
+      "relativeAltitudeM": 12
+    },
+    "expectedPayloadHex": "000000000000000000000000000000000000000000000000000040411600010100",
+    "expected": {
+      "messageId": 76,
+      "commandId": 22,
+      "targetSystemId": 1,
+      "targetComponentId": 1,
+      "relativeAltitudeM": 12
+    }
+  },
+  {
+    "name": "copter-guided-land-current-location",
+    "command": "guidedLand",
+    "input": {
+      "sysId": 255,
+      "compId": 190,
+      "targetSystemId": 1,
+      "targetComponentId": 1
+    },
+    "expectedPayloadHex": "000000000000000000000000000000000000000000000000000000001500010100",
+    "expected": {
+      "messageId": 76,
+      "commandId": 21,
+      "targetSystemId": 1,
+      "targetComponentId": 1
+    }
+  }
+]

@@ -1,0 +1,14 @@
+{
+  "type": "guidedLand",
+  "requestId": "land-invalid",
+  "sysId": 1,
+  "compId": 1,
+  "touchdownAltitudeM": 0.75,
+  "relativeAltitudeM": 0.5,
+  "status": "failed",
+  "ackResult": 1.5,
+  "observed": false,
+  "attempts": 1,
+  "reason": "invalid ack",
+  "updatedAtMs": 2000
+}

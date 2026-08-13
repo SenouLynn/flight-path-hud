@@ -1,7 +1,7 @@
 # Video pipeline notes
 
-Companion to [ADR-0021](./decisions.md) (video as a first-class sidecar) and
-Phase 5b of the [consume plan](./mavlink_gcs_consume_plan.md).
+Companion to [ADR-0021](./decisions.md) (video as a first-class sidecar) and the
+[portable runtime blueprint](./gcs_runtime_blueprint.md).
 
 ## Layering
 

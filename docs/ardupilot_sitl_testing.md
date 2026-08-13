@@ -79,6 +79,30 @@ Keep the GCS WebSocket URL at `ws://localhost:8080/telemetry`. Use
 `pnpm sitl-test:logs` to follow container output, and stop everything with
 `pnpm sitl-test:down`.
 
+### Mixed-vehicle motion scenario
+
+`pnpm sitl-test:motion` is a separate disposable motion acceptance scenario; it
+does not change the stationary `sitl-test:up` baseline. A Docker-only controller
+uses fixed, target-explicit MAVLink channels to arm and move both vehicles on
+separated routes. Copter performs a verified Guided takeoff before entering its
+mission; Plane uses its mission's AUTO takeoff. The controller requires each
+vehicle to move at least 75 m and advance its own mission while maintaining a
+150 m separation floor. Success and every failure path enter the same
+force-disarm container cleanup. Stop an interrupted stack with
+`pnpm sitl-test:motion:down`.
+
+Acceptance passed on 2026-08-13 against ArduPilot 4.6.2. Copter exceeded the
+75 m displacement threshold and Plane exceeded 191 m, both progressed their
+independent five-item missions, and separation remained above the configured
+floor. Browser observation confirmed independent markers, trails, instruments,
+and mission overlays. The sanitized `mixed-sitl-motion-v2.jsonl` fixture retains
+80 representative MAVLink v2 datagrams and proves movement, coherent telemetry,
+mission isolation, passive replay, and deterministic normalization in the normal
+bridge suite.
+
+This scenario is test authority, not a general browser command surface. Its
+controller is exact-target, isolated to Docker SITL, and responsible for cleanup.
+
 `pnpm sitl-test:message-interval` runs a separate bridge-path acceptance scenario.
 It enables interval commands only inside the Compose override, sets distinct
 `ATTITUDE` cadences on `1:1` and `2:1`, measures monotonic WebSocket arrival
@@ -241,13 +265,14 @@ item zero coordinates and target-routed mission synchronization.
 The seeded `*.waypoints` files are uploaded to ArduPilot at startup through a
 connection-aware SITL-only MAVLink transaction. They give the bridge a real
 mission to read, but loading them neither arms the vehicle nor begins AUTO mode.
-This GCS intentionally has no arm/mode/mission write capability. A stationary
-marker is therefore expected at startup and is not a telemetry failure.
+The stationary baseline does not arm or change mode. State-changing browser
+workflows exist only behind separate feature and isolated-SITL environment gates;
+they are not enabled by `sitl-test:up`. A stationary marker is therefore expected
+in the baseline and is not a telemetry failure.
 
-If movement is needed for a separate map/track exercise, control it through an
-explicit MAVProxy or another authorized GCS workflow—not through this project
-bridge. Keep that flight-control exercise separate from the read-only mission
-acceptance result.
+Use `pnpm sitl-test:motion` for the repeatable map/track exercise, or another
+explicitly authorized test workflow. Keep flight-control evidence separate from
+the stationary mission-read acceptance result.
 
 ### Frame type is physics, not just a label
 

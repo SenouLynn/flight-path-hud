@@ -1,0 +1,14 @@
+{
+  "type": "guidedLand",
+  "requestId": "land-1",
+  "sysId": 1,
+  "compId": 1,
+  "touchdownAltitudeM": 0.75,
+  "relativeAltitudeM": 0.5,
+  "status": "complete",
+  "ackResult": 0,
+  "observed": true,
+  "attempts": 1,
+  "reason": null,
+  "updatedAtMs": 2000
+}

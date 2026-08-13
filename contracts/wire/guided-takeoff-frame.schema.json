@@ -1,0 +1,23 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://flight-path-hud.local/contracts/wire/guided-takeoff-frame.schema.json",
+  "title": "Guided-takeoff lifecycle frame (protocol v0 producer contract)",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["type", "requestId", "sysId", "compId", "relativeAltitudeM", "altitudeToleranceM", "status", "ackResult", "observed", "attempts", "altitudeErrorM", "reason", "updatedAtMs"],
+  "properties": {
+    "type": { "const": "guidedTakeoff" },
+    "requestId": { "type": ["string", "null"], "minLength": 1 },
+    "sysId": { "type": ["integer", "null"], "minimum": 1, "maximum": 255, "x-wire-type": "uint8" },
+    "compId": { "type": ["integer", "null"], "minimum": 1, "maximum": 255, "x-wire-type": "uint8" },
+    "relativeAltitudeM": { "type": ["number", "null"], "x-unit": "m-relative-to-home" },
+    "altitudeToleranceM": { "type": ["number", "null"], "minimum": 0, "x-unit": "m" },
+    "status": { "enum": ["awaitingAck", "awaitingObservation", "complete", "failed"] },
+    "ackResult": { "type": ["integer", "null"], "minimum": 0, "maximum": 255, "x-wire-type": "uint8" },
+    "observed": { "type": "boolean" },
+    "attempts": { "type": "integer", "minimum": 0 },
+    "altitudeErrorM": { "type": ["number", "null"], "minimum": 0, "x-unit": "m-absolute-error" },
+    "reason": { "type": ["string", "null"] },
+    "updatedAtMs": { "type": "number", "x-wire-type": "float64-ms" }
+  }
+}

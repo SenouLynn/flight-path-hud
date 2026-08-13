@@ -143,7 +143,7 @@ fresh and disarmed preconditions, exact-target ACK correlation, and HEARTBEAT
 post-condition verification. The initial allowlists contain only Copter
 `STABILIZE`/`LOITER` and Plane `MANUAL`/`LOITER`. Mixed-SITL acceptance passed
 with both vehicles disarmed, target-isolation checks, and restoration to each
-vehicle's original custom mode. Guided operations remain.
+vehicle's original custom mode. Guided operations are described below.
 A sanitized 12-event lifecycle fixture deterministically replays all four accepted
 mode transitions without outbound traffic.
 

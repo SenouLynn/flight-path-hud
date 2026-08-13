@@ -126,8 +126,8 @@ vehicle-class override
 local safety policy
 ```
 
-The portable semantic registry proposed in
-[the contract handoff](portable_contracts_handoff_2026-08-13.md) should capture
+The portable semantic registry in
+[the contract pack](../contracts/README.md) should capture
 units, scaling, coordinate frames, sign conventions, fallback priority, and
 valid ranges. Metadata improves UI generation and validation, but it does not
 replace state-machine or byte-level tests.

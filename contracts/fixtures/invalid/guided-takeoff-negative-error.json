@@ -1,0 +1,15 @@
+{
+  "type": "guidedTakeoff",
+  "requestId": "takeoff-invalid",
+  "sysId": 1,
+  "compId": 1,
+  "relativeAltitudeM": 12,
+  "altitudeToleranceM": 2,
+  "status": "complete",
+  "ackResult": 0,
+  "observed": true,
+  "attempts": 1,
+  "altitudeErrorM": -0.1,
+  "reason": null,
+  "updatedAtMs": 1000
+}
