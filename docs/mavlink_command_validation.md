@@ -142,7 +142,7 @@ fresh and disarmed preconditions, exact-target ACK correlation, and HEARTBEAT
 post-condition verification. The initial allowlists contain only Copter
 `STABILIZE`/`LOITER` and Plane `MANUAL`/`LOITER`. Mixed-SITL acceptance passed
 with both vehicles disarmed, target-isolation checks, and restoration to each
-vehicle's original custom mode. Arm/disarm live validation and Guided operations remain.
+vehicle's original custom mode. Guided operations remain.
 A sanitized 12-event lifecycle fixture deterministically replays all four accepted
 mode transitions without outbound traffic.
 
@@ -153,7 +153,21 @@ correlates both ACK and the HEARTBEAT armed bit. Forced arm/disarm is impossible
 the codec and arming has no retry by default. The acceptance controller proved
 standard arming, exact-target peer isolation, immediate verified disarm, and final
 disarmed cleanup for both vehicles. It remains dual-gated with no browser or
-non-SITL enablement. Guided operations remain unimplemented.
+non-SITL enablement. A sanitized 12-event fixture deterministically replays the
+four accepted arm/disarm lifecycles, including ACK and armed-state observation,
+without transmitting MAVLink. Live Guided operations remain unimplemented.
+
+The first Guided foundation is implemented but deliberately transport-free. A pure
+policy prepares a position-only `MAV_CMD_DO_REPOSITION` encoded as `COMMAND_INT` in
+`MAV_FRAME_GLOBAL_RELATIVE_ALT_INT`; it cannot send through the live bridge. It
+requires fresh supported ArduPilot identity, an already-armed vehicle already in
+the correct vehicle-specific Guided custom mode (Copter `4`, Plane `15`), operator
+identity and confirmation, an isolated-SITL attestation, and a caller-supplied
+latitude/longitude/relative-altitude safety envelope. Plane additionally requires
+an explicit loiter radius and direction bounded by that envelope, while Copter
+rejects those Plane-only controls. The command never requests an implicit mode
+change. Routing, ACK lifecycle, position post-condition, and separate live SITL
+acceptance scenarios remain before this can be enabled.
 
 These are state-changing and potentially safety-critical. Add only after a command policy,
 operator confirmation UX, target identity display, current-mode/armed-state verification,

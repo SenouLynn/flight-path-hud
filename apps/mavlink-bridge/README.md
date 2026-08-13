@@ -254,6 +254,24 @@ for stable disarmed position/state readiness, arms only one target, verifies the
 peer stays disarmed, immediately disarms, and verifies both targets disarmed in
 unconditional cleanup. Remove the stack with `pnpm sitl-test:arm-disarm:down`.
 
+Regenerate its lifecycle fixture only from a reviewed successful run:
+
+```bash
+node apps/mavlink-bridge/src/curateArmDisarmFixture.js \
+  apps/mavlink-bridge/recordings/<successful-session>.jsonl \
+  apps/mavlink-bridge/test-fixtures/mixed-sitl-arm-disarm-v2.jsonl
+```
+
+Guided reposition currently exists only as a transport-free portable policy and
+codec; it is not registered with the WebSocket or UDP bridge and has no enablement
+variable. The boundary uses position-only `MAV_CMD_DO_REPOSITION` in `COMMAND_INT`
+with an explicit relative-to-home frame and no implicit mode transition. It requires
+an already-armed supported ArduPilot vehicle already in its vehicle-specific Guided
+mode, operator identity and confirmation, the `isolated-sitl-guided` attestation,
+and an explicit latitude/longitude/relative-altitude safety envelope. Copter rejects
+Plane loiter controls; Plane requires an explicit positive loiter radius and direction
+plus an envelope ceiling for that radius.
+
 Malformed datagrams are dropped and counted in `decodeErrorCount`.
 
 ### Read-only parameter request

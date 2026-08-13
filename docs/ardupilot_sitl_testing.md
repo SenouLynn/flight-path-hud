@@ -151,6 +151,12 @@ accepted standard `MAV_CMD_COMPONENT_ARM_DISARM`, reported the armed HEARTBEAT b
 preserved peer isolation, and immediately accepted and reported disarm. No force
 magic was transmitted, and final cleanup verified both vehicles disarmed.
 
+The sanitized `mixed-sitl-arm-disarm-v2.jsonl` fixture retains all 12 lifecycle
+events from those four accepted transactions. Regression tests reconstruct both
+vehicles' arm-then-disarm histories, require successful ACK and HEARTBEAT armed-bit
+observation, verify disarm is each target's final state, and prove replay emits no
+MAVLink.
+
 ## Acceptance checklist
 
 1. The GCS fleet roster lists `1:1` and `2:1`, with no bridge decode errors for

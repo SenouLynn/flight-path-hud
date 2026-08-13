@@ -16,6 +16,12 @@
 - Added mixed Copter/Plane arm-disarm SITL acceptance with stable readiness,
   zero-retry standard arming, peer isolation, immediate verified disarm, and
   unconditional final disarmed-state verification.
+- Added a sanitized deterministic fixture for all four accepted arm/disarm
+  lifecycles, proving ACK plus armed-state observation and transmit-free replay.
+- Added the transport-free Guided reposition foundation: exact-target
+  `COMMAND_INT` encoding, explicit relative-home coordinates and safety envelope,
+  already-armed/Guided preconditions, and distinct Copter/Plane loiter semantics.
+  It is intentionally not connected to the live bridge.
 
 - Added the portable Stage 3 mission-replacement protocol and state-machine
   foundation, including exact-target correlation, bounded retries, final ACK,
