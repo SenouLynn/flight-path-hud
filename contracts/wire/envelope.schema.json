@@ -5,6 +5,10 @@
   "oneOf": [
     { "$ref": "telemetry-frame.schema.json" },
     { "$ref": "flight-state-frame.schema.json" },
+    { "$ref": "mission-frame.schema.json" },
+    { "$ref": "home-frame.schema.json" },
+    { "$ref": "link-mode-frame.schema.json" },
+    { "$ref": "guided-reposition-frame.schema.json" },
     { "$ref": "mode-change-frame.schema.json" },
     { "$ref": "arm-disarm-frame.schema.json" },
     { "$ref": "guided-takeoff-frame.schema.json" },

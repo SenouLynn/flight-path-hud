@@ -1,0 +1,16 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://flight-path-hud.local/contracts/wire/home-frame.schema.json",
+  "title": "Home-position frame (protocol v0 producer contract)",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["type", "sysId", "compId", "lat", "lon", "altMslM"],
+  "properties": {
+    "type": { "const": "home" },
+    "sysId": { "type": "integer", "minimum": 1, "maximum": 255 },
+    "compId": { "type": "integer", "minimum": 1, "maximum": 255 },
+    "lat": { "type": "number", "minimum": -90, "maximum": 90 },
+    "lon": { "type": "number", "minimum": -180, "maximum": 180 },
+    "altMslM": { "type": "number" }
+  }
+}

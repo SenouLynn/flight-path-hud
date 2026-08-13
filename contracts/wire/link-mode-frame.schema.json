@@ -1,0 +1,12 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://flight-path-hud.local/contracts/wire/link-mode-frame.schema.json",
+  "title": "Link-mode frame (protocol v0 producer contract)",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["type", "replayMode"],
+  "properties": {
+    "type": { "const": "linkMode" },
+    "replayMode": { "type": "boolean" }
+  }
+}

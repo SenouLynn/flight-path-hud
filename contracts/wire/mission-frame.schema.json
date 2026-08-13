@@ -1,0 +1,33 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://flight-path-hud.local/contracts/wire/mission-frame.schema.json",
+  "title": "Mission download frame (protocol v0 producer contract)",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["type", "sysId", "compId", "status", "items", "activeIndex", "reason"],
+  "properties": {
+    "type": { "const": "mission" },
+    "sysId": { "type": "integer", "minimum": 1, "maximum": 255 },
+    "compId": { "type": "integer", "minimum": 1, "maximum": 255 },
+    "status": { "enum": ["pending", "complete", "failed"] },
+    "items": { "type": "array", "items": { "$ref": "#/$defs/item" }, "maxItems": 65535 },
+    "activeIndex": { "type": ["integer", "null"], "minimum": 0, "maximum": 65535 },
+    "reason": { "type": ["string", "null"] }
+  },
+  "$defs": {
+    "item": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["seq", "command", "current", "autocontinue", "latDeg", "lonDeg", "altM"],
+      "properties": {
+        "seq": { "type": "integer", "minimum": 0, "maximum": 65535 },
+        "command": { "type": "integer", "minimum": 0, "maximum": 65535 },
+        "current": { "type": "boolean" },
+        "autocontinue": { "type": "boolean" },
+        "latDeg": { "type": "number", "minimum": -90, "maximum": 90 },
+        "lonDeg": { "type": "number", "minimum": -180, "maximum": 180 },
+        "altM": { "type": "number" }
+      }
+    }
+  }
+}

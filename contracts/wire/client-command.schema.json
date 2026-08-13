@@ -1,0 +1,103 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://flight-path-hud.local/contracts/wire/client-command.schema.json",
+  "title": "Supported protocol v0 client command",
+  "oneOf": [
+    { "$ref": "#/$defs/requestMission" },
+    { "$ref": "#/$defs/requestParameter" },
+    { "$ref": "#/$defs/requestParameterList" },
+    { "$ref": "#/$defs/requestMessage" },
+    { "$ref": "#/$defs/setMessageInterval" },
+    { "$ref": "#/$defs/writeParameter" },
+    { "$ref": "#/$defs/uploadMission" },
+    { "$ref": "#/$defs/commandRequest" },
+    { "$ref": "#/$defs/setMode" },
+    { "$ref": "#/$defs/setArmed" },
+    { "$ref": "#/$defs/guidedReposition" },
+    { "$ref": "#/$defs/guidedTakeoff" },
+    { "$ref": "#/$defs/guidedLand" }
+  ],
+  "$defs": {
+    "targetProperties": {
+      "type": "object",
+      "properties": {
+        "requestId": { "type": "string", "minLength": 1 },
+        "sysId": { "type": "integer", "minimum": 1, "maximum": 255 },
+        "compId": { "type": "integer", "minimum": 1, "maximum": 255 }
+      }
+    },
+    "requestMission": {
+      "type": "object", "additionalProperties": false,
+      "required": ["type", "sysId", "compId"],
+      "properties": { "type": { "const": "requestMission" }, "sysId": { "type": "integer", "minimum": 1, "maximum": 255 }, "compId": { "type": "integer", "minimum": 1, "maximum": 255 } }
+    },
+    "requestParameter": {
+      "type": "object", "additionalProperties": false,
+      "required": ["type", "requestId", "sysId", "compId"],
+      "properties": {
+        "type": { "const": "requestParameter" }, "requestId": { "type": "string", "minLength": 1 },
+        "sysId": { "type": "integer", "minimum": 1, "maximum": 255 }, "compId": { "type": "integer", "minimum": 1, "maximum": 255 },
+        "name": { "type": "string", "minLength": 1, "maxLength": 16, "pattern": "^[ -~]+$" }, "index": { "type": "integer", "minimum": 0, "maximum": 32767 }
+      },
+      "oneOf": [{ "required": ["name"], "not": { "required": ["index"] } }, { "required": ["index"], "not": { "required": ["name"] } }]
+    },
+    "requestParameterList": {
+      "type": "object", "additionalProperties": false, "required": ["type", "requestId", "sysId", "compId"],
+      "properties": { "type": { "const": "requestParameterList" }, "requestId": { "type": "string", "minLength": 1 }, "sysId": { "type": "integer", "minimum": 1, "maximum": 255 }, "compId": { "type": "integer", "minimum": 1, "maximum": 255 } }
+    },
+    "requestMessage": {
+      "type": "object", "additionalProperties": false, "required": ["type", "requestId", "sysId", "compId", "messageName"],
+      "properties": { "type": { "const": "requestMessage" }, "requestId": { "type": "string", "minLength": 1 }, "sysId": { "type": "integer", "minimum": 1, "maximum": 255 }, "compId": { "type": "integer", "minimum": 1, "maximum": 255 }, "messageName": { "enum": ["HOME_POSITION", "GPS_GLOBAL_ORIGIN"] } }
+    },
+    "setMessageInterval": {
+      "type": "object", "additionalProperties": false, "required": ["type", "requestId", "sysId", "compId", "messageName", "intervalUs"],
+      "properties": { "type": { "const": "setMessageInterval" }, "requestId": { "type": "string", "minLength": 1 }, "sysId": { "type": "integer", "minimum": 1, "maximum": 255 }, "compId": { "type": "integer", "minimum": 1, "maximum": 255 }, "messageName": { "enum": ["ATTITUDE", "GLOBAL_POSITION_INT", "VFR_HUD", "GPS_RAW_INT"] }, "intervalUs": { "type": "integer", "anyOf": [{ "enum": [-1, 0] }, { "minimum": 100000, "maximum": 60000000 }] } }
+    },
+    "operator": {
+      "type": "object",
+      "properties": { "actor": { "type": "string", "minLength": 1 }, "timestampMs": { "type": "number" }, "confirmation": { "const": true } }
+    },
+    "writeParameter": {
+      "type": "object", "additionalProperties": false, "required": ["type", "requestId", "sysId", "compId", "name", "value", "actor", "timestampMs", "confirmation"],
+      "properties": { "type": { "const": "writeParameter" }, "requestId": { "type": "string", "minLength": 1 }, "sysId": { "type": "integer", "minimum": 1, "maximum": 255 }, "compId": { "type": "integer", "minimum": 1, "maximum": 255 }, "name": { "const": "LOG_DISARMED" }, "value": { "enum": [0, 1] }, "actor": { "type": "string", "minLength": 1 }, "timestampMs": { "type": "number" }, "confirmation": { "const": true } }
+    },
+    "missionItem": {
+      "type": "object", "additionalProperties": false,
+      "required": ["command", "frameId", "current", "autocontinue", "latDegE7", "lonDegE7", "altM"],
+      "properties": { "command": { "type": "integer", "minimum": 0, "maximum": 65535 }, "frameId": { "type": "integer", "minimum": 0, "maximum": 255 }, "current": { "type": "boolean" }, "autocontinue": { "type": "boolean" }, "param1": { "type": "number" }, "param2": { "type": "number" }, "param3": { "type": "number" }, "param4": { "type": "number" }, "latDegE7": { "type": "integer", "minimum": -2147483648, "maximum": 2147483647 }, "lonDegE7": { "type": "integer", "minimum": -2147483648, "maximum": 2147483647 }, "altM": { "type": "number" } }
+    },
+    "uploadMission": {
+      "type": "object", "additionalProperties": false, "required": ["type", "requestId", "sysId", "compId", "actor", "timestampMs", "confirmation", "policy", "items"],
+      "properties": { "type": { "const": "uploadMission" }, "requestId": { "type": "string", "minLength": 1 }, "sysId": { "type": "integer", "minimum": 1, "maximum": 255 }, "compId": { "type": "integer", "minimum": 1, "maximum": 255 }, "actor": { "type": "string", "minLength": 1 }, "timestampMs": { "type": "number" }, "confirmation": { "const": true }, "policy": { "const": "clearThenReplace" }, "items": { "type": "array", "minItems": 1, "maxItems": 65535, "items": { "$ref": "#/$defs/missionItem" } } }
+    },
+    "commandRequest": {
+      "type": "object", "additionalProperties": false, "required": ["type", "requestId", "sysId", "compId", "family", "actor", "timestampMs", "confirmation"],
+      "properties": { "type": { "const": "commandRequest" }, "requestId": { "type": "string", "minLength": 1 }, "sysId": { "type": "integer", "minimum": 1, "maximum": 255 }, "compId": { "type": "integer", "minimum": 1, "maximum": 255 }, "family": { "type": "string", "minLength": 1 }, "actor": { "type": "string", "minLength": 1 }, "timestampMs": { "type": "number" }, "confirmation": { "const": true }, "params": { "type": "object" } }
+    },
+    "setMode": {
+      "type": "object", "additionalProperties": false, "required": ["type", "requestId", "sysId", "compId", "mode", "actor", "timestampMs", "confirmation"],
+      "properties": { "type": { "const": "setMode" }, "requestId": { "type": "string", "minLength": 1 }, "sysId": { "type": "integer", "minimum": 1, "maximum": 255 }, "compId": { "type": "integer", "minimum": 1, "maximum": 255 }, "mode": { "enum": ["STABILIZE", "MANUAL", "LOITER", "GUIDED"] }, "actor": { "type": "string", "minLength": 1 }, "timestampMs": { "type": "number" }, "confirmation": { "const": true } }
+    },
+    "setArmed": {
+      "type": "object", "additionalProperties": false, "required": ["type", "requestId", "sysId", "compId", "arm", "actor", "timestampMs", "confirmation", "safetyCase"],
+      "properties": { "type": { "const": "setArmed" }, "requestId": { "type": "string", "minLength": 1 }, "sysId": { "type": "integer", "minimum": 1, "maximum": 255 }, "compId": { "type": "integer", "minimum": 1, "maximum": 255 }, "arm": { "type": "boolean" }, "actor": { "type": "string", "minLength": 1 }, "timestampMs": { "type": "number" }, "confirmation": { "const": true }, "safetyCase": { "const": "sitl-no-propulsion" } }
+    },
+    "safetyEnvelope": {
+      "type": "object", "additionalProperties": false,
+      "required": ["minLatitudeDeg", "maxLatitudeDeg", "minLongitudeDeg", "maxLongitudeDeg", "minRelativeAltitudeM", "maxRelativeAltitudeM", "maxArrivalRadiusM", "maxAltitudeToleranceM"],
+      "properties": { "minLatitudeDeg": { "type": "number", "minimum": -90, "maximum": 90 }, "maxLatitudeDeg": { "type": "number", "minimum": -90, "maximum": 90 }, "minLongitudeDeg": { "type": "number", "minimum": -180, "maximum": 180 }, "maxLongitudeDeg": { "type": "number", "minimum": -180, "maximum": 180 }, "minRelativeAltitudeM": { "type": "number" }, "maxRelativeAltitudeM": { "type": "number" }, "maxArrivalRadiusM": { "type": "number", "exclusiveMinimum": 0 }, "maxAltitudeToleranceM": { "type": "number", "exclusiveMinimum": 0 }, "maxLoiterRadiusM": { "type": "number", "exclusiveMinimum": 0 } }
+    },
+    "guidedReposition": {
+      "type": "object", "additionalProperties": false, "required": ["type", "requestId", "sysId", "compId", "latitudeDeg", "longitudeDeg", "relativeAltitudeM", "arrivalRadiusM", "altitudeToleranceM", "actor", "timestampMs", "confirmation", "safetyCase", "safetyEnvelope"],
+      "properties": { "type": { "const": "guidedReposition" }, "requestId": { "type": "string", "minLength": 1 }, "sysId": { "type": "integer", "minimum": 1, "maximum": 255 }, "compId": { "type": "integer", "minimum": 1, "maximum": 255 }, "latitudeDeg": { "type": "number", "minimum": -90, "maximum": 90 }, "longitudeDeg": { "type": "number", "minimum": -180, "maximum": 180 }, "relativeAltitudeM": { "type": "number" }, "arrivalRadiusM": { "type": "number", "exclusiveMinimum": 0 }, "altitudeToleranceM": { "type": "number", "exclusiveMinimum": 0 }, "loiterRadiusM": { "type": "number" }, "loiterDirection": { "enum": ["clockwise", "counterclockwise"] }, "actor": { "type": "string", "minLength": 1 }, "timestampMs": { "type": "number" }, "confirmation": { "const": true }, "safetyCase": { "const": "isolated-sitl-guided" }, "safetyEnvelope": { "$ref": "#/$defs/safetyEnvelope" } }
+    },
+    "guidedTakeoff": {
+      "type": "object", "additionalProperties": false, "required": ["type", "requestId", "sysId", "compId", "relativeAltitudeM", "altitudeToleranceM", "actor", "timestampMs", "confirmation", "safetyCase"],
+      "properties": { "type": { "const": "guidedTakeoff" }, "requestId": { "type": "string", "minLength": 1 }, "sysId": { "type": "integer", "minimum": 1, "maximum": 255 }, "compId": { "type": "integer", "minimum": 1, "maximum": 255 }, "relativeAltitudeM": { "type": "number", "minimum": 2, "maximum": 120 }, "altitudeToleranceM": { "type": "number", "minimum": 0.5, "maximum": 10 }, "actor": { "type": "string", "minLength": 1 }, "timestampMs": { "type": "number" }, "confirmation": { "const": true }, "safetyCase": { "const": "isolated-sitl-guided" } }
+    },
+    "guidedLand": {
+      "type": "object", "additionalProperties": false, "required": ["type", "requestId", "sysId", "compId", "actor", "timestampMs", "confirmation", "safetyCase"],
+      "properties": { "type": { "const": "guidedLand" }, "requestId": { "type": "string", "minLength": 1 }, "sysId": { "type": "integer", "minimum": 1, "maximum": 255 }, "compId": { "type": "integer", "minimum": 1, "maximum": 255 }, "actor": { "type": "string", "minLength": 1 }, "timestampMs": { "type": "number" }, "confirmation": { "const": true }, "safetyCase": { "const": "isolated-sitl-guided" } }
+    }
+  }
+}
