@@ -23,9 +23,14 @@ tagged release exists.
 ## [Unreleased]
 
 ### Changed
+- **Mixed-SITL motion is now a repeatable regression gate.** The test-only
+  controller flies independently targeted Copter and Plane missions, preserves a
+  45-second browser observation window after automated acceptance, and supplies
+  a minimized real-MAVLink fixture proving per-system motion, instruments,
+  mission progress, passive overlays, trail inputs, and deterministic replay.
 - **Root commands now expose the two GCS validation modes directly.**
   `npm run gcs:mock` starts the deterministic local fleet, while
-  `npm run gcs:sitl` starts the detached mixed ArduPilot Compose stack and the
+  `npm run gcs:sitl-test` starts the detached mixed ArduPilot Compose stack and the
   browser GCS. Obsolete bridge/sample/video composition aliases were removed
   from the root interface; SITL lifecycle commands remain for diagnostics.
 - **Mixed SITL has passed its initial live smoke run.** The Docker-built Copter
@@ -47,6 +52,10 @@ tagged release exists.
   runtime `PATH`.
 
 ### Fixed
+- **Coordinate-less mission actions no longer draw routes through `0,0`.** SITL
+  takeoff-at-current-position and return-to-launch commands remain visible under
+  their true mission sequence numbers, but the map omits their protocol sentinel
+  coordinates instead of placing false waypoints off Africa.
 - **Breadcrumb trails ignore startup GPS discontinuities.** The GCS now advances
   a trail only for `GLOBAL_POSITION_INT` frames and begins a fresh trail after a
   jump greater than 1 km, rather than connecting a simulator's placeholder fix

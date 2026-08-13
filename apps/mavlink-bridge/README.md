@@ -129,6 +129,20 @@ passively into cached mission overlays during replay. This reconstruction emits
 no MAVLink requests or acknowledgements; browser mission loading remains disabled
 because there is no live vehicle to query.
 
+The checked-in `mixed-sitl-motion-v2.jsonl` fixture is a minimized real-SITL
+motion capture. To deliberately replace it from a reviewed successful run, use:
+
+```bash
+node apps/mavlink-bridge/src/curateMotionFixture.js \
+  apps/mavlink-bridge/recordings/<session>.jsonl \
+  apps/mavlink-bridge/test-fixtures/mixed-sitl-motion-v2.jsonl
+```
+
+The curator retains representative raw MAVLink rather than decoded envelopes,
+rebases timestamps deterministically, and removes repetitive simulator traffic.
+Run `npm run test:bridge` after curating; do not promote an arbitrary or failed
+recording merely because it is newest.
+
 Note: a recording is read fully into memory on replay, so it is bounded by the
 per-run cap above.
 

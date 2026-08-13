@@ -75,9 +75,19 @@ The controller-level real-SITL acceptance passed on 2026-08-13. Copter completed
 a GUIDED takeoff, entered AUTO and exceeded the 75 m displacement threshold;
 Plane completed its AUTO takeoff and exceeded 191 m before the shared threshold
 passed. Separation remained above the configured 150 m floor, and both vehicles
-acknowledged force-disarm during cleanup. Browser trail inspection and deriving
-a minimized sanitized motion fixture from a tightly capped recording remain the
-replay-parity follow-up.
+acknowledged force-disarm during cleanup. Browser validation confirmed both
+markers and trails moving independently, changing instruments, target-scoped
+mission overlays, and disabled mission loading during replay.
+
+The successful raw capture was curated into the versioned 8 KB fixture
+`apps/mavlink-bridge/test-fixtures/mixed-sitl-motion-v2.jsonl`. It preserves 80
+representative raw MAVLink v2 datagrams while replacing local capture timestamps
+with deterministic values. Regression tests prove both systems move at least
+75 m, yield multiple nonduplicate trail inputs without a false 1 km segment,
+change heading/speed/altitude/attitude, progress their own five-item missions,
+reconstruct passive target-scoped overlays without sending MAVLink, and normalize
+identically on repeated replay. `curateMotionFixture.js` documents and repeats
+the mechanical reduction from a deliberately selected source capture.
 
 ## Authority boundary
 
