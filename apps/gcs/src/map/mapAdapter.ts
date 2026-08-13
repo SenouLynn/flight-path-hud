@@ -117,12 +117,10 @@ export function createWaypointMarkerElement(
  * displaced. Because this only runs on the update path, a badge renders
  * correctly when created and jumps the first time anything restyles it.
  *
- * The active highlight deliberately wins over the node colour. An inline
- * background outranks any class rule, so keeping one set would hide
- * `.waypoint-marker.active` entirely and the operator would lose track of which
- * waypoint the vehicle is flying to. Identity is worth less than state here:
- * which node a badge belongs to is also carried by its route line and its
- * position, whereas "this one is next" has no other tell.
+ * The active highlight deliberately wins the fill, while the node colour moves
+ * to a ring. This carries both facts at once: yellow means active, and the ring
+ * still says whose plan it belongs to. The ring also remains visible when a
+ * stationary vehicle marker and mission-home item zero occupy the same point.
  */
 export function styleWaypointMarker(
   element: HTMLElement,
@@ -130,7 +128,10 @@ export function styleWaypointMarker(
   color?: string,
 ): void {
   element.classList.toggle('active', active)
-  // Empty string removes the inline declaration and hands the badge back to the
-  // stylesheet, rather than pinning it to a wrong colour.
+  // Empty background hands active state back to the stylesheet's yellow fill.
   element.style.background = active || color === undefined ? '' : color
+  element.style.borderColor = color ?? ''
+  element.style.boxShadow = active && color !== undefined
+    ? `0 0 0 2px #0a0e14, 0 0 0 4px ${color}`
+    : ''
 }

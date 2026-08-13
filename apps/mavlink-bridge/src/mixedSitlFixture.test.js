@@ -3,6 +3,7 @@ import path from 'node:path'
 import test from 'node:test'
 import { fileURLToPath } from 'node:url'
 import { createBridgeCore } from './bridgeCore.js'
+import { createMissionRouter } from './missionRouter.js'
 import { readRecording } from './recording.js'
 
 const fixture = path.join(path.dirname(fileURLToPath(import.meta.url)), '../test-fixtures/mixed-mavlink-v2.jsonl')
@@ -52,4 +53,27 @@ test('mixed MAVLink v2 fixture replays to the same normalized envelope stream', 
   const second = replayFrames()
   assert.ok(first.length > 0)
   assert.deepEqual(second, first)
+})
+
+test('mixed MAVLink v2 fixture reconstructs both mission overlays in passive replay', () => {
+  const router = createMissionRouter({
+    send: () => assert.fail('passive replay must not send MAVLink'),
+    canSend: () => false,
+    isLive: () => false,
+  })
+
+  replayFrames().forEach((frame) => router.ingestEnvelope(frame))
+
+  const missions = router.snapshotForNewClient()
+    .filter((frame) => frame.type === 'mission')
+    .sort((left, right) => left.sysId - right.sysId)
+
+  assert.deepEqual(missions.map((mission) => ({
+    system: `${mission.sysId}:${mission.compId}`,
+    status: mission.status,
+    items: mission.items.map((item) => item.seq),
+  })), [
+    { system: '1:1', status: 'complete', items: [0, 1, 2] },
+    { system: '2:1', status: 'complete', items: [0, 1, 2, 3] },
+  ])
 })

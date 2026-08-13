@@ -86,12 +86,24 @@ describe('styleWaypointMarker', () => {
     expect(element.style.background).toBe('#c792ea')
   })
 
-  it('hands an active badge back to the stylesheet, so the highlight wins', () => {
+  it('uses a yellow active fill plus a node-colour identity ring', () => {
     const element = fakeElement(['waypoint-marker'])
 
     styleWaypointMarker(element, true, '#c792ea')
 
     expect(element.style.background).toBe('')
+    expect(element.style.borderColor).toBe('#c792ea')
+    expect(element.style.boxShadow).toContain('#c792ea')
+  })
+
+  it('removes the active ring when a badge becomes inactive', () => {
+    const element = fakeElement(['waypoint-marker'])
+
+    styleWaypointMarker(element, true, '#c792ea')
+    styleWaypointMarker(element, false, '#c792ea')
+
+    expect(element.style.boxShadow).toBe('')
+    expect(element.style.background).toBe('#c792ea')
   })
 
   it('leaves the stylesheet in charge when no colour is given', () => {

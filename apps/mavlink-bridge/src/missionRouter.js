@@ -122,6 +122,17 @@ export function createMissionRouter({ send, canSend, isLive = () => true, now = 
       }
 
       const sync = syncFor(sysId, compId)
+
+      // A recording contains the vehicle's inbound mission response frames but
+      // not the browser request or this bridge's outbound request frames. In
+      // replay mode only, treat MISSION_COUNT as the start of a passive fold so
+      // captured mission overlays reconstruct without sending or authorizing
+      // any command. Live unsolicited mission traffic remains ignored.
+      if (!isLive() && messageName === 'MISSION_COUNT') {
+        sync.beginPassiveReplay(payload.missionCount.count)
+        return missionFrameFor(sysId, compId, sync)
+      }
+
       const changed = sync.ingestEnvelope(envelope)
 
       if (!changed) {

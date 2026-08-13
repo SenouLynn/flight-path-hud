@@ -84,6 +84,47 @@ test('handleClientMessage fails immediately when canSend() is false (replay mode
   assert.equal(sent.length, 0, 'no outbound bytes in replay mode')
 })
 
+test('replay passively reconstructs a captured mission without sending MAVLink', () => {
+  const { router, setLive, sent } = makeRouter()
+  setLive(false)
+
+  const pending = router.ingestEnvelope({
+    sysId: 2, compId: 1, messageName: 'MISSION_COUNT',
+    payload: { missionCount: { count: 2 } },
+  })
+  assert.equal(pending.status, 'pending')
+
+  router.ingestEnvelope({
+    sysId: 2, compId: 1, messageName: 'MISSION_ITEM_INT',
+    payload: { missionItemInt: { seq: 0, command: 16, current: true, autocontinue: true, latDegE7: 1, lonDegE7: 2, altM: 3 } },
+  })
+  const complete = router.ingestEnvelope({
+    sysId: 2, compId: 1, messageName: 'MISSION_ITEM_INT',
+    payload: { missionItemInt: { seq: 1, command: 16, current: false, autocontinue: true, latDegE7: 4, lonDegE7: 5, altM: 6 } },
+  })
+
+  assert.equal(complete.status, 'complete')
+  assert.deepEqual(complete.items.map((item) => item.seq), [0, 1])
+  assert.equal(sent.length, 0, 'passive replay emits neither requests nor ACKs')
+  assert.deepEqual(router.snapshotForNewClient(), [complete])
+})
+
+test('live unsolicited mission responses remain ignored', () => {
+  const { router, sent } = makeRouter()
+
+  assert.equal(router.ingestEnvelope({
+    sysId: 1, compId: 1, messageName: 'MISSION_COUNT',
+    payload: { missionCount: { count: 1 } },
+  }), null)
+  assert.equal(router.ingestEnvelope({
+    sysId: 1, compId: 1, messageName: 'MISSION_ITEM_INT',
+    payload: { missionItemInt: { seq: 0, command: 16, current: true, autocontinue: true, latDegE7: 1, lonDegE7: 2, altM: 3 } },
+  }), null)
+
+  assert.equal(sent.length, 0)
+  assert.deepEqual(router.snapshotForNewClient(), [])
+})
+
 test('a live request with no route fails safely rather than using another vehicle endpoint', () => {
   const { router, setCanSend, sent } = makeRouter()
   setCanSend(false)

@@ -119,10 +119,9 @@ stack, run `npm ci` at repository root on the Mac, then restart the GCS.
    MAVLINK_BRIDGE_REPLAY_FILE=recordings/<session>.jsonl npm run replay:bridge
    ```
 
-   Confirm the same roster. Mission overlays cannot currently be reconstructed
-   by standalone replay because recordings contain inbound MAVLink datagrams,
-   not the browser's outbound mission request that starts the bridge mission
-   transaction. Do not enable recording during replay.
+   Confirm the same roster and passively reconstructed mission overlays. Replay
+   sends no mission requests or acknowledgements, and mission loading remains
+   disabled. Do not enable recording during replay.
 5. Curate a small, sanitized real-SITL capture into the versioned fixture and
    extend the existing fixture tests to prove independent IDs/state/missions and
    normalized replay parity.
@@ -143,15 +142,17 @@ The mixed-SITL acceptance checklist passed:
 - The checked-in sanitized fixture `mixed-mavlink-v2.jsonl` and its tests prove
   independent IDs, positions, mission counts/items, and normalized replay parity.
 
-Two follow-ups were identified but do not invalidate transport acceptance:
+Two UI/replay follow-ups identified during acceptance were resolved on
+2026-08-13:
 
-- Waypoint `0` is the active mission-home item at the stationary vehicle's
-  position, so its yellow badge overlaps the vehicle marker. Plane's assigned
-  sand/amber identity colour is also visually close to the yellow active-item
-  colour, making the fleet overlay ambiguous.
-- Raw recording captures inbound MAVLink datagrams but not the browser's outbound
-  mission request. Standalone replay therefore reproduces the two-node roster but
-  cannot reconstruct cached mission overlays with the current mission router.
+- Active waypoints retain the yellow state fill but now carry a strong ring in
+  their vehicle's identity colour. This preserves both meanings when mission-home
+  item zero overlaps a stationary vehicle marker and separates Plane's amber
+  identity from active yellow.
+- Standalone replay now passively folds captured `MISSION_COUNT` and
+  `MISSION_ITEM_INT` transactions into cached overlays. It emits no outbound
+  MAVLink, leaves mission loading disabled, and does not change live unsolicited
+  mission handling.
 
 Future harness optimization: startup latency is dominated by the bridge running
 `npm ci` before opening its WebSocket, browser exponential reconnect backoff, and

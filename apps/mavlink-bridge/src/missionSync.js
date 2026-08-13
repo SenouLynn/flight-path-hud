@@ -32,6 +32,7 @@ export function createMissionSync({ send, now = Date.now, sysId, compId, targetS
   let retryCount = 0
   let awaitingSince = null
   let activeIndex = null
+  let passiveReplay = false
 
   function sendRequestList() {
     send(encodeMissionRequestList({ sysId, compId, targetSystemId, targetComponentId }))
@@ -59,6 +60,7 @@ export function createMissionSync({ send, now = Date.now, sysId, compId, targetS
 
   return {
     requestMission() {
+      passiveReplay = false
       status = 'requested'
       reason = null
       expectedCount = null
@@ -66,6 +68,23 @@ export function createMissionSync({ send, now = Date.now, sysId, compId, targetS
       nextSeq = 0
       retryCount = 0
       sendRequestList()
+    },
+
+    /**
+     * Rebuild a mission transaction already present in a recording. Replay has
+     * no live route and must emit no requests or ACKs; it can nevertheless fold
+     * the recorded MISSION_COUNT/ITEM_INT response sequence into the same public
+     * mission snapshot used by a live pull.
+     */
+    beginPassiveReplay(count) {
+      passiveReplay = true
+      status = count === 0 ? 'complete' : 'collecting'
+      reason = null
+      expectedCount = count
+      items = count === 0 ? [] : new Array(count)
+      nextSeq = 0
+      retryCount = 0
+      awaitingSince = null
     },
 
     /** Returns whether this envelope actually changed observable state, so the
@@ -101,7 +120,9 @@ export function createMissionSync({ send, now = Date.now, sysId, compId, targetS
 
         if (item.seq !== nextSeq) {
           // Recoverable per spec: drop it, re-ask for the index we actually want.
-          sendRequestItem(nextSeq)
+          if (!passiveReplay) {
+            sendRequestItem(nextSeq)
+          }
           return true
         }
 
@@ -110,12 +131,16 @@ export function createMissionSync({ send, now = Date.now, sysId, compId, targetS
         retryCount = 0
 
         if (nextSeq >= expectedCount) {
-          sendAck(MAV_MISSION_ACCEPTED)
+          if (!passiveReplay) {
+            sendAck(MAV_MISSION_ACCEPTED)
+          }
           status = 'complete'
           return true
         }
 
-        sendRequestItem(nextSeq)
+        if (!passiveReplay) {
+          sendRequestItem(nextSeq)
+        }
         return true
       }
 

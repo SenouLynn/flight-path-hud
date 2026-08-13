@@ -28,6 +28,7 @@ import {
   styleWaypointMarker,
   toLngLat,
 } from './mapAdapter'
+import { isActiveMissionWaypoint } from '../missionPresentation'
 
 interface MapPanelProps {
   vehicle: VehicleState | null
@@ -436,7 +437,7 @@ export const MapPanel = forwardRef<MapHandle, MapPanelProps>(function MapPanel(
 
     mission.items.forEach((item) => {
       seenSeqs.add(item.seq)
-      const active = item.seq === mission.activeIndex
+      const active = isActiveMissionWaypoint(item.seq, mission.activeIndex)
       const position = toLngLat(item.latDeg, item.lonDeg)
       const existing = markers.get(item.seq)
 

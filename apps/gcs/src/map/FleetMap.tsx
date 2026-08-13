@@ -34,6 +34,7 @@ import {
   routeFeatureCollection,
   sortedWaypoints,
 } from '../fleet/fleetMapData'
+import { isActiveMissionWaypoint } from '../missionPresentation'
 
 interface FleetMapProps {
   nodes: NodeSummary[]
@@ -365,7 +366,7 @@ export const FleetMap = forwardRef<FleetMapHandle, FleetMapProps>(function Fleet
         const key = waypointKey(node.identity.id, item.seq)
         seen.add(key)
 
-        const active = item.seq === mission.activeIndex
+        const active = isActiveMissionWaypoint(item.seq, mission.activeIndex)
         const position = toLngLat(item.latDeg, item.lonDeg)
         const existing = markers.get(key)
 

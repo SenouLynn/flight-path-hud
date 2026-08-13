@@ -1,11 +1,9 @@
 # Multi-node awareness
 
-**Status: producer, domain and presentation built for MAVLink nodes, with a
-mixed ArduCopter/ArduPlane SITL harness Docker-built and manually observed live.
-The two-node roster, independent missions, map placement and per-system routing
-have been exercised. The repeatable capture/replay and stop/restart portions of
-the acceptance checklist remain before calling this scenario fully validated.
-Not field-validated.**
+**Status: producer, domain and presentation built for MAVLink nodes. Mixed
+ArduCopter/ArduPlane SITL acceptance passed on 2026-08-13, including independent
+missions, stop/restart eviction and recovery, and capture/replay with passive
+mission-overlay reconstruction. Not field-validated.**
 [ADR-0026](./decisions.md) gated this phase on the single-node system being
 validated in real life. [ADR-0028](./decisions.md) amended that gate's scope to
 let producer work proceed *while every node on the link is synthetic*, because a
@@ -31,15 +29,14 @@ position, an identity and a staleness, contributed by different transports.
 The unifying idea is that a vehicle we fly and a node someone is carrying are the
 same kind of object on the map, differing in transport and in what they report.
 
-## Next load-bearing validation step
+## Completed load-bearing validation step
 
-Complete and preserve the mixed ArduCopter (`1:1`) + ArduPlane (`2:1`) Docker
-SITL acceptance scenario: stop/restart one simulator, replay the captured
-session, then curate a short sanitized recording as the versioned real-producer
-fixture. This is the evidence gate for MAVLink v2 decoding, per-system UDP
-mission return routing, independent mission pulls, stale-node eviction,
-reconnect, recording, and replay. The checked-in fixture remains a
-binary-contract fixture until that captured SITL fixture is added.
+The mixed ArduCopter (`1:1`) + ArduPlane (`2:1`) Docker SITL acceptance scenario
+passed on 2026-08-13: independent mission pulls, Plane-only stop/restart,
+stale-node eviction and recovery without browser reload, and replay of a short
+real-producer capture. The checked-in sanitized fixture now locks independent
+MAVLink v2 state, mission counts/items, normalized replay parity, and passive
+mission-overlay reconstruction.
 
 ## What is already multi-node
 
@@ -69,9 +66,10 @@ start:
   system alongside `nodes`, so a plan belonging to a node nobody has selected is
   no longer invisible.
 
-The gap is no longer data or presentation but *repeatable evidence*: the live
-SITL smoke run has exercised the data path, while the preserved recording and
-the stop/restart/replay acceptance evidence remain to be completed.
+The next evidence boundary is real SITL motion: both vehicle types must move
+under an explicit test-only control workflow while their tracks and instruments
+remain independent. Browser command authority remains out of scope for that
+scenario.
 
 ## What would actually change
 

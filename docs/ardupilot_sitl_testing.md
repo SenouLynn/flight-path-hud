@@ -100,9 +100,10 @@ Keep the GCS WebSocket URL at `ws://localhost:8080/telemetry`. Use
 5. Stop the stack. Locate the bridge recording in
    `apps/mavlink-bridge/recordings/`, replay it from the repository root with
    `MAVLINK_BRIDGE_REPLAY_FILE=recordings/<file> npm run replay:bridge`, and
-   confirm the same two-node roster appears. Cached mission overlays do not
-   currently reconstruct in standalone replay because the raw capture excludes
-   the browser's outbound mission request that initiates mission synchronization.
+   confirm the same two-node roster and cached mission overlays appear. Replay
+   passively folds captured `MISSION_COUNT`/`MISSION_ITEM_INT` transactions; it
+   sends no mission requests or acknowledgements and keeps mission loading
+   disabled.
 
 ## Operator gotchas
 

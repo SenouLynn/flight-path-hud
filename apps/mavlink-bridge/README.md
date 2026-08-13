@@ -124,6 +124,11 @@ Replays with the original inter-packet pacing and no vehicle, sender or UDP sock
 attached. `MAVLINK_BRIDGE_REPLAY_SPEED` (default `1`) and
 `MAVLINK_BRIDGE_REPLAY_LOOP=1` are available.
 
+Captured `MISSION_COUNT`/`MISSION_ITEM_INT` response sequences are folded
+passively into cached mission overlays during replay. This reconstruction emits
+no MAVLink requests or acknowledgements; browser mission loading remains disabled
+because there is no live vehicle to query.
+
 Note: a recording is read fully into memory on replay, so it is bounded by the
 per-run cap above.
 
