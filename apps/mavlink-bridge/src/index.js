@@ -10,6 +10,7 @@ import { createCommandRouter } from './commandRouter.js'
 import { createParameterRouter } from './parameterRouter.js'
 import { createParameterListRouter } from './parameterListRouter.js'
 import { createMessageRequestRouter } from './messageRequestRouter.js'
+import { createMessageIntervalRouter } from './messageIntervalRouter.js'
 
 const UDP_HOST = process.env.MAVLINK_BRIDGE_UDP_HOST ?? '0.0.0.0'
 const UDP_PORT = Number.parseInt(process.env.MAVLINK_BRIDGE_UDP_PORT ?? '14550', 10)
@@ -82,6 +83,8 @@ const parameterListRouter = createParameterListRouter({
   isLive: () => typeof ingress.sendTo === 'function', recordEvent: (event) => recorder?.recordEvent(event),
 })
 const messageRequestRouter = createMessageRequestRouter({ send: (s,c,b)=>ingress.sendTo?.(s,c,b), canSend: (s,c)=>ingress.hasRoute?.(s,c)===true, isLive: ()=>typeof ingress.sendTo==='function', recordEvent: (e)=>recorder?.recordEvent(e) })
+const messageIntervalRouter = createMessageIntervalRouter({ send:(s,c,b)=>ingress.sendTo?.(s,c,b), canSend:(s,c)=>ingress.hasRoute?.(s,c)===true,
+  isLive:()=>typeof ingress.sendTo==='function', enabled:()=>process.env.MAVLINK_BRIDGE_ENABLE_MESSAGE_INTERVAL==='1', recordEvent:e=>recorder?.recordEvent(e) })
 
 const MISSION_MESSAGE_NAMES = new Set(['MISSION_COUNT', 'MISSION_ITEM_INT', 'MISSION_CURRENT', 'MISSION_ACK'])
 
@@ -151,6 +154,8 @@ const stopIngress = ingress.start((datagram, meta) => {
     }
     const requestedFrame = messageRequestRouter.ingestEnvelope(envelope)
     if (requestedFrame !== null) publish(requestedFrame)
+    const intervalFrame = messageIntervalRouter.ingestEnvelope(envelope)
+    if (intervalFrame !== null) publish(intervalFrame)
     if (envelope.messageName === 'PARAM_VALUE') {
       const frame = parameterRouter.ingestEnvelope(envelope)
       if (frame !== null) publish(frame)
@@ -177,6 +182,8 @@ const stopIngress = ingress.start((datagram, meta) => {
   if (listFrame !== null) publish(listFrame)
   const requestedFrame = messageRequestRouter.ingestRecordedEvent(event)
   if (requestedFrame !== null) publish(requestedFrame)
+  const intervalFrame = messageIntervalRouter.ingestRecordedEvent(event)
+  if (intervalFrame !== null) publish(intervalFrame)
 })
 
 wsServer.on('listening', () => {
@@ -196,6 +203,7 @@ wsServer.on('connection', (ws) => {
   parameterRouter.snapshotForNewClient().forEach((frame) => ws.send(JSON.stringify(frame)))
   parameterListRouter.snapshotForNewClient().forEach((frame) => ws.send(JSON.stringify(frame)))
   messageRequestRouter.snapshotForNewClient().forEach((frame) => ws.send(JSON.stringify(frame)))
+  messageIntervalRouter.snapshotForNewClient().forEach((frame) => ws.send(JSON.stringify(frame)))
 
   ws.on('message', (raw) => {
     let message = null
@@ -221,6 +229,8 @@ wsServer.on('connection', (ws) => {
       if (listFrame !== null) publish(listFrame)
       const requestedFrame = messageRequestRouter.handleClientMessage(message)
       if (requestedFrame !== null) publish(requestedFrame)
+      const intervalFrame = messageIntervalRouter.handleClientMessage(message)
+      if (intervalFrame !== null) publish(intervalFrame)
     } catch (error) {
       console.error(`[mavlink-bridge] client message rejected: ${error?.message ?? error}`)
     }
@@ -233,6 +243,7 @@ const missionTickTimer = setInterval(() => {
   parameterRouter.tick().forEach(publish)
   parameterListRouter.tick().forEach(publish)
   messageRequestRouter.tick().forEach(publish)
+  messageIntervalRouter.tick().forEach(publish)
 }, 100)
 
 async function shutdown() {

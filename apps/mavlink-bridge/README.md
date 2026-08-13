@@ -157,6 +157,7 @@ per-run cap above.
 | `MAVLINK_BRIDGE_UDP_HOST` / `_UDP_PORT` | `0.0.0.0` / `14550` | UDP ingress |
 | `MAVLINK_BRIDGE_WS_PORT` / `_WS_PATH` | `8080` / `/telemetry` | WebSocket egress |
 | `MAVLINK_BRIDGE_SYSTEM_TTL_MS` | `10000` | Drop a quiet system and its UDP return route from the roster |
+| `MAVLINK_BRIDGE_ENABLE_MESSAGE_INTERVAL` | `0` | `1` enables allowlisted, target-scoped stream interval changes |
 | `MAVLINK_BRIDGE_SAMPLE_PORT` | `14549` | Sample sender's single-instance lock |
 
 ## Envelope shape
@@ -190,6 +191,11 @@ control authority.
 One-shot `HOME_POSITION` and `GPS_GLOBAL_ORIGIN` reads use
 `{"type":"requestMessage","requestId":"message-1","sysId":1,"compId":1,"messageName":"HOME_POSITION"}`.
 Completion requires both the exact target's `COMMAND_ACK` and requested response.
+
+With the explicit feature flag enabled, `setMessageInterval` requests accept
+`ATTITUDE`, `GLOBAL_POSITION_INT`, `VFR_HUD`, or `GPS_RAW_INT` and an `intervalUs`
+of `-1` (disable), `0` (restore default), or 100000–60000000. Successful non-disable
+requests require both the exact target's ACK and a subsequent requested message.
 
 Use `{"type":"requestParameterList","requestId":"parameters-1","sysId":1,"compId":1}`
 to retrieve the full target-scoped parameter set. Progress frames contain counts

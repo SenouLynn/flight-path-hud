@@ -1,5 +1,8 @@
 # Changelog
 
+- Added disabled-by-default, target-scoped MAVLink message-interval configuration
+  with bandwidth limits, ACK correlation, and observed-message verification.
+
 - Added target-scoped one-shot `HOME_POSITION` and `GPS_GLOBAL_ORIGIN` requests,
   correlated against both `COMMAND_ACK` and the expected response message.
 
