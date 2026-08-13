@@ -13,6 +13,7 @@ const SUPPORTED_MESSAGE_DECODERS = {
   42: decodeMissionCurrent,
   44: decodeMissionCount,
   47: decodeMissionAck,
+  49: decodeGpsGlobalOrigin,
   73: decodeMissionItemInt,
   74: decodeVfrHud,
   77: decodeCommandAck,
@@ -30,6 +31,7 @@ const MESSAGE_CRC_EXTRA = {
   42: 28,
   44: 221,
   47: 153,
+  49: 39,
   73: 38,
   74: 20,
   77: 143,
@@ -372,6 +374,12 @@ function decodeHomePosition(frame) {
       },
     },
   }
+}
+function decodeGpsGlobalOrigin(frame) {
+  const payload = payloadPaddedTo(frame.payload, 12)
+  if (payload === null) return null
+  return { messageName: 'GPS_GLOBAL_ORIGIN', payload: { timestampMs: frame.recvTimestampMs,
+    gpsGlobalOrigin: { latDegE7: payload.readInt32LE(0), lonDegE7: payload.readInt32LE(4), altMm: payload.readInt32LE(8) } } }
 }
 
 function decodeSupportedFrame(frame) {
