@@ -106,6 +106,33 @@ Keep the GCS WebSocket URL at `ws://localhost:8080/telemetry`. Use
 
 ## Operator gotchas
 
+### Startup latency is mostly harness sequencing
+
+The several-second delay before the GCS connects and the vehicles appear is not
+primarily MAVLink throughput. It currently comes from three deliberate or
+incidental startup stages:
+
+- The Compose bridge runs `npm ci` on every container start before opening its
+  WebSocket. With a warm dependency volume this still took about four seconds in
+  the 2026-08-13 validation run.
+- While the bridge is unavailable, the browser retries with exponential delays
+  of 500 ms, 900 ms, 1.62 s, 2.92 s, then up to 5 s. A bridge that becomes ready
+  just after an attempt can therefore sit idle until the next retry.
+- Copter and Plane containers start concurrently, but each withholds its MAVProxy
+  forwarding independently until SITL accepts a seeded mission. The seeder waits
+  for TCP, `HEARTBEAT`, `HOME_POSITION`, a fixed three-second mission-storage
+  delay, and the complete mission upload. Different home/GPS initialization times
+  make the vehicles appear one after the other even though they were launched in
+  parallel.
+
+This sequencing currently favors deterministic mission seeding over startup
+speed and remains the acceptance baseline. A future harness optimization should
+measure each stage, then consider baking bridge dependencies into an image,
+starting telemetry forwarding independently of seeding, replacing the fixed
+three-second wait with an explicit readiness/retry transaction, and shortening
+initial browser reconnect backoff. Any change must preserve reliable mission
+item zero coordinates and target-routed mission synchronization.
+
 ### A loaded mission is not a flying mission
 
 The seeded `*.waypoints` files are uploaded to ArduPilot at startup through a

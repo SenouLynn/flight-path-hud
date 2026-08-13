@@ -153,6 +153,14 @@ Two follow-ups were identified but do not invalidate transport acceptance:
   mission request. Standalone replay therefore reproduces the two-node roster but
   cannot reconstruct cached mission overlays with the current mission router.
 
+Future harness optimization: startup latency is dominated by the bridge running
+`npm ci` before opening its WebSocket, browser exponential reconnect backoff, and
+each concurrently launched vehicle withholding forwarding until its independent
+`HEARTBEAT`/`HOME_POSITION`/three-second delay/mission-upload sequence completes.
+Optimize only with timing evidence, preserving deterministic mission seeding and
+the guard against waypoint zero being captured at temporary `0,0`. See the
+startup-latency note in `ardupilot_sitl_testing.md` for candidate changes.
+
 ## Recommended next milestone
 
 After the checklist above, add a **separate test-only SITL motion scenario**.
