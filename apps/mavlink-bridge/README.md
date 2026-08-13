@@ -283,6 +283,14 @@ one exact target at a time, verifies arrival and peer isolation, and the setup
 force-disarms both simulated vehicles during unconditional container cleanup.
 Remove the stopped stack with `pnpm sitl-test:guided-reposition:down`.
 
+Regenerate the successful lifecycle fixture only from a reviewed passing run:
+
+```bash
+node apps/mavlink-bridge/src/curateGuidedRepositionFixture.js \
+  apps/mavlink-bridge/recordings/<successful-session>.jsonl \
+  apps/mavlink-bridge/test-fixtures/mixed-sitl-guided-reposition-v2.jsonl
+```
+
 Malformed datagrams are dropped and counted in `decodeErrorCount`.
 
 ### Read-only parameter request

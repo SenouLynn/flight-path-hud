@@ -28,6 +28,9 @@
 - Registered Guided reposition behind dual isolated-SITL gates and added separate
   Copter/Plane airborne acceptance flows. Real ArduPilot 4.6.2 SITL proved target
   arrival, peer isolation, distinct Plane loiter semantics, and cleanup disarm.
+- Added a sanitized deterministic fixture for both successful Guided reposition
+  lifecycles, preserving vehicle-specific policy, ACK, and bounded arrival evidence
+  with transmit-free replay coverage.
 
 - Added the portable Stage 3 mission-replacement protocol and state-machine
   foundation, including exact-target correlation, bounded retries, final ACK,

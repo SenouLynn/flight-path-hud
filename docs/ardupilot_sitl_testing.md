@@ -169,6 +169,12 @@ an 8 m horizontal arrival volume; Plane moved 194.3 m into its 100 m loiter arri
 volume with an explicit 75 m clockwise loiter radius. Both commands were accepted,
 and disposable-SITL cleanup force-disarmed both vehicles with accepted ACKs.
 
+The sanitized `mixed-sitl-guided-reposition-v2.jsonl` fixture retains all six
+lifecycle events from the two accepted transactions. Regression tests reconstruct
+the Copter position arrival and Plane clockwise 75 m loiter arrival, require ACK
+and both bounded position errors in each terminal frame, and prove replay emits no
+MAVLink.
+
 ## Acceptance checklist
 
 1. The GCS fleet roster lists `1:1` and `2:1`, with no bridge decode errors for

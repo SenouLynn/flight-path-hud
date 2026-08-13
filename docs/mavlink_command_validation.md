@@ -175,6 +175,10 @@ Copter moved 22.9 m into its bounded arrival volume and Plane moved 194.3 m into
 its larger loiter arrival volume; both commands received successful ACKs, the peer
 remained armed in its own Guided mode, and cleanup disarmed both simulators. No
 browser or non-SITL enablement exists.
+A sanitized six-event lifecycle fixture retains both successful transactions and
+their distinct Copter/Plane policy fields, successful ACKs, and horizontal plus
+relative-altitude arrival measurements. Regression tests replay it deterministically
+without emitting MAVLink.
 
 These are state-changing and potentially safety-critical. Add only after a command policy,
 operator confirmation UX, target identity display, current-mode/armed-state verification,
