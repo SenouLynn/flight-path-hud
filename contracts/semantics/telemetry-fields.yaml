@@ -1,0 +1,19 @@
+protocolVersion: 0
+fields:
+  vfrHud.headingDeg:
+    unit: degree
+    convention: clockwise from true north, normalized to [0, 360)
+    priority: 1
+  attitude.yawRad:
+    unit: radian
+    convention: converted to heading degrees and normalized to [0, 360)
+    priority: 2
+  globalPositionInt.headingCdeg:
+    unit: centidegree
+    convention: clockwise from true north
+    sentinel:
+      65535: unknown
+    priority: 3
+  globalPositionInt.vzCms:
+    unit: centimetre-per-second
+    convention: NED positive-down; negate for HUD positive-up climb rate

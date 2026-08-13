@@ -11,11 +11,15 @@ import {
   type ScalarTelemetryResolution,
 } from './flightPath'
 import type { TelemetrySample } from './telemetry'
+import headingCasesJson from '../../../../contracts/semantics/heading-cases.json'
 
 export interface ReplayFrame {
   id: string
   sample: TelemetrySample
   expectedHeadingDeg: number | null
+  expectedSource: HeadingResolution['source']
+  expectedIsFallback: boolean
+  toleranceDeg: number
 }
 
 export interface HeadingReplayResult {
@@ -79,48 +83,8 @@ export interface FlightPathReplayResult {
   turnEndErrorM: number | null
 }
 
-export const HEADING_VALIDATION_FRAMES: ReplayFrame[] = [
-  {
-    id: 'vfr-primary-090',
-    sample: {
-      timestampMs: 0,
-      vfrHud: { headingDeg: 90 },
-    },
-    expectedHeadingDeg: 90,
-  },
-  {
-    id: 'vfr-wrap-370',
-    sample: {
-      timestampMs: 100,
-      vfrHud: { headingDeg: 370 },
-    },
-    expectedHeadingDeg: 10,
-  },
-  {
-    id: 'attitude-fallback-neg-quarter-turn',
-    sample: {
-      timestampMs: 200,
-      attitude: { yawRad: -Math.PI / 2 },
-    },
-    expectedHeadingDeg: 270,
-  },
-  {
-    id: 'global-fallback-centideg',
-    sample: {
-      timestampMs: 300,
-      globalPositionInt: { headingCdeg: 12345 },
-    },
-    expectedHeadingDeg: 123.45,
-  },
-  {
-    id: 'global-unknown-no-heading',
-    sample: {
-      timestampMs: 400,
-      globalPositionInt: { headingCdeg: 65535 },
-    },
-    expectedHeadingDeg: null,
-  },
-]
+const portableHeadingCases: unknown = headingCasesJson
+export const HEADING_VALIDATION_FRAMES = portableHeadingCases as ReplayFrame[]
 
 export const ATTITUDE_VALIDATION_FRAMES: AttitudeReplayFrame[] = [
   {

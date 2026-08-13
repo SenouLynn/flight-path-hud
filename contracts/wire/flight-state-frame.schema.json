@@ -1,0 +1,20 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://flight-path-hud.local/contracts/wire/flight-state-frame.schema.json",
+  "title": "Flight-state frame (protocol v0 producer contract)",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["type", "sysId", "compId", "armed", "baseMode", "customMode", "systemStatus", "vehicleType", "autopilotType", "observedAtMs"],
+  "properties": {
+    "type": { "const": "flightState" },
+    "sysId": { "type": "integer", "minimum": 1, "maximum": 255, "x-wire-type": "uint8" },
+    "compId": { "type": "integer", "minimum": 1, "maximum": 255, "x-wire-type": "uint8" },
+    "armed": { "type": "boolean" },
+    "baseMode": { "type": "integer", "minimum": 0, "maximum": 255, "x-wire-type": "uint8" },
+    "customMode": { "type": "integer", "minimum": 0, "maximum": 4294967295, "x-wire-type": "uint32" },
+    "systemStatus": { "type": "integer", "minimum": 0, "maximum": 255, "x-wire-type": "uint8" },
+    "vehicleType": { "type": "integer", "minimum": 0, "maximum": 255, "x-wire-type": "uint8" },
+    "autopilotType": { "type": "integer", "minimum": 0, "maximum": 255, "x-wire-type": "uint8" },
+    "observedAtMs": { "type": "number", "x-wire-type": "float64-ms" }
+  }
+}

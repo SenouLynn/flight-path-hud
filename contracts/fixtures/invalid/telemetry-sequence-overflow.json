@@ -1,0 +1,8 @@
+{
+  "recvTimestampMs": 1000,
+  "sysId": 1,
+  "compId": 1,
+  "messageName": "GLOBAL_POSITION_INT",
+  "sequence": 256,
+  "payload": { "timestampMs": 999 }
+}

@@ -79,13 +79,18 @@ describe('runHeadingReplay', () => {
     expect(replay).toHaveLength(HEADING_VALIDATION_FRAMES.length)
 
     for (const row of replay) {
+      const fixture = HEADING_VALIDATION_FRAMES.find((candidate) => candidate.id === row.id)
+      expect(fixture).toBeDefined()
+      expect(row.result.source).toBe(fixture?.expectedSource)
+      expect(row.result.isFallback).toBe(fixture?.expectedIsFallback)
+
       if (row.expectedHeadingDeg === null) {
         expect(row.result.headingDeg).toBeNull()
         continue
       }
 
       expect(row.result.headingDeg).not.toBeNull()
-      expect(row.absoluteErrorDeg).toBeLessThan(0.000001)
+      expect(row.absoluteErrorDeg).toBeLessThanOrEqual(fixture?.toleranceDeg ?? 0)
     }
   })
 })

@@ -1,0 +1,15 @@
+{
+  "recvTimestampMs": 1000,
+  "sysId": 1,
+  "compId": 1,
+  "messageName": "GLOBAL_POSITION_INT",
+  "sequence": 7,
+  "payload": {
+    "timestampMs": 999,
+    "globalPositionInt": {
+      "latDegE7": 473977420,
+      "lonDegE7": 85455940,
+      "headingCdeg": 18000
+    }
+  }
+}

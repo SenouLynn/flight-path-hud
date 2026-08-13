@@ -1,0 +1,48 @@
+[
+  {
+    "name": "copter-position-only",
+    "input": {
+      "sysId": 255,
+      "compId": 190,
+      "targetSystemId": 1,
+      "targetComponentId": 1,
+      "latitudeDeg": 35.1234567,
+      "longitudeDeg": -80.7654321,
+      "relativeAltitudeM": 25,
+      "vehicleType": 2
+    },
+    "expectedPayloadHex": "000080bf00000000000000000000c07f076aef144f2cdccf0000c841c0000101060000",
+    "expected": {
+      "messageId": 75,
+      "command": 192,
+      "coordinateFrame": 6,
+      "latitudeDegE7": 351234567,
+      "longitudeDegE7": -807654321,
+      "relativeAltitudeM": 25
+    }
+  },
+  {
+    "name": "plane-clockwise-loiter",
+    "input": {
+      "sysId": 255,
+      "compId": 190,
+      "targetSystemId": 2,
+      "targetComponentId": 1,
+      "latitudeDeg": -35,
+      "longitudeDeg": 149,
+      "relativeAltitudeM": 100,
+      "vehicleType": 1,
+      "loiterRadiusM": 75,
+      "loiterDirection": "clockwise"
+    },
+    "expectedPayloadHex": "000080bf000000000000964200000000806c23eb8098cf580000c842c0000201060000",
+    "expected": {
+      "messageId": 75,
+      "command": 192,
+      "coordinateFrame": 6,
+      "latitudeDegE7": -350000000,
+      "longitudeDegE7": 1490000000,
+      "relativeAltitudeM": 100
+    }
+  }
+]

@@ -1,0 +1,12 @@
+{
+  "type": "flightState",
+  "sysId": 0,
+  "compId": 1,
+  "armed": true,
+  "baseMode": 129,
+  "customMode": 4,
+  "systemStatus": 4,
+  "vehicleType": 2,
+  "autopilotType": 3,
+  "observedAtMs": 1234
+}

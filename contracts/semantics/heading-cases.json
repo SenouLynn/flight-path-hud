@@ -1,0 +1,42 @@
+[
+  {
+    "id": "vfr-primary-090",
+    "sample": { "timestampMs": 0, "vfrHud": { "headingDeg": 90 } },
+    "expectedHeadingDeg": 90,
+    "expectedSource": "VFR_HUD.heading",
+    "expectedIsFallback": false,
+    "toleranceDeg": 0.000001
+  },
+  {
+    "id": "vfr-wrap-370",
+    "sample": { "timestampMs": 100, "vfrHud": { "headingDeg": 370 } },
+    "expectedHeadingDeg": 10,
+    "expectedSource": "VFR_HUD.heading",
+    "expectedIsFallback": false,
+    "toleranceDeg": 0.000001
+  },
+  {
+    "id": "attitude-fallback-neg-quarter-turn",
+    "sample": { "timestampMs": 200, "attitude": { "yawRad": -1.5707963267948966 } },
+    "expectedHeadingDeg": 270,
+    "expectedSource": "ATTITUDE.yaw",
+    "expectedIsFallback": true,
+    "toleranceDeg": 0.000001
+  },
+  {
+    "id": "global-fallback-centideg",
+    "sample": { "timestampMs": 300, "globalPositionInt": { "headingCdeg": 12345 } },
+    "expectedHeadingDeg": 123.45,
+    "expectedSource": "GLOBAL_POSITION_INT.hdg",
+    "expectedIsFallback": true,
+    "toleranceDeg": 0.000001
+  },
+  {
+    "id": "global-unknown-no-heading",
+    "sample": { "timestampMs": 400, "globalPositionInt": { "headingCdeg": 65535 } },
+    "expectedHeadingDeg": null,
+    "expectedSource": "none",
+    "expectedIsFallback": false,
+    "toleranceDeg": 0.000001
+  }
+]

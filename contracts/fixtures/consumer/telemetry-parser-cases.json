@@ -1,0 +1,34 @@
+[
+  {
+    "name": "unknown envelope and payload fields are accepted then dropped",
+    "input": {
+      "recvTimestampMs": 1000,
+      "sysId": 1,
+      "compId": 1,
+      "messageName": "VFR_HUD",
+      "sequence": 7,
+      "futureEnvelopeField": true,
+      "payload": {
+        "timestampMs": 999,
+        "futureSection": { "value": 1 },
+        "vfrHud": { "headingDeg": 91, "futureField": 2 }
+      }
+    },
+    "accepted": true,
+    "producerValid": false,
+    "expectedPayload": { "timestampMs": 999, "vfrHud": { "headingDeg": 91 } }
+  },
+  {
+    "name": "out-of-range identity is rejected",
+    "input": {
+      "recvTimestampMs": 1000,
+      "sysId": 256,
+      "compId": 1,
+      "messageName": "VFR_HUD",
+      "sequence": 7,
+      "payload": { "timestampMs": 999 }
+    },
+    "accepted": false,
+    "producerValid": false
+  }
+]

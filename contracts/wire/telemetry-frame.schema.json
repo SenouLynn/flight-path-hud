@@ -1,0 +1,79 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://flight-path-hud.local/contracts/wire/telemetry-frame.schema.json",
+  "title": "Telemetry frame (protocol v0 producer contract)",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["recvTimestampMs", "sysId", "compId", "messageName", "sequence", "payload"],
+  "properties": {
+    "recvTimestampMs": { "type": "number", "x-wire-type": "float64-ms" },
+    "sysId": { "type": "integer", "minimum": 0, "maximum": 255, "x-wire-type": "uint8" },
+    "compId": { "type": "integer", "minimum": 0, "maximum": 255, "x-wire-type": "uint8" },
+    "messageName": { "type": "string", "pattern": ".*\\S.*" },
+    "sequence": { "type": "integer", "minimum": 0, "maximum": 255, "x-wire-type": "uint8" },
+    "payload": { "$ref": "#/$defs/telemetrySample" }
+  },
+  "$defs": {
+    "finiteNumberFields": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "rollRad": { "type": "number" },
+        "pitchRad": { "type": "number" },
+        "yawRad": { "type": "number" },
+        "pitchSpeedRadPerSec": { "type": "number" },
+        "yawSpeedRadPerSec": { "type": "number" },
+        "headingDeg": { "type": "number" },
+        "airSpeedMps": { "type": "number" },
+        "groundSpeedMps": { "type": "number" },
+        "climbMps": { "type": "number" },
+        "headingCdeg": { "type": "number" },
+        "vxCms": { "type": "number" },
+        "vyCms": { "type": "number" },
+        "vzCms": { "type": "number" },
+        "latDegE7": { "type": "number" },
+        "lonDegE7": { "type": "number" },
+        "altMm": { "type": "number" },
+        "relativeAltMm": { "type": "number" },
+        "cogCdeg": { "type": "number" },
+        "velCms": { "type": "number" }
+      }
+    },
+    "attitude": {
+      "allOf": [
+        { "$ref": "#/$defs/finiteNumberFields" },
+        { "propertyNames": { "enum": ["rollRad", "pitchRad", "yawRad", "pitchSpeedRadPerSec", "yawSpeedRadPerSec"] } }
+      ]
+    },
+    "vfrHud": {
+      "allOf": [
+        { "$ref": "#/$defs/finiteNumberFields" },
+        { "propertyNames": { "enum": ["headingDeg", "airSpeedMps", "groundSpeedMps", "climbMps"] } }
+      ]
+    },
+    "globalPositionInt": {
+      "allOf": [
+        { "$ref": "#/$defs/finiteNumberFields" },
+        { "propertyNames": { "enum": ["headingCdeg", "vxCms", "vyCms", "vzCms", "latDegE7", "lonDegE7", "altMm", "relativeAltMm"] } }
+      ]
+    },
+    "gpsRawInt": {
+      "allOf": [
+        { "$ref": "#/$defs/finiteNumberFields" },
+        { "propertyNames": { "enum": ["cogCdeg", "velCms"] } }
+      ]
+    },
+    "telemetrySample": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["timestampMs"],
+      "properties": {
+        "timestampMs": { "type": "number", "x-wire-type": "float64-ms" },
+        "attitude": { "$ref": "#/$defs/attitude" },
+        "vfrHud": { "$ref": "#/$defs/vfrHud" },
+        "globalPositionInt": { "$ref": "#/$defs/globalPositionInt" },
+        "gpsRawInt": { "$ref": "#/$defs/gpsRawInt" }
+      }
+    }
+  }
+}

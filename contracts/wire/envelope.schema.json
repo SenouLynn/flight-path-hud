@@ -1,0 +1,9 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://flight-path-hud.local/contracts/wire/envelope.schema.json",
+  "title": "Supported protocol v0 server frame",
+  "oneOf": [
+    { "$ref": "telemetry-frame.schema.json" },
+    { "$ref": "flight-state-frame.schema.json" }
+  ]
+}
