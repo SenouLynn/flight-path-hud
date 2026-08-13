@@ -79,8 +79,9 @@ Compose stack before changing the bridge or GCS. See ADR-0031.
 ## Recording
 
 **Recording is on by default.** Each run writes
-`recordings/session-<timestamp>.jsonl` — raw wire bytes, not decoded envelopes, so
-a replay re-runs the parser and catches decoder regressions.
+`recordings/session-<timestamp>.jsonl` — raw wire bytes plus normalized protocol
+transaction events. Raw telemetry re-runs the parser during replay, while
+request lifecycle events reconstruct without contacting a vehicle.
 
 That default is only safe because retention is bounded. On startup the bridge
 sweeps its recordings directory, and every run is capped:
@@ -129,6 +130,9 @@ passively into cached mission overlays during replay. This reconstruction emits
 no MAVLink requests or acknowledgements; browser mission loading remains disabled
 because there is no live vehicle to query.
 
+Recorded command and parameter-read lifecycle events are also folded passively.
+Replay never retries a request or emits outbound MAVLink.
+
 The checked-in `mixed-sitl-motion-v2.jsonl` fixture is a minimized real-SITL
 motion capture. To deliberately replace it from a reviewed successful run, use:
 
@@ -167,10 +171,27 @@ Outbound frames are JSON:
 
 Malformed datagrams are dropped and counted in `decodeErrorCount`.
 
+### Read-only parameter request
+
+WebSocket clients may request one parameter from an exact live target by name:
+
+```json
+{"type":"requestParameter","requestId":"parameter-1","sysId":1,"compId":1,"name":"SYSID_THISMAV"}
+```
+
+or by zero-based parameter index using `"index"` instead of `"name"`. The bridge
+publishes `parameterRead` frames with `pending`, `complete`, or `failed` status.
+Identical concurrent target/query pairs are rejected because MAVLink
+`PARAM_VALUE` has no request ID and cannot correlate them unambiguously.
+
+This is a read transaction only. It does not enable `PARAM_SET` or any browser
+control authority.
+
 ## Decoded messages
 
-`HEARTBEAT` (0), `GPS_RAW_INT` (24), `ATTITUDE` (30), `GLOBAL_POSITION_INT` (33),
-`VFR_HUD` (74). Others are skipped.
+`HEARTBEAT` (0), `PARAM_VALUE` (22), `GPS_RAW_INT` (24), `ATTITUDE` (30),
+`GLOBAL_POSITION_INT` (33), mission messages, `VFR_HUD` (74), `COMMAND_ACK` (77),
+and `HOME_POSITION` (242). Others are skipped.
 
 MAVLink orders payload fields **by size, not by XML declaration order** — the
 decoders read size-sorted offsets. Getting that wrong produces plausible-looking

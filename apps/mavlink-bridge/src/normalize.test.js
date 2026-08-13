@@ -2,7 +2,7 @@ import assert from 'node:assert/strict'
 import test from 'node:test'
 import { computeFrameCrc, crcAccumulate, parseIncomingDatagram, encodeMissionCount, encodeMissionItemInt } from './normalize.js'
 
-const CRC_EXTRA = { 0: 50, 24: 24, 30: 39, 33: 104, 42: 28, 44: 221, 47: 153, 73: 38, 74: 20, 77: 143, 242: 104 }
+const CRC_EXTRA = { 0: 50, 22: 220, 24: 24, 30: 39, 33: 104, 42: 28, 44: 221, 47: 153, 73: 38, 74: 20, 77: 143, 242: 104 }
 
 function buildMavlinkV1Frame(messageId, payload, { sequence = 7, sysId = 1, compId = 1, corruptCrc = false } = {}) {
   const frame = Buffer.alloc(6 + payload.length + 2)
@@ -117,6 +117,19 @@ test('parses MAVLink v1 ATTITUDE frames', () => {
   assert.equal(result.envelopes[0].payload.attitude.rollRad.toFixed(3), '0.100')
   assert.equal(result.envelopes[0].payload.attitude.pitchRad.toFixed(3), '-0.200')
   assert.equal(result.envelopes[0].payload.attitude.yawSpeedRadPerSec.toFixed(3), '0.600')
+})
+
+test('parses PARAM_VALUE including its portable numeric type id', () => {
+  const payload = Buffer.alloc(25)
+  payload.writeFloatLE(42.5, 0)
+  payload.writeUInt16LE(1200, 4)
+  payload.writeUInt16LE(17, 6)
+  Buffer.from('WPNAV_SPEED').copy(payload, 8)
+  payload.writeUInt8(9, 24)
+  const result = parseIncomingDatagram(buildMavlinkV1Frame(22, payload, { sysId: 2 }))
+  assert.deepEqual(result.envelopes[0].payload.paramValue, {
+    value: 42.5, paramCount: 1200, paramIndex: 17, paramId: 'WPNAV_SPEED', paramType: 9,
+  })
 })
 
 test('parses multiple MAVLink frames from one datagram and ignores unsupported messages', () => {

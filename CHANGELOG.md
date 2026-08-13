@@ -1,5 +1,9 @@
 # Changelog
 
+- Added target-routed, read-only MAVLink parameter lookup by name or index, with
+  portable transaction logic, response correlation, retry/timeout handling, and
+  deterministic lifecycle recording/replay.
+
 - Added the Stage 0 MAVLink command foundation: confirmed target-explicit envelopes,
   an empty-by-default allowlist, exact-route send/retry handling, `COMMAND_ACK`
   correlation, normalized timeouts/results, and deterministic lifecycle recording/replay.

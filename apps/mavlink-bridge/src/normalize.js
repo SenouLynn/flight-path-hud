@@ -6,6 +6,7 @@ const MAVLINK_V2_MAGIC = 0xFD
 
 const SUPPORTED_MESSAGE_DECODERS = {
   0: decodeHeartbeat,
+  22: decodeParamValue,
   24: decodeGpsRawInt,
   30: decodeAttitude,
   33: decodeGlobalPositionInt,
@@ -22,6 +23,7 @@ const SUPPORTED_MESSAGE_DECODERS = {
 // bytes so a message whose field layout changed fails the checksum.
 const MESSAGE_CRC_EXTRA = {
   0: 50,
+  22: 220,
   24: 24,
   30: 39,
   33: 104,
@@ -154,6 +156,24 @@ function decodeHeartbeat(frame) {
     messageName: 'HEARTBEAT',
     payload: {
       timestampMs: frame.recvTimestampMs,
+    },
+  }
+}
+
+function decodeParamValue(frame) {
+  const payload = payloadPaddedTo(frame.payload, 25)
+  if (payload === null || payload.length < 8) return null
+  const terminator = payload.indexOf(0, 8)
+  const end = terminator === -1 ? 24 : Math.min(terminator, 24)
+  return {
+    messageName: 'PARAM_VALUE',
+    payload: {
+      timestampMs: frame.recvTimestampMs,
+      paramValue: {
+        value: payload.readFloatLE(0), paramCount: payload.readUInt16LE(4),
+        paramIndex: payload.readUInt16LE(6), paramId: payload.toString('ascii', 8, end),
+        paramType: payload.readUInt8(24),
+      },
     },
   }
 }

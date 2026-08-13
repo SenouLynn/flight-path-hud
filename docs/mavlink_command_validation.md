@@ -88,6 +88,11 @@ No browser command UI or operational command family is enabled yet.
 
 ### 1. Read-only protocol coverage
 
+In progress: the first slice implements target-routed single-parameter reads by
+name or index using a transport-neutral transaction state machine. `PARAM_VALUE`
+responses, retries, timeouts, recording, and passive replay are correlated to the
+request and exact vehicle. No parameter writes or browser controls are included.
+
 Validate parameter reads, message/data-stream requests, home/EKF-origin reads where
 applicable, and expanded mission download. These confirm request/response correlation
 without changing vehicle state.

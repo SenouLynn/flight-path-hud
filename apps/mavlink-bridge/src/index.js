@@ -7,6 +7,7 @@ import { createReplayIngress } from './replayIngress.js'
 import { createUdpIngress } from './udpIngress.js'
 import { createMissionRouter } from './missionRouter.js'
 import { createCommandRouter } from './commandRouter.js'
+import { createParameterRouter } from './parameterRouter.js'
 
 const UDP_HOST = process.env.MAVLINK_BRIDGE_UDP_HOST ?? '0.0.0.0'
 const UDP_PORT = Number.parseInt(process.env.MAVLINK_BRIDGE_UDP_PORT ?? '14550', 10)
@@ -61,6 +62,13 @@ const commandRouter = createCommandRouter({
   // Stage 0 intentionally ships with no production command families. Each
   // future family must be registered here behind its own evidence gate.
   definitions: new Map(),
+  send: (sysId, compId, buffer) => ingress.sendTo?.(sysId, compId, buffer),
+  canSend: (sysId, compId) => ingress.hasRoute?.(sysId, compId) === true,
+  isLive: () => typeof ingress.sendTo === 'function',
+  recordEvent: (event) => recorder?.recordEvent(event),
+})
+
+const parameterRouter = createParameterRouter({
   send: (sysId, compId, buffer) => ingress.sendTo?.(sysId, compId, buffer),
   canSend: (sysId, compId) => ingress.hasRoute?.(sysId, compId) === true,
   isLive: () => typeof ingress.sendTo === 'function',
@@ -133,6 +141,10 @@ const stopIngress = ingress.start((datagram, meta) => {
       const frame = commandRouter.ingestEnvelope(envelope)
       if (frame !== null) publish(frame)
     }
+    if (envelope.messageName === 'PARAM_VALUE') {
+      const frame = parameterRouter.ingestEnvelope(envelope)
+      if (frame !== null) publish(frame)
+    }
     if (envelope.messageName === 'HOME_POSITION' || MISSION_MESSAGE_NAMES.has(envelope.messageName)) {
       const frame = missionRouter.ingestEnvelope(envelope)
       if (frame !== null) {
@@ -145,8 +157,10 @@ const stopIngress = ingress.start((datagram, meta) => {
   })
   reportSourceConflicts()
 }, (event) => {
-  const frame = commandRouter.ingestRecordedEvent(event)
-  if (frame !== null) publish(frame)
+  const commandFrame = commandRouter.ingestRecordedEvent(event)
+  if (commandFrame !== null) publish(commandFrame)
+  const parameterFrame = parameterRouter.ingestRecordedEvent(event)
+  if (parameterFrame !== null) publish(parameterFrame)
 })
 
 wsServer.on('listening', () => {
@@ -163,6 +177,7 @@ wsServer.on('connection', (ws) => {
   ws.send(JSON.stringify({ type: 'linkMode', replayMode: REPLAY_FILE !== null }))
   missionRouter.snapshotForNewClient().forEach((frame) => ws.send(JSON.stringify(frame)))
   commandRouter.snapshotForNewClient().forEach((frame) => ws.send(JSON.stringify(frame)))
+  parameterRouter.snapshotForNewClient().forEach((frame) => ws.send(JSON.stringify(frame)))
 
   ws.on('message', (raw) => {
     let message = null
@@ -182,6 +197,8 @@ wsServer.on('connection', (ws) => {
       }
       const commandFrame = commandRouter.handleClientMessage(message)
       if (commandFrame !== null) publish(commandFrame)
+      const parameterFrame = parameterRouter.handleClientMessage(message)
+      if (parameterFrame !== null) publish(parameterFrame)
     } catch (error) {
       console.error(`[mavlink-bridge] client message rejected: ${error?.message ?? error}`)
     }
@@ -191,6 +208,7 @@ wsServer.on('connection', (ws) => {
 const missionTickTimer = setInterval(() => {
   missionRouter.tick().forEach(publish)
   commandRouter.tick().forEach(publish)
+  parameterRouter.tick().forEach(publish)
 }, 100)
 
 async function shutdown() {
