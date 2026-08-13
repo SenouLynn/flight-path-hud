@@ -1,0 +1,40 @@
+services:
+  copter:
+    environment:
+      MISSION_FILE: /scenario/copter-motion.waypoints
+      CONTROLLER_HOST: motion-controller
+      CONTROLLER_PORT: "14601"
+    volumes:
+      - ./copter-motion.waypoints:/scenario/copter-motion.waypoints:ro
+
+  plane:
+    environment:
+      CUSTOM_LOCATION: "-35.3660000,149.1615000,584,270"
+      MISSION_FILE: /scenario/plane-motion.waypoints
+      CONTROLLER_HOST: motion-controller
+      CONTROLLER_PORT: "14602"
+    volumes:
+      - ./plane-motion.waypoints:/scenario/plane-motion.waypoints:ro
+
+  motion-controller:
+    build: .
+    entrypoint: ["python3", "/scenario/motion_controller.py"]
+    command:
+      - --vehicle
+      - copter,udpin:0.0.0.0:14601,1,1
+      - --vehicle
+      - plane,udpin:0.0.0.0:14602,2,1
+      - --minimum-displacement-m
+      - "75"
+      - --minimum-separation-m
+      - "150"
+      - --timeout
+      - "180"
+      - --observation-seconds
+      - "45"
+    volumes:
+      - ./motion_controller.py:/scenario/motion_controller.py:ro
+    depends_on:
+      - copter
+      - plane
+    stop_grace_period: 15s

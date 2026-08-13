@@ -108,17 +108,17 @@ the browser GCS. Open the Vite address it prints (normally
 `http://localhost:5174`) and use `ws://localhost:8080/telemetry`.
 
 ```bash
-npm run gcs:sitl
+npm run gcs:sitl-test
 ```
 
 Stop the detached simulator stack after the GCS exits:
 
 ```bash
-npm run sitl:down
+npm run sitl-test:down
 ```
 
-For attached Compose output or diagnostics, use `npm run sitl:up` or
-`npm run sitl:logs`. The first SITL build compiles ArduPilot and is intentionally
+For attached Compose output or diagnostics, use `npm run sitl-test:up` or
+`npm run sitl-test:logs`. The first SITL build compiles ArduPilot and is intentionally
 large; Docker caches the result locally. Docker Desktop Linux/arm64 containers
 are the supported path on Apple Silicon Macs. Native macOS SITL is best-effort.
 

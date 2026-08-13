@@ -9,6 +9,7 @@
 
 import { systemKeyFromNodeId, type MissionPlan, type NodeFreshness, type NodeSummary } from '@flight-path-hud/gcs-core'
 import type { Feature, FeatureCollection, LineString } from 'geojson'
+import { hasDrawableMissionPosition } from '../missionPresentation'
 
 /**
  * How much to trust what is drawn, expressed as how solid it looks.
@@ -57,7 +58,9 @@ export function routeFeatureCollection(
   for (const node of nodes) {
     const mission = missionFor(node, missions)
 
-    if (mission === null || mission.items.length < 2) {
+    const waypoints = mission === null ? [] : sortedWaypoints(mission).filter(hasDrawableMissionPosition)
+
+    if (waypoints.length < 2) {
       continue
     }
 
@@ -66,7 +69,7 @@ export function routeFeatureCollection(
       properties: { color: colorOf(node.identity.id), nodeId: node.identity.id },
       geometry: {
         type: 'LineString',
-        coordinates: sortedWaypoints(mission).map((item) => [item.lonDeg, item.latDeg]),
+        coordinates: waypoints.map((item) => [item.lonDeg, item.latDeg]),
       },
     })
   }
@@ -134,6 +137,7 @@ export function overlaySignature(
       // Positions are included: a reloaded plan can keep its waypoint count and
       // move them, which has to redraw.
       const waypoints = sortedWaypoints(mission)
+        .filter(hasDrawableMissionPosition)
         .map((item) => `${item.seq},${item.latDeg},${item.lonDeg}`)
         .join(';')
 

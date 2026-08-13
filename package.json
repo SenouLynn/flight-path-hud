@@ -11,7 +11,9 @@
   ],
   "scripts": {
     "gcs:mock": "npm run dev --workspace @flight-path-hud/gcs & npm run start --workspace @flight-path-hud/mavlink-bridge & npm run sample:udp --workspace @flight-path-hud/mavlink-bridge & npm run mock --workspace @flight-path-hud/video-bridge",
-    "gcs:sitl": "docker compose -f apps/mavlink-bridge/sitl/compose.yml up --build --detach && npm run dev --workspace @flight-path-hud/gcs",
+    "gcs:sitl-test": "docker compose -f apps/mavlink-bridge/sitl/compose.yml up --build --detach && npm run dev --workspace @flight-path-hud/gcs",
+    "sitl-test:motion": "docker compose -f apps/mavlink-bridge/sitl/compose.yml -f apps/mavlink-bridge/sitl/compose.motion.yml up --build --abort-on-container-exit --exit-code-from motion-controller",
+    "sitl-test:motion:down": "docker compose -f apps/mavlink-bridge/sitl/compose.yml -f apps/mavlink-bridge/sitl/compose.motion.yml down",
     "dev:hud": "npm run dev --workspace @flight-path-hud/hud",
     "build:hud": "npm run build --workspace @flight-path-hud/hud",
     "lint:hud": "npm run lint --workspace @flight-path-hud/hud",
@@ -25,8 +27,8 @@
     "test:hud-ui": "npm run test --workspace @flight-path-hud/hud-ui",
     "clean:recordings": "MAVLINK_BRIDGE_RECORD_DIR=apps/mavlink-bridge/recordings node apps/mavlink-bridge/src/cleanRecordings.js",
     "test:gcs": "npm run test --workspace @flight-path-hud/gcs",
-    "sitl:up": "docker compose -f apps/mavlink-bridge/sitl/compose.yml up --build",
-    "sitl:down": "docker compose -f apps/mavlink-bridge/sitl/compose.yml down",
-    "sitl:logs": "docker compose -f apps/mavlink-bridge/sitl/compose.yml logs --follow"
+    "sitl-test:up": "docker compose -f apps/mavlink-bridge/sitl/compose.yml up --build",
+    "sitl-test:down": "docker compose -f apps/mavlink-bridge/sitl/compose.yml down",
+    "sitl-test:logs": "docker compose -f apps/mavlink-bridge/sitl/compose.yml logs --follow"
   }
 }

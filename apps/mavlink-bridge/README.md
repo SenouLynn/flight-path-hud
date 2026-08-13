@@ -37,12 +37,12 @@ The repository includes a reproducible **ArduCopter + ArduPlane** scenario for
 validating the bridge against real binary MAVLink v2, rather than the JSON mock:
 
 ```bash
-npm run sitl:up
+npm run sitl-test:up
 # separate terminal
 npm run dev --workspace @flight-path-hud/gcs
 ```
 
-`sitl:up` builds the pinned ArduPilot 4.6.2 image and starts the bridge plus
+`sitl-test:up` builds the pinned ArduPilot 4.6.2 image and starts the bridge plus
 Copter (`1:1`) and Plane (`2:1`). Open the GCS at the Vite URL and retain its
 default `ws://localhost:8080/telemetry` link. Both nodes must be live and moving.
 Their seeded missions intentionally have different waypoint counts; click **Load
@@ -52,9 +52,9 @@ selected system, not the other vehicle.
 Stop one service (for example `docker compose -f apps/mavlink-bridge/sitl/compose.yml
 stop plane`): it should become stale and leave the roster while Copter remains
 live. Restart it with `start plane` and verify recovery without reloading the
-browser. The bridge records the run; use `npm run sitl:down`, then replay its new
+browser. The bridge records the run; use `npm run sitl-test:down`, then replay its new
 recording through `npm run replay:bridge` and verify the same two-node roster and
-mission overlays. `npm run sitl:logs` follows Compose logs.
+mission overlays. `npm run sitl-test:logs` follows Compose logs.
 
 This validates one simulated mixed-fleet scenario only; it is not a field or
 arbitrary-fleet validation claim.

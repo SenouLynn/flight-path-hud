@@ -7,7 +7,7 @@ when they disagree, ArduPilot's documentation wins.
 
 ## The project scenario
 
-`npm run sitl:up` runs three Linux containers:
+`npm run sitl-test:up` runs three Linux containers:
 
 | Service | Vehicle | MAVLink identity | Purpose |
 | --- | --- | --- | --- |
@@ -49,7 +49,7 @@ flight test.
 From the repository root:
 
 ```bash
-BUILDKIT_PROGRESS=plain npm run sitl:up
+BUILDKIT_PROGRESS=plain npm run sitl-test:up
 ```
 
 The first build downloads ArduPilot and its submodules, installs its supported
@@ -76,8 +76,8 @@ npm run dev --workspace @flight-path-hud/gcs
 ```
 
 Keep the GCS WebSocket URL at `ws://localhost:8080/telemetry`. Use
-`npm run sitl:logs` to follow container output, and stop everything with
-`npm run sitl:down`.
+`npm run sitl-test:logs` to follow container output, and stop everything with
+`npm run sitl-test:down`.
 
 ## Acceptance checklist
 

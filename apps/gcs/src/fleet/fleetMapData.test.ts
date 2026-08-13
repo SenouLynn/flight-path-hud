@@ -153,6 +153,16 @@ describe('routeFeatureCollection', () => {
       .toEqual([[8.0, 47.0], [8.1, 47.1]])
   })
 
+  it('omits coordinate-less commands instead of drawing a route through 0,0', () => {
+    const takeoffHere = { ...item(1, 0, 0), command: 22 }
+    const missions = new Map([
+      ['1:1', mission([item(0, -35.36, 149.16), takeoffHere, item(2, -35.35, 149.17)])],
+    ])
+
+    expect(routeFeatureCollection([node()], missions, alwaysRed).features[0].geometry.coordinates)
+      .toEqual([[149.16, -35.36], [149.17, -35.35]])
+  })
+
   it('skips nodes with no mission, an empty one, or a single waypoint', () => {
     const missions = new Map([['1:1', EMPTY_MISSION], ['2:1', mission([item(0, 47, 8)])]])
     const nodes = [

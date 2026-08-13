@@ -16,7 +16,7 @@ The stationary Docker acceptance scenario has passed with real ArduPilot 4.6.2:
 - A short real-SITL recording replays both systems and passively reconstructs
   both mission overlays without emitting MAVLink.
 
-The existing `npm run gcs:sitl` scenario is deliberately stationary and
+The existing `npm run gcs:sitl-test` scenario is deliberately stationary and
 read-only. Preserve it as the regression/acceptance baseline; do not turn it into
 the motion scenario.
 
@@ -34,6 +34,50 @@ vehicles move enough to exercise:
 
 This remains bridge/presentation validation, not an airworthiness or control-UX
 claim.
+
+## Implemented workflow
+
+The separate motion scenario is now available without changing the stationary
+`gcs:sitl-test` baseline:
+
+```bash
+npm run sitl-test:motion
+```
+
+It uses dedicated missions and a Docker-only controller with two fixed MAVLink
+channels. Copter remains at CMAC; Plane starts roughly 450 m southwest so the
+routes have a meaningful separation floor from initialization onward. The
+controller verifies the expected `1:1` and `2:1` sources, waits for real global
+positions, verifies GUIDED readiness, and arms each vehicle. Copter performs a
+verified GUIDED takeoff before continuing its geographic mission in AUTO; Plane
+uses its mission's AUTO takeoff. The controller then requires at least
+75 m displacement and mission progress from both. Any target mismatch,
+separation breach, readiness/start failure, timeout, signal, or normal success
+enters the same force-disarm cleanup path inside the disposable SITL containers.
+
+After both vehicles satisfy automated motion acceptance, the controller keeps
+the scenario alive for a 45-second browser observation window. This dwell is
+intentional: the first accepted run crossed its displacement thresholds in only
+about 15 seconds, and Compose immediately stopped the bridge and vehicles when
+the controller exited. The telemetry proved that both vehicles moved, but the
+short lifetime made movement and trail development difficult to see in the GCS.
+The observation window preserves automated acceptance and cleanup while giving
+an operator time to inspect changing markers, trails, and instruments. Target
+filtering and the 150 m separation guard remain active during the dwell.
+
+Stop and remove the complete override stack after an interrupted run with:
+
+```bash
+npm run sitl-test:motion:down
+```
+
+The controller-level real-SITL acceptance passed on 2026-08-13. Copter completed
+a GUIDED takeoff, entered AUTO and exceeded the 75 m displacement threshold;
+Plane completed its AUTO takeoff and exceeded 191 m before the shared threshold
+passed. Separation remained above the configured 150 m floor, and both vehicles
+acknowledged force-disarm during cleanup. Browser trail inspection and deriving
+a minimized sanitized motion fixture from a tightly capped recording remain the
+replay-parity follow-up.
 
 ## Authority boundary
 

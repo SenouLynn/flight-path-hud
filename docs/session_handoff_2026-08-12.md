@@ -37,19 +37,19 @@ For mixed real-ArduPilot testing, start the Compose stack in the background and
 run the GCS with one command:
 
 ```bash
-npm run gcs:sitl
+npm run gcs:sitl-test
 ```
 
 Open the GCS at Vite's printed address (normally `http://localhost:5174`) and
 use `ws://localhost:8080/telemetry`. Stop the detached SITL services after the
-GCS exits with `npm run sitl:down`.
+GCS exits with `npm run sitl-test:down`.
 
 Useful commands:
 
 ```bash
-npm run sitl:up
-npm run sitl:logs
-npm run sitl:down
+npm run sitl-test:up
+npm run sitl-test:logs
+npm run sitl-test:down
 npm run build:gcs
 npm run test --workspace @flight-path-hud/gcs-core
 ```

@@ -8,7 +8,7 @@
 import type { ConnectionState, MissionPlan } from '@flight-path-hud/gcs-core'
 import { formatCoord, formatNumber } from './format'
 import { missionGate } from './missionGate'
-import { displayedActiveMissionIndex, isActiveMissionWaypoint } from './missionPresentation'
+import { displayedActiveMissionIndex, hasDrawableMissionPosition, isActiveMissionWaypoint } from './missionPresentation'
 
 interface MissionPanelProps {
   mission: MissionPlan
@@ -49,11 +49,15 @@ export function MissionPanel({
       <div className="stat"><span>Waypoints</span><strong>{mission.items.length}</strong></div>
       <div className="stat"><span>Active</span><strong>{displayedActiveMissionIndex(mission.activeIndex) ?? '—'}</strong></div>
       <div className="mission-list">
-        {mission.items.map((item) => (
+        {mission.items.map((item) => {
+          const drawable = hasDrawableMissionPosition(item)
+          return (
           <button
             key={item.seq}
             type="button"
             className={isActiveMissionWaypoint(item.seq, mission.activeIndex) ? 'mission-row active' : 'mission-row'}
+            disabled={!drawable}
+            title={drawable ? undefined : 'This command uses the vehicle’s current position'}
             onClick={() => onSelectWaypoint(item.latDeg, item.lonDeg)}
           >
             <span>{item.seq}</span>
@@ -62,7 +66,8 @@ export function MissionPanel({
             <span>{formatCoord(item.lonDeg)}</span>
             <span>{formatNumber(item.altM, 1, ' m')}</span>
           </button>
-        ))}
+          )
+        })}
       </div>
     </section>
   )

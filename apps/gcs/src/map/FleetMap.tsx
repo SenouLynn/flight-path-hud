@@ -34,7 +34,7 @@ import {
   routeFeatureCollection,
   sortedWaypoints,
 } from '../fleet/fleetMapData'
-import { isActiveMissionWaypoint } from '../missionPresentation'
+import { hasDrawableMissionPosition, isActiveMissionWaypoint } from '../missionPresentation'
 
 interface FleetMapProps {
   nodes: NodeSummary[]
@@ -362,7 +362,7 @@ export const FleetMap = forwardRef<FleetMapHandle, FleetMapProps>(function Fleet
 
       const color = colorOf(node.identity.id)
 
-      sortedWaypoints(mission).forEach((item) => {
+      sortedWaypoints(mission).filter(hasDrawableMissionPosition).forEach((item) => {
         const key = waypointKey(node.identity.id, item.seq)
         seen.add(key)
 

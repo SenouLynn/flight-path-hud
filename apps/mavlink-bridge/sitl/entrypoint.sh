@@ -14,10 +14,15 @@ fi
 # the explicit seeder below waits for its heartbeat before exercising the real
 # MAVLink mission transaction.
 cd /opt/ardupilot
+location_args=(--location "${LOCATION:-CMAC}")
+if [[ -n "${CUSTOM_LOCATION:-}" ]]; then
+  location_args=(--custom-location "${CUSTOM_LOCATION}")
+fi
+
 Tools/autotest/sim_vehicle.py \
   --vehicle "${VEHICLE}" \
   --sysid "${SYSID}" \
-  --location CMAC \
+  "${location_args[@]}" \
   --no-extra-ports \
   --no-mavproxy \
   --no-rebuild &
@@ -37,10 +42,16 @@ trap cleanup EXIT INT TERM
 # MAVProxy is the persistent MAVLink fan-out hop. In daemon mode it is independent
 # of the container's closed stdin; the no-MAVProxy supervisor remains this
 # container's foreground process and owns the simulator lifetime.
+controller_args=()
+if [[ -n "${CONTROLLER_HOST:-}" && -n "${CONTROLLER_PORT:-}" ]]; then
+  controller_args+=(--out "udp:${CONTROLLER_HOST}:${CONTROLLER_PORT}")
+fi
+
 mavproxy.py \
   --master tcp:127.0.0.1:5760 \
   --sitl 127.0.0.1:5501 \
   --out udp:bridge:14550 \
+  "${controller_args[@]}" \
   --non-interactive \
   --daemon
 

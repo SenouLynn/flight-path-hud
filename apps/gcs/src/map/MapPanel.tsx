@@ -28,7 +28,7 @@ import {
   styleWaypointMarker,
   toLngLat,
 } from './mapAdapter'
-import { isActiveMissionWaypoint } from '../missionPresentation'
+import { hasDrawableMissionPosition, isActiveMissionWaypoint } from '../missionPresentation'
 
 interface MapPanelProps {
   vehicle: VehicleState | null
@@ -93,7 +93,9 @@ function syncRouteSource(map: maplibregl.Map, mission: MissionPlan): void {
     return
   }
 
-  const items = [...mission.items].sort((a, b) => a.seq - b.seq)
+  const items = [...mission.items]
+    .filter(hasDrawableMissionPosition)
+    .sort((a, b) => a.seq - b.seq)
 
   routeSource.setData({
     type: 'Feature',
@@ -435,7 +437,7 @@ export const MapPanel = forwardRef<MapHandle, MapPanelProps>(function MapPanel(
     const markers = waypointMarkersRef.current
     const seenSeqs = new Set<number>()
 
-    mission.items.forEach((item) => {
+    mission.items.filter(hasDrawableMissionPosition).forEach((item) => {
       seenSeqs.add(item.seq)
       const active = isActiveMissionWaypoint(item.seq, mission.activeIndex)
       const position = toLngLat(item.latDeg, item.lonDeg)
