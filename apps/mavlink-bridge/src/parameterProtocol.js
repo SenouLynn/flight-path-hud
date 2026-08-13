@@ -3,8 +3,10 @@ import { buildMavlinkV1Frame, computeFrameCrc } from './mavlinkFrame.js'
 export const PARAM_REQUEST_READ_MSG_ID = 20
 export const PARAM_REQUEST_LIST_MSG_ID = 21
 export const PARAM_VALUE_MSG_ID = 22
+export const PARAM_SET_MSG_ID = 23
 const PARAM_REQUEST_READ_CRC_EXTRA = 214
 const PARAM_REQUEST_LIST_CRC_EXTRA = 159
+const PARAM_SET_CRC_EXTRA = 168
 const PARAM_ID_LENGTH = 16
 let outboundSequence = 0
 
@@ -43,6 +45,21 @@ export function encodeParameterRequestList({ sysId, compId, targetSystemId, targ
   outboundSequence = (outboundSequence + 1) % 256
   return buildMavlinkV1Frame(PARAM_REQUEST_LIST_MSG_ID, payload, {
     sequence: outboundSequence, sysId, compId, crcExtra: PARAM_REQUEST_LIST_CRC_EXTRA,
+  })
+}
+
+export function encodeParameterSet({ sysId, compId, targetSystemId, targetComponentId, name, value, paramType }) {
+  if (!Number.isFinite(value)) throw new Error('parameter value must be finite')
+  if (!Number.isInteger(paramType) || paramType < 1 || paramType > 10) throw new Error('invalid MAV_PARAM_TYPE')
+  const payload = Buffer.alloc(23)
+  payload.writeFloatLE(value, 0)
+  payload.writeUInt8(targetSystemId, 4)
+  payload.writeUInt8(targetComponentId, 5)
+  encodeParamId(name).copy(payload, 6)
+  payload.writeUInt8(paramType, 22)
+  outboundSequence = (outboundSequence + 1) % 256
+  return buildMavlinkV1Frame(PARAM_SET_MSG_ID, payload, {
+    sequence: outboundSequence, sysId, compId, crcExtra: PARAM_SET_CRC_EXTRA,
   })
 }
 

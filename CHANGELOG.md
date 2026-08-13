@@ -1,5 +1,9 @@
 # Changelog
 
+- Added a disabled-by-default, allowlisted `PARAM_SET` transaction and mixed-SITL
+  acceptance workflow with independent read-back, target-isolation checks, and
+  unconditional restoration.
+
 - Added mixed-ArduPilot SITL acceptance for target-scoped message intervals,
   including cadence statistics, cross-target isolation, and unconditional default
   restoration.

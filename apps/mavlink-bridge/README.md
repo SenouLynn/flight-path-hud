@@ -70,6 +70,15 @@ measures bridge-WebSocket arrival intervals, and restores both targets to their
 autopilot defaults in unconditional cleanup. After interruption, remove the
 override stack with `pnpm sitl-test:message-interval:down`.
 
+The reversible parameter-write acceptance scenario is separate:
+
+```bash
+pnpm sitl-test:parameter-write
+```
+
+It reads, toggles, independently reads back, and restores `LOG_DISARMED` on each
+stationary vehicle while proving the other target remains unchanged.
+
 See [ArduPilot SITL Testing Nuances](../../docs/ardupilot_sitl_testing.md) for
 the Compose topology, acceptance criteria, frame/mission behavior, and the
 important distinction between loading a mission and making a simulator fly it.
@@ -169,6 +178,7 @@ per-run cap above.
 | `MAVLINK_BRIDGE_WS_PORT` / `_WS_PATH` | `8080` / `/telemetry` | WebSocket egress |
 | `MAVLINK_BRIDGE_SYSTEM_TTL_MS` | `10000` | Drop a quiet system and its UDP return route from the roster |
 | `MAVLINK_BRIDGE_ENABLE_MESSAGE_INTERVAL` | `0` | `1` enables allowlisted, target-scoped stream interval changes |
+| `MAVLINK_BRIDGE_ENABLE_PARAMETER_WRITE` | `0` | `1` enables narrowly allowlisted parameter writes |
 | `MAVLINK_BRIDGE_SAMPLE_PORT` | `14549` | Sample sender's single-instance lock |
 
 ## Envelope shape
@@ -196,8 +206,8 @@ publishes `parameterRead` frames with `pending`, `complete`, or `failed` status.
 Identical concurrent target/query pairs are rejected because MAVLink
 `PARAM_VALUE` has no request ID and cannot correlate them unambiguously.
 
-This is a read transaction only. It does not enable `PARAM_SET` or any browser
-control authority.
+This request is read-only. `PARAM_SET` remains a separate, disabled-by-default
+transaction with its own exact-name and value allowlist; no browser UI enables it.
 
 One-shot `HOME_POSITION` and `GPS_GLOBAL_ORIGIN` reads use
 `{"type":"requestMessage","requestId":"message-1","sysId":1,"compId":1,"messageName":"HOME_POSITION"}`.

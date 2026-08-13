@@ -92,6 +92,15 @@ Acceptance passed on 2026-08-13 against ArduPilot 4.6.2. Copter measured a
 105.0 ms maximum. Every measured interval was within tolerance. Both vehicles
 accepted the cleanup request restoring their autopilot-default intervals.
 
+`pnpm sitl-test:parameter-write` validates the first reversible write family.
+The bridge feature flag exists only in its Compose override. The controller reads
+both original `LOG_DISARMED` values, toggles one exact target at a time, performs
+an independent read-back, proves the peer remains unchanged, and restores and
+re-reads both originals in unconditional cleanup.
+
+Acceptance passed on 2026-08-13 against ArduPilot 4.6.2. Copter and Plane each
+changed from `0` to `1` without affecting the peer, then both restored to `0`.
+
 ## Acceptance checklist
 
 1. The GCS fleet roster lists `1:1` and `2:1`, with no bridge decode errors for

@@ -1,0 +1,12 @@
+services:
+  bridge:
+    environment:
+      MAVLINK_BRIDGE_ENABLE_PARAMETER_WRITE: "1"
+  parameter-write-controller:
+    image: node:22-bookworm-slim
+    working_dir: /workspace
+    entrypoint: ["node", "apps/mavlink-bridge/sitl/parameter_write_controller.js"]
+    volumes:
+      - ../../..:/workspace:ro
+    depends_on: [bridge, copter, plane]
+    stop_grace_period: 20s

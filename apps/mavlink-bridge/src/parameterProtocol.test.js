@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict'
 import test from 'node:test'
 import { computeFrameCrc } from './mavlinkFrame.js'
-import { decodeParameterRequestRead, encodeParameterRequestList, encodeParameterRequestRead } from './parameterProtocol.js'
+import { decodeParameterRequestRead, encodeParameterRequestList, encodeParameterRequestRead, encodeParameterSet } from './parameterProtocol.js'
 
 test('list request is a CRC-correct exact-target MAVLink frame', () => {
   const frame = encodeParameterRequestList({ sysId: 255, compId: 190, targetSystemId: 2, targetComponentId: 1 })
@@ -43,4 +43,11 @@ test('decoder rejects a damaged request CRC', () => {
   })
   frame[10] ^= 0xFF
   assert.equal(decodeParameterRequestRead(frame), null)
+})
+
+test('PARAM_SET encodes exact target, bounded name, value and type with valid CRC', () => {
+  const frame=encodeParameterSet({sysId:255,compId:190,targetSystemId:2,targetComponentId:1,name:'LOG_DISARMED',value:1,paramType:2})
+  const payload=frame.subarray(6);assert.equal(frame[5],23);assert.equal(payload.readFloatLE(0),1)
+  assert.deepEqual([...payload.subarray(4,6)],[2,1]);assert.equal(payload.toString('ascii',6,18),'LOG_DISARMED');assert.equal(payload[22],2)
+  assert.equal(frame.readUInt16LE(29),computeFrameCrc(frame,1,29,168))
 })
