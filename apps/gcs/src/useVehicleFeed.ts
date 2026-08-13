@@ -24,6 +24,9 @@ import {
   toLogEntry,
   type ConnectionState,
   encodeGuidedRepositionRequest,
+  encodeSetGuidedRequest, encodeSetArmedRequest, encodeGuidedTakeoffRequest,
+  encodeGuidedLandRequest, type ModeChangeWireFrame, type ArmDisarmWireFrame, type GuidedTakeoffWireFrame,
+  type GuidedLandWireFrame,
   type FlightStateWireFrame,
   type GuidedRepositionDraft,
   type GuidedRepositionWireFrame,
@@ -109,7 +112,15 @@ export interface VehicleFeedState {
   requestMission: (sysId: number, compId: number) => void
   flightState: FlightStateWireFrame | null
   guidedReposition: GuidedRepositionWireFrame | null
+  modeChange: ModeChangeWireFrame | null
+  armDisarm: ArmDisarmWireFrame | null
+  guidedTakeoff: GuidedTakeoffWireFrame | null
+  guidedLand: GuidedLandWireFrame | null
   sendGuidedReposition: (sysId: number, compId: number, actor: string, draft: GuidedRepositionDraft) => boolean
+  sendSetGuided: (sysId: number, compId: number, actor: string) => boolean
+  sendSetArmed: (sysId: number, compId: number, actor: string, arm: boolean) => boolean
+  sendGuidedTakeoff: (sysId: number, compId: number, actor: string, altitudeM: number, toleranceM: number) => boolean
+  sendGuidedLand: (sysId: number, compId: number, actor: string) => boolean
 }
 
 /**
@@ -117,7 +128,7 @@ export interface VehicleFeedState {
  * per-system mission map on mission arrival, so all three are held as separate
  * state. `requestMission` is a stable callback, not fold-derived state.
  */
-type FeedSnapshot = Omit<VehicleFeedState, 'log' | 'nodes' | 'missions' | 'requestMission' | 'sendGuidedReposition'>
+type FeedSnapshot = Omit<VehicleFeedState, 'log' | 'nodes' | 'missions' | 'requestMission' | 'sendGuidedReposition' | 'sendSetGuided' | 'sendSetArmed' | 'sendGuidedTakeoff' | 'sendGuidedLand'>
 
 const INITIAL: FeedSnapshot = {
   vehicle: null,
@@ -133,6 +144,7 @@ const INITIAL: FeedSnapshot = {
   replayMode: null,
   flightState: null,
   guidedReposition: null,
+  modeChange: null, armDisarm: null, guidedTakeoff: null, guidedLand: null,
 }
 
 /** Matches the hud harness's live-source window. */
@@ -208,6 +220,11 @@ export function useVehicleFeed({
     return streamRef.current?.send(encodeGuidedRepositionRequest({ requestId, sysId, compId,
       actor, timestampMs: Date.now(), draft })) ?? false
   }, [])
+  const requestId = (prefix: string) => globalThis.crypto?.randomUUID?.() ?? `${prefix}-${Date.now()}-${Math.random().toString(16).slice(2)}`
+  const sendSetGuided = useCallback((sysId: number, compId: number, actor: string) => streamRef.current?.send(encodeSetGuidedRequest({ requestId: requestId('mode'), sysId, compId, actor, timestampMs: Date.now() })) ?? false, [])
+  const sendSetArmed = useCallback((sysId: number, compId: number, actor: string, arm: boolean) => streamRef.current?.send(encodeSetArmedRequest({ requestId: requestId('armed'), sysId, compId, actor, timestampMs: Date.now(), arm })) ?? false, [])
+  const sendGuidedTakeoff = useCallback((sysId: number, compId: number, actor: string, relativeAltitudeM: number, altitudeToleranceM: number) => streamRef.current?.send(encodeGuidedTakeoffRequest({ requestId: requestId('takeoff'), sysId, compId, actor, timestampMs: Date.now(), relativeAltitudeM, altitudeToleranceM })) ?? false, [])
+  const sendGuidedLand = useCallback((sysId: number, compId: number, actor: string) => streamRef.current?.send(encodeGuidedLandRequest({ requestId: requestId('land'), sysId, compId, actor, timestampMs: Date.now() })) ?? false, [])
 
   useEffect(() => {
     // Per-system folds: two vehicles must never merge into one aircraft.
@@ -221,6 +238,7 @@ export function useVehicleFeed({
     const homes = new Map<string, HomePosition>()
     const flightStates = new Map<string, FlightStateWireFrame>()
     const guidedStatuses = new Map<string, GuidedRepositionWireFrame>()
+    const modeStatuses = new Map<string, ModeChangeWireFrame>(), armStatuses = new Map<string, ArmDisarmWireFrame>(), takeoffStatuses = new Map<string, GuidedTakeoffWireFrame>(), landStatuses = new Map<string, GuidedLandWireFrame>()
     let frameCount = 0
     let decodeErrorCount = 0
     let connectionState: ConnectionState = 'connecting'
@@ -247,6 +265,10 @@ export function useVehicleFeed({
         replayMode,
         flightState: flightStates.get(activeKey) ?? null,
         guidedReposition: guidedStatuses.get(activeKey) ?? null,
+        modeChange: modeStatuses.get(activeKey) ?? null,
+        armDisarm: armStatuses.get(activeKey) ?? null,
+        guidedTakeoff: takeoffStatuses.get(activeKey) ?? null,
+        guidedLand: landStatuses.get(activeKey) ?? null,
       })
     }
 
@@ -344,6 +366,10 @@ export function useVehicleFeed({
           const selected = selectedRef.current
           if (selected === null || selected === key) publish(selected ?? key)
         },
+        onModeChange: (frame) => { if (frame.sysId && frame.compId) { const key = systemKey(frame.sysId, frame.compId); modeStatuses.set(key, frame); const selected = selectedRef.current; if (selected === null || selected === key) publish(selected ?? key) } },
+        onArmDisarm: (frame) => { if (frame.sysId && frame.compId) { const key = systemKey(frame.sysId, frame.compId); armStatuses.set(key, frame); const selected = selectedRef.current; if (selected === null || selected === key) publish(selected ?? key) } },
+        onGuidedTakeoff: (frame) => { if (frame.sysId && frame.compId) { const key = systemKey(frame.sysId, frame.compId); takeoffStatuses.set(key, frame); const selected = selectedRef.current; if (selected === null || selected === key) publish(selected ?? key) } },
+        onGuidedLand: (frame) => { if (frame.sysId && frame.compId) { const key = systemKey(frame.sysId, frame.compId); landStatuses.set(key, frame); const selected = selectedRef.current; if (selected === null || selected === key) publish(selected ?? key) } },
         onConnectionState: (state) => {
           connectionState = state
           // The bridge resends linkMode fresh on every new connection ('connecting'
@@ -400,6 +426,7 @@ export function useVehicleFeed({
         homes.delete(key)
         flightStates.delete(key)
         guidedStatuses.delete(key)
+        modeStatuses.delete(key); armStatuses.delete(key); takeoffStatuses.delete(key); landStatuses.delete(key)
       })
 
       // The roster recomputes from `vehicles` on its own timer, but the published
@@ -423,5 +450,6 @@ export function useVehicleFeed({
     }
   }, [url, trackConfig])
 
-  return { ...snapshot, log, nodes, missions: missionsByKey, requestMission, sendGuidedReposition }
+  return { ...snapshot, log, nodes, missions: missionsByKey, requestMission, sendGuidedReposition,
+    sendSetGuided, sendSetArmed, sendGuidedTakeoff, sendGuidedLand }
 }

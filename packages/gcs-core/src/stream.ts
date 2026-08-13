@@ -9,7 +9,7 @@
  * connection state, and the caller folds.
  */
 
-import { parseWireEvent, type FlightStateWireFrame, type GuidedRepositionWireFrame, type HomeWireFrame, type LinkModeWireFrame, type MissionWireFrame, type WireFrame } from './wire'
+import { parseWireEvent, type ArmDisarmWireFrame, type FlightStateWireFrame, type GuidedLandWireFrame, type GuidedRepositionWireFrame, type GuidedTakeoffWireFrame, type HomeWireFrame, type LinkModeWireFrame, type MissionWireFrame, type ModeChangeWireFrame, type WireFrame } from './wire'
 
 export type ConnectionState = 'connecting' | 'open' | 'closed' | 'error'
 
@@ -27,6 +27,10 @@ export interface StreamHandlers {
   onLinkMode?: (frame: LinkModeWireFrame) => void
   onFlightState?: (frame: FlightStateWireFrame) => void
   onGuidedReposition?: (frame: GuidedRepositionWireFrame) => void
+  onModeChange?: (frame: ModeChangeWireFrame) => void
+  onArmDisarm?: (frame: ArmDisarmWireFrame) => void
+  onGuidedTakeoff?: (frame: GuidedTakeoffWireFrame) => void
+  onGuidedLand?: (frame: GuidedLandWireFrame) => void
   onConnectionState?: (state: ConnectionState) => void
   /** Frames that failed to parse — surfaced so a UI can show a decode-error count. */
   onDecodeError?: () => void
@@ -123,6 +127,10 @@ export function startTelemetryStream(options: StreamOptions, handlers: StreamHan
       case 'guidedReposition':
         handlers.onGuidedReposition?.(wireEvent.frame)
         return
+      case 'modeChange': handlers.onModeChange?.(wireEvent.frame); return
+      case 'armDisarm': handlers.onArmDisarm?.(wireEvent.frame); return
+      case 'guidedTakeoff': handlers.onGuidedTakeoff?.(wireEvent.frame); return
+      case 'guidedLand': handlers.onGuidedLand?.(wireEvent.frame); return
       case 'unrecognized':
         handlers.onDecodeError?.()
         return

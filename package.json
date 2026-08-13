@@ -18,7 +18,7 @@
     "sitl-test:arm-disarm": "docker compose -f apps/mavlink-bridge/sitl/compose.yml -f apps/mavlink-bridge/sitl/compose.arm-disarm.yml up --build --abort-on-container-exit --exit-code-from arm-disarm-controller",
     "sitl-test:arm-disarm:down": "docker compose -f apps/mavlink-bridge/sitl/compose.yml -f apps/mavlink-bridge/sitl/compose.arm-disarm.yml down",
     "sitl-test:guided-reposition": "docker compose -f apps/mavlink-bridge/sitl/compose.yml -f apps/mavlink-bridge/sitl/compose.guided-reposition.yml up --build --abort-on-container-exit --exit-code-from guided-reposition-controller",
-    "sitl-test:guided-reposition:ui": "docker compose -f apps/mavlink-bridge/sitl/compose.yml -f apps/mavlink-bridge/sitl/compose.guided-reposition.yml up --build --detach --scale guided-reposition-controller=0 && pnpm --filter @flight-path-hud/gcs dev",
+    "sitl-test:guided-reposition:ui": "docker compose -f apps/mavlink-bridge/sitl/compose.yml -f apps/mavlink-bridge/sitl/compose.guided-reposition.yml up --build --detach --scale guided-reposition-controller=0 --scale guided-flight-setup=0 && pnpm --filter @flight-path-hud/gcs dev",
     "sitl-test:guided-reposition:down": "docker compose -f apps/mavlink-bridge/sitl/compose.yml -f apps/mavlink-bridge/sitl/compose.guided-reposition.yml down",
     "dev:hud": "pnpm --filter @flight-path-hud/hud dev",
     "build:hud": "pnpm --filter @flight-path-hud/hud build",

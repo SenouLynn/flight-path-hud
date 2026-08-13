@@ -1,6 +1,7 @@
 # MAVLink Command Validation Roadmap
 
-The browser GCS is deliberately receive-only today, except for explicit mission download.
+The browser GCS is receive-only for field-connected systems. Its command surfaces
+are available only through explicitly gated isolated-SITL validation workflows.
 That boundary remains in force for field-connected systems. The mixed ArduCopter +
 ArduPlane SITL stack is the future validation environment for carefully expanding from
 observation to command-capable workflows.
@@ -155,7 +156,8 @@ standard arming, exact-target peer isolation, immediate verified disarm, and fin
 disarmed cleanup for both vehicles. It remains dual-gated with no browser or
 non-SITL enablement. A sanitized 12-event fixture deterministically replays the
 four accepted arm/disarm lifecycles, including ACK and armed-state observation,
-without transmitting MAVLink. Live Guided operations remain unimplemented.
+without transmitting MAVLink. The browser exposes this transaction only as part
+of the exact-target isolated-SITL Guided workflow.
 
 The first Guided operation is registered exclusively behind a feature gate plus
 the isolated-SITL environment gate. A pure policy prepares position-only
@@ -189,6 +191,13 @@ cleared whenever the target or movement changes. Lifecycle results remain
 correlated to that exact target and are displayed through arrival or failure.
 The bridge's isolated-SITL feature and environment gates remain authoritative;
 this browser surface does not enable either gate or introduce a non-SITL path.
+
+The Copter workflow now also stages verified Guided entry, standard arming,
+Guided takeoff, reposition, and landing. Landing requires an exact-target
+`MAV_CMD_NAV_LAND` ACK plus relative-altitude touchdown observation before the
+UI permits a separate standard disarm. Live ArduCopter 4.6.2 SITL validation on
+2026-08-13 passed the complete workflow; ArduPilot automatically disarmed after
+touchdown, so no redundant disarm command was sent.
 
 These are state-changing and potentially safety-critical. Add only after a command policy,
 operator confirmation UX, target identity display, current-mode/armed-state verification,

@@ -21,6 +21,7 @@ import { formatCoord, formatNumber } from './format'
 import { LinkPanel } from './LinkPanel'
 import { MissionPanel } from './MissionPanel'
 import { GuidedRepositionPanel } from './GuidedRepositionPanel'
+import { GuidedWorkflowPanel } from './GuidedWorkflowPanel'
 import { NodePicker } from './NodePicker'
 import type { VehicleFeedState } from './useVehicleFeed'
 import { VIEW_OPTIONS, ViewsMenu, type ViewId } from './ViewsMenu'
@@ -321,6 +322,13 @@ export function NodeView({
                   onLoadMission={() => vehicle !== null && feed.requestMission(vehicle.sysId, vehicle.compId)}
                   onSelectWaypoint={selectMissionWaypoint}
                 />
+                <GuidedWorkflowPanel vehicle={vehicle} flightState={feed.flightState}
+                  connectionState={feed.connectionState} replayMode={feed.replayMode}
+                  modeStatus={feed.modeChange} armStatus={feed.armDisarm} takeoffStatus={feed.guidedTakeoff} landStatus={feed.guidedLand}
+                  onSetGuided={(actor) => vehicle !== null && feed.sendSetGuided(vehicle.sysId, vehicle.compId, actor)}
+                  onSetArmed={(actor, arm) => vehicle !== null && feed.sendSetArmed(vehicle.sysId, vehicle.compId, actor, arm)}
+                  onTakeoff={(actor, altitudeM, toleranceM) => vehicle !== null && feed.sendGuidedTakeoff(vehicle.sysId, vehicle.compId, actor, altitudeM, toleranceM)}
+                  onLand={(actor) => vehicle !== null && feed.sendGuidedLand(vehicle.sysId, vehicle.compId, actor)} />
                 <GuidedRepositionPanel vehicle={vehicle} flightState={feed.flightState}
                   status={feed.guidedReposition} connectionState={feed.connectionState}
                   replayMode={feed.replayMode}

@@ -92,6 +92,32 @@ export interface GuidedRepositionWireFrame {
   updatedAtMs: number
 }
 
+export type CommandLifecycleStatus = 'awaitingAck' | 'awaitingObservation' | 'complete' | 'failed'
+
+export interface ModeChangeWireFrame {
+  type: 'modeChange'; requestId: string | null; sysId: number | null; compId: number | null
+  mode: string | null; customMode: number | null; status: CommandLifecycleStatus
+  ackResult: number | null; observed: boolean; attempts: number; reason: string | null; updatedAtMs: number
+}
+
+export interface ArmDisarmWireFrame {
+  type: 'armDisarm'; requestId: string | null; sysId: number | null; compId: number | null
+  arm: boolean | null; status: CommandLifecycleStatus; ackResult: number | null
+  observed: boolean; attempts: number; reason: string | null; updatedAtMs: number
+}
+
+export interface GuidedTakeoffWireFrame {
+  type: 'guidedTakeoff'; requestId: string | null; sysId: number | null; compId: number | null
+  relativeAltitudeM: number | null; altitudeToleranceM: number | null; status: CommandLifecycleStatus
+  ackResult: number | null; observed: boolean; attempts: number; altitudeErrorM: number | null
+  reason: string | null; updatedAtMs: number
+}
+export interface GuidedLandWireFrame {
+  type: 'guidedLand'; requestId: string | null; sysId: number | null; compId: number | null
+  touchdownAltitudeM: number; relativeAltitudeM: number | null; status: CommandLifecycleStatus
+  ackResult: number | null; observed: boolean; attempts: number; reason: string | null; updatedAtMs: number
+}
+
 export type WireEvent =
   | { kind: 'telemetry'; frame: WireFrame }
   | { kind: 'mission'; frame: MissionWireFrame }
@@ -99,6 +125,10 @@ export type WireEvent =
   | { kind: 'linkMode'; frame: LinkModeWireFrame }
   | { kind: 'flightState'; frame: FlightStateWireFrame }
   | { kind: 'guidedReposition'; frame: GuidedRepositionWireFrame }
+  | { kind: 'modeChange'; frame: ModeChangeWireFrame }
+  | { kind: 'armDisarm'; frame: ArmDisarmWireFrame }
+  | { kind: 'guidedTakeoff'; frame: GuidedTakeoffWireFrame }
+  | { kind: 'guidedLand'; frame: GuidedLandWireFrame }
   | { kind: 'unrecognized' }
 
 function isObject(value: unknown): value is Record<string, unknown> {
@@ -225,6 +255,10 @@ export function parseWireEvent(data: unknown): WireEvent {
   }
   if (parsed.type === 'flightState') return parseFlightStateWireFrame(parsed)
   if (parsed.type === 'guidedReposition') return parseGuidedRepositionWireFrame(parsed)
+  if (parsed.type === 'modeChange') return parseModeChangeWireFrame(parsed)
+  if (parsed.type === 'armDisarm') return parseArmDisarmWireFrame(parsed)
+  if (parsed.type === 'guidedTakeoff') return parseGuidedTakeoffWireFrame(parsed)
+  if (parsed.type === 'guidedLand') return parseGuidedLandWireFrame(parsed)
 
   // Fall through to existing telemetry parse for frames without type tag
   const frame = parseWireFrame(parsed)
@@ -233,6 +267,37 @@ export function parseWireEvent(data: unknown): WireEvent {
   }
 
   return { kind: 'unrecognized' }
+}
+
+const commandStatuses: CommandLifecycleStatus[] = ['awaitingAck', 'awaitingObservation', 'complete', 'failed']
+function commandBase(value: Record<string, unknown>): boolean {
+  return (value.requestId === null || isNonEmptyString(value.requestId))
+    && (value.sysId === null || (isUint8(value.sysId) && value.sysId > 0))
+    && (value.compId === null || (isUint8(value.compId) && value.compId > 0))
+    && commandStatuses.includes(value.status as CommandLifecycleStatus)
+    && nullableFinite(value.ackResult) && typeof value.observed === 'boolean'
+    && isNonNegativeInteger(value.attempts)
+    && (value.reason === null || typeof value.reason === 'string') && isFiniteNumber(value.updatedAtMs)
+}
+
+function parseModeChangeWireFrame(value: Record<string, unknown>): WireEvent {
+  if (!commandBase(value) || (value.mode !== null && typeof value.mode !== 'string')
+    || !nullableFinite(value.customMode)) return { kind: 'unrecognized' }
+  return { kind: 'modeChange', frame: value as unknown as ModeChangeWireFrame }
+}
+function parseArmDisarmWireFrame(value: Record<string, unknown>): WireEvent {
+  if (!commandBase(value) || (value.arm !== null && typeof value.arm !== 'boolean')) return { kind: 'unrecognized' }
+  return { kind: 'armDisarm', frame: value as unknown as ArmDisarmWireFrame }
+}
+function parseGuidedTakeoffWireFrame(value: Record<string, unknown>): WireEvent {
+  if (!commandBase(value) || !nullableFinite(value.relativeAltitudeM)
+    || !nullableFinite(value.altitudeToleranceM) || !nullableFinite(value.altitudeErrorM)) return { kind: 'unrecognized' }
+  return { kind: 'guidedTakeoff', frame: value as unknown as GuidedTakeoffWireFrame }
+}
+function parseGuidedLandWireFrame(value: Record<string, unknown>): WireEvent {
+  if (!commandBase(value) || !isFiniteNumber(value.touchdownAltitudeM)
+    || !nullableFinite(value.relativeAltitudeM)) return { kind: 'unrecognized' }
+  return { kind: 'guidedLand', frame: value as unknown as GuidedLandWireFrame }
 }
 
 function parseFlightStateWireFrame(value: Record<string, unknown>): WireEvent {

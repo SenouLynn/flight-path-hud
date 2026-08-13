@@ -190,12 +190,23 @@ describe('parseWireEvent', () => {
       attempts: 1, horizontalDistanceM: null, altitudeErrorM: null, reason: null,
       updatedAtMs: 1100 }))
     expect(guided.kind).toBe('guidedReposition')
+
+    const common = { requestId: 'r2', sysId: 1, compId: 1, status: 'complete',
+      ackResult: 0, observed: true, attempts: 1, reason: null, updatedAtMs: 1200 }
+    expect(parseWireEvent(JSON.stringify({ type: 'modeChange', ...common, mode: 'GUIDED', customMode: 4 })).kind).toBe('modeChange')
+    expect(parseWireEvent(JSON.stringify({ type: 'armDisarm', ...common, arm: true })).kind).toBe('armDisarm')
+    expect(parseWireEvent(JSON.stringify({ type: 'guidedTakeoff', ...common, relativeAltitudeM: 10,
+      altitudeToleranceM: 2, altitudeErrorM: 1 })).kind).toBe('guidedTakeoff')
+    expect(parseWireEvent(JSON.stringify({ type: 'guidedLand', ...common,
+      touchdownAltitudeM: 0.75, relativeAltitudeM: 0.5 })).kind).toBe('guidedLand')
   })
 
   it('rejects partial safety-state and Guided lifecycle frames', () => {
     expect(parseWireEvent(JSON.stringify({ type: 'flightState', sysId: 1, compId: 1,
       armed: true }))).toEqual({ kind: 'unrecognized' })
     expect(parseWireEvent(JSON.stringify({ type: 'guidedReposition', requestId: 'r1',
+      sysId: 1, compId: 1, status: 'complete' }))).toEqual({ kind: 'unrecognized' })
+    expect(parseWireEvent(JSON.stringify({ type: 'guidedTakeoff', requestId: 'r1',
       sysId: 1, compId: 1, status: 'complete' }))).toEqual({ kind: 'unrecognized' })
   })
 

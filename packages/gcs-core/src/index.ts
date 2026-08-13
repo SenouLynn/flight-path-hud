@@ -26,6 +26,11 @@ export {
   type FlightStateWireFrame,
   type GuidedRepositionStatus,
   type GuidedRepositionWireFrame,
+  type GuidedTakeoffWireFrame,
+  type GuidedLandWireFrame,
+  type ModeChangeWireFrame,
+  type ArmDisarmWireFrame,
+  type CommandLifecycleStatus,
   type LinkModeWireFrame,
   type MissionItemWire,
   type MissionWireFrame,
@@ -130,3 +135,5 @@ export {
   type GuidedRepositionDraft,
   type GuidedRepositionGateInput,
 } from './guidedReposition'
+
+export { encodeSetGuidedRequest, encodeSetArmedRequest, encodeGuidedTakeoffRequest, encodeGuidedLandRequest } from './guidedWorkflow'

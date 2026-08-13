@@ -1105,3 +1105,6 @@ body {
 .node-freshness.live { color: #6ee7a8; }
 .node-freshness.aging { color: var(--warn); }
 .node-freshness.stale { color: var(--error); }
+
+.guided-workflow-actions { display: flex; flex-wrap: wrap; gap: 0.45rem; margin-top: 0.65rem; }
+.guided-workflow-actions .danger { border-color: #8f4545; color: #ffb0a8; }

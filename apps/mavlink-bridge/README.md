@@ -208,6 +208,8 @@ per-run cap above.
 | `MAVLINK_BRIDGE_ENABLE_MODE_CHANGE` | `0` | `1` enables the disarmed-only Copter/Plane mode allowlist for isolated SITL validation |
 | `MAVLINK_BRIDGE_ENABLE_ARM_DISARM` | `0` | Requires `1` plus `MAVLINK_BRIDGE_COMMAND_ENVIRONMENT=sitl`; enables standard, never-forced arm/disarm validation |
 | `MAVLINK_BRIDGE_ENABLE_GUIDED_REPOSITION` | `0` | Requires `1` plus `MAVLINK_BRIDGE_COMMAND_ENVIRONMENT=sitl`; enables bounded Copter/Plane Guided reposition validation |
+| `MAVLINK_BRIDGE_ENABLE_GUIDED_TAKEOFF` | `0` | Requires `1` plus `MAVLINK_BRIDGE_COMMAND_ENVIRONMENT=sitl`; enables verified ArduCopter Guided takeoff |
+| `MAVLINK_BRIDGE_ENABLE_GUIDED_LAND` | `0` | Requires isolated SITL; enables verified ArduCopter landing at the current location |
 | `MAVLINK_BRIDGE_COMMAND_ENVIRONMENT` | *(unset)* | Must equal `sitl` for arm/disarm and Guided reposition; no production value enables them |
 | `MAVLINK_BRIDGE_SAMPLE_PORT` | `14549` | Sample sender's single-instance lock |
 

@@ -1,5 +1,12 @@
 # Changelog
 
+- Added an isolated-SITL ArduCopter operator workflow for verified GUIDED entry,
+  standard arm/disarm, altitude-observed Guided takeoff, and the existing bounded
+  map-selected reposition action. Each step remains exact-target, explicitly
+  confirmed, replay-disabled, and independently feature-gated.
+- Added exact-target Copter landing with ACK and touchdown-altitude verification;
+  the workflow now withholds standard disarm until landing completes.
+
 - Added a target-pinned Guided reposition confirmation panel for isolated SITL,
   with live armed/Guided-state gating, explicit operator identity and confirmation,
   bounded Copter/Plane inputs, and correlated lifecycle results.

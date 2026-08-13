@@ -17,6 +17,8 @@ import { createFlightStateTracker } from './flightStateTracker.js'
 import { createModeChangeRouter } from './modeChangeRouter.js'
 import { createArmDisarmRouter } from './armDisarmRouter.js'
 import { createGuidedRepositionRouter } from './guidedRepositionRouter.js'
+import { createGuidedTakeoffRouter } from './guidedTakeoffRouter.js'
+import { createGuidedLandRouter } from './guidedLandRouter.js'
 
 const UDP_HOST = process.env.MAVLINK_BRIDGE_UDP_HOST ?? '0.0.0.0'
 const UDP_PORT = Number.parseInt(process.env.MAVLINK_BRIDGE_UDP_PORT ?? '14550', 10)
@@ -109,6 +111,14 @@ const guidedRepositionRouter = createGuidedRepositionRouter({ send:(s,c,b)=>ingr
   getFlightState:(s,c)=>flightStateTracker.getFreshState(s,c), isLive:()=>typeof ingress.sendTo==='function',
   enabled:()=>process.env.MAVLINK_BRIDGE_ENABLE_GUIDED_REPOSITION==='1',
   isIsolatedSitl:()=>process.env.MAVLINK_BRIDGE_COMMAND_ENVIRONMENT==='sitl', recordEvent:e=>recorder?.recordEvent(e) })
+const guidedTakeoffRouter = createGuidedTakeoffRouter({ send:(s,c,b)=>ingress.sendTo?.(s,c,b), canSend:(s,c)=>ingress.hasRoute?.(s,c)===true,
+  getFlightState:(s,c)=>flightStateTracker.getFreshState(s,c), isLive:()=>typeof ingress.sendTo==='function',
+  enabled:()=>process.env.MAVLINK_BRIDGE_ENABLE_GUIDED_TAKEOFF==='1',
+  isIsolatedSitl:()=>process.env.MAVLINK_BRIDGE_COMMAND_ENVIRONMENT==='sitl', recordEvent:e=>recorder?.recordEvent(e) })
+const guidedLandRouter = createGuidedLandRouter({ send:(s,c,b)=>ingress.sendTo?.(s,c,b), canSend:(s,c)=>ingress.hasRoute?.(s,c)===true,
+  getFlightState:(s,c)=>flightStateTracker.getFreshState(s,c), isLive:()=>typeof ingress.sendTo==='function',
+  enabled:()=>process.env.MAVLINK_BRIDGE_ENABLE_GUIDED_LAND==='1',
+  isIsolatedSitl:()=>process.env.MAVLINK_BRIDGE_COMMAND_ENVIRONMENT==='sitl', recordEvent:e=>recorder?.recordEvent(e) })
 
 const MISSION_MESSAGE_NAMES = new Set(['MISSION_COUNT', 'MISSION_ITEM_INT', 'MISSION_CURRENT', 'MISSION_ACK', 'MISSION_REQUEST', 'MISSION_REQUEST_INT'])
 
@@ -180,6 +190,10 @@ const stopIngress = ingress.start((datagram, meta) => {
     if (armFrame !== null) publish(armFrame)
     const guidedFrame = guidedRepositionRouter.ingestEnvelope(envelope)
     if (guidedFrame !== null) publish(guidedFrame)
+    const takeoffFrame = guidedTakeoffRouter.ingestEnvelope(envelope)
+    if (takeoffFrame !== null) publish(takeoffFrame)
+    const landFrame = guidedLandRouter.ingestEnvelope(envelope)
+    if (landFrame !== null) publish(landFrame)
     if (envelope.messageName === 'COMMAND_ACK') {
       const frame = commandRouter.ingestEnvelope(envelope)
       if (frame !== null) publish(frame)
@@ -230,6 +244,10 @@ const stopIngress = ingress.start((datagram, meta) => {
   if (armFrame !== null) publish(armFrame)
   const guidedFrame = guidedRepositionRouter.ingestRecordedEvent(event)
   if (guidedFrame !== null) publish(guidedFrame)
+  const takeoffFrame = guidedTakeoffRouter.ingestRecordedEvent(event)
+  if (takeoffFrame !== null) publish(takeoffFrame)
+  const landFrame = guidedLandRouter.ingestRecordedEvent(event)
+  if (landFrame !== null) publish(landFrame)
 })
 
 wsServer.on('listening', () => {
@@ -256,6 +274,8 @@ wsServer.on('connection', (ws) => {
   modeChangeRouter.snapshotForNewClient().forEach((frame) => ws.send(JSON.stringify(frame)))
   armDisarmRouter.snapshotForNewClient().forEach((frame) => ws.send(JSON.stringify(frame)))
   guidedRepositionRouter.snapshotForNewClient().forEach((frame) => ws.send(JSON.stringify(frame)))
+  guidedTakeoffRouter.snapshotForNewClient().forEach((frame) => ws.send(JSON.stringify(frame)))
+  guidedLandRouter.snapshotForNewClient().forEach((frame) => ws.send(JSON.stringify(frame)))
 
   ws.on('message', (raw) => {
     let message = null
@@ -293,6 +313,10 @@ wsServer.on('connection', (ws) => {
       if (armFrame !== null) publish(armFrame)
       const guidedFrame = guidedRepositionRouter.handleClientMessage(message)
       if (guidedFrame !== null) publish(guidedFrame)
+      const takeoffFrame = guidedTakeoffRouter.handleClientMessage(message)
+      if (takeoffFrame !== null) publish(takeoffFrame)
+      const landFrame = guidedLandRouter.handleClientMessage(message)
+      if (landFrame !== null) publish(landFrame)
     } catch (error) {
       console.error(`[mavlink-bridge] client message rejected: ${error?.message ?? error}`)
     }
@@ -311,6 +335,8 @@ const missionTickTimer = setInterval(() => {
   modeChangeRouter.tick().forEach(publish)
   armDisarmRouter.tick().forEach(publish)
   guidedRepositionRouter.tick().forEach(publish)
+  guidedTakeoffRouter.tick().forEach(publish)
+  guidedLandRouter.tick().forEach(publish)
 }, 100)
 
 async function shutdown() {
