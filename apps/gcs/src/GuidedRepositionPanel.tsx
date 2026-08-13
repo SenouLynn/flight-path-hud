@@ -1,4 +1,4 @@
-import { guidedModeFor, guidedRepositionGate, type ConnectionState,
+import { guidedRepositionGate, type ConnectionState,
   type FlightStateWireFrame, type GuidedRepositionDraft, type GuidedRepositionWireFrame,
   type VehicleState } from '@flight-path-hud/gcs-core'
 import { useEffect, useState } from 'react'
@@ -55,10 +55,6 @@ export function GuidedRepositionPanel({ vehicle, flightState, status, connection
 
   return <section className="panel guided-panel">
     <h2>Guided reposition · isolated SITL</h2>
-    <div className="stat"><span>Exact target</span><strong>{targetKey ?? '—'}</strong></div>
-    <div className="stat"><span>Vehicle</span><strong>{isPlane ? 'Plane' : flightState?.vehicleType === 2 ? 'Copter' : 'unsupported'}</strong></div>
-    <div className="stat"><span>Armed</span><strong>{flightState === null ? 'unknown' : flightState.armed ? 'yes' : 'no'}</strong></div>
-    <div className="stat"><span>Mode</span><strong>{flightState === null ? 'unknown' : `${flightState.customMode} / Guided ${guidedModeFor(flightState.vehicleType) ?? '—'}`}</strong></div>
     <button type="button" className="segment" onClick={useCurrentPosition} disabled={vehicle === null || vehicle.latDeg === null || vehicle.lonDeg === null}>Use current position</button>
     <label className="control"><span>Latitude</span><input value={latitude} onChange={e => setLatitude(e.target.value)} inputMode="decimal" /></label>
     <label className="control"><span>Longitude</span><input value={longitude} onChange={e => setLongitude(e.target.value)} inputMode="decimal" /></label>

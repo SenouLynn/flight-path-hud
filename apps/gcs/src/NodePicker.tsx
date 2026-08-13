@@ -1,9 +1,7 @@
 /**
- * The global scope picker: are we looking at the whole fleet, or at one node?
+ * The node-view scope picker: which exact node are we looking at?
  *
- * Lives in the shell header and shows in both views, so "which node am I on" is
- * answerable and changeable from anywhere without going back to the roster
- * first.
+ * Lives beside the Fleet back button so navigation and scope stay together.
  *
  * This is the only node selector. Choosing a node always pins the detail view to
  * that concrete system; a "latest frame wins" option would ping-pong between

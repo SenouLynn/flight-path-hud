@@ -8,7 +8,7 @@
 
 import { useEffect, useRef, useState } from 'react'
 
-export type ViewId = 'instruments' | 'map' | 'video'
+export type ViewId = 'instruments' | 'map' | 'video' | 'mission'
 
 export interface ViewOption {
   id: ViewId
@@ -24,6 +24,7 @@ export const VIEW_OPTIONS: ViewOption[] = [
   { id: 'instruments', label: 'Instruments' },
   { id: 'map', label: 'Map' },
   { id: 'video', label: 'Video' },
+  { id: 'mission', label: 'Mission' },
 ]
 
 interface ViewsMenuProps {

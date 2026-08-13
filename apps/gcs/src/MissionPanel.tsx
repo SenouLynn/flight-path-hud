@@ -31,16 +31,18 @@ export function MissionPanel({
 
   return (
     <section className="panel">
-      <h2>Mission</h2>
-      <button
-        type="button"
-        className="segment"
-        disabled={!gate.enabled}
-        onClick={onLoadMission}
-        title={gate.reason}
-      >
-        Load mission
-      </button>
+      <div className="panel-heading">
+        <h2>Mission</h2>
+        <button
+          type="button"
+          className="segment"
+          disabled={!gate.enabled}
+          onClick={onLoadMission}
+          title={gate.reason}
+        >
+          Load mission
+        </button>
+      </div>
       <div className="stat">
         <span>Status</span>
         <strong className={`mission-status ${mission.status}`}>{mission.status}</strong>

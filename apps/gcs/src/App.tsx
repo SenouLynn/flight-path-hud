@@ -21,7 +21,6 @@
 import { useMemo, useState } from 'react'
 import { FleetView } from './fleet/FleetView'
 import { DEFAULT_BASEMAP, findBasemap } from './map/tileSource'
-import { NodePicker } from './NodePicker'
 import { NodeView } from './NodeView'
 import { useVehicleFeed } from './useVehicleFeed'
 
@@ -92,7 +91,6 @@ function App() {
     <div className="app-shell">
       <header className="gcs-topbar">
         <span className="app-title">Ground control</span>
-        <NodePicker nodes={feed.nodes} value={scopedSystem} onChange={changeScope} />
       </header>
 
       {appView === 'fleet' ? (
@@ -117,6 +115,8 @@ function App() {
           basemapId={basemapId}
           onBasemapChange={setBasemapId}
           onBackToFleet={() => setAppView('fleet')}
+          onScopeChange={changeScope}
+          selectedSystem={scopedSystem}
         />
       )}
     </div>

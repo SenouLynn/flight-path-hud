@@ -9,7 +9,7 @@
  * other's.
  */
 
-import { trackLengthM, type VideoHealth } from '@flight-path-hud/gcs-core'
+import { guidedModeFor, trackLengthM, type VideoHealth } from '@flight-path-hud/gcs-core'
 import { IDLE_VIDEO_HEALTH } from '@flight-path-hud/gcs-core'
 import { useMemo, useRef, useState } from 'react'
 import { HudPanel } from './hud/HudPanel'
@@ -21,6 +21,7 @@ import { formatCoord, formatNumber } from './format'
 import { LinkPanel } from './LinkPanel'
 import { MissionPanel } from './MissionPanel'
 import { GuidedRepositionPanel } from './GuidedRepositionPanel'
+import { NodePicker } from './NodePicker'
 import type { VehicleFeedState } from './useVehicleFeed'
 import { VIEW_OPTIONS, ViewsMenu, type ViewId } from './ViewsMenu'
 
@@ -38,6 +39,9 @@ interface NodeViewProps {
   onBasemapChange: (id: string) => void
   /** Back to the roster. */
   onBackToFleet: () => void
+  /** Change the exact node without returning through the fleet roster. */
+  onScopeChange: (system: string | null) => void
+  selectedSystem: string | null
 }
 
 export function NodeView({
@@ -48,6 +52,8 @@ export function NodeView({
   basemapId,
   onBasemapChange,
   onBackToFleet,
+  onScopeChange,
+  selectedSystem,
 }: NodeViewProps) {
   const [follow, setFollow] = useState(true)
   const [trackUp, setTrackUp] = useState(false)
@@ -64,6 +70,7 @@ export function NodeView({
     instruments: true,
     map: true,
     video: true,
+    mission: true,
   })
 
   const shownViews = VIEW_OPTIONS.filter((option) => visibleViews[option.id])
@@ -124,6 +131,11 @@ export function NodeView({
     setTrackUp(false)
   }
 
+  const selectMissionWaypoint = (latDeg: number, lonDeg: number) => {
+    handOverCamera()
+    mapHandleRef.current?.panTo(latDeg, lonDeg)
+  }
+
   const trackKm = useMemo(
     () => trackLengthM({ points: feed.track }) / 1000,
     [feed.track],
@@ -137,6 +149,8 @@ export function NodeView({
         <button type="button" className="segment" onClick={onBackToFleet} title="Back to the fleet roster">
           ← Fleet
         </button>
+        <NodePicker nodes={feed.nodes} value={selectedSystem}
+          onChange={onScopeChange} />
         <ViewsMenu visible={visibleViews} onToggle={toggleView} />
       </div>
 
@@ -149,26 +163,25 @@ export function NodeView({
           decodeErrorCount={feed.decodeErrorCount}
         />
 
+        <section className="panel">
+          <h2>Target state</h2>
+          <div className="stat"><span>Exact target</span><strong>{selectedSystem ?? '—'}</strong></div>
+          <div className="stat"><span>Vehicle</span><strong>{feed.flightState?.vehicleType === 1
+            ? 'Plane' : feed.flightState?.vehicleType === 2 ? 'Copter' : 'unsupported'}</strong></div>
+          <div className="stat"><span>Armed</span><strong>{feed.flightState === null
+            ? 'unknown' : feed.flightState.armed ? 'yes' : 'no'}</strong></div>
+          <div className="stat"><span>Mode</span><strong>{feed.flightState === null ? 'unknown'
+            : `${feed.flightState.customMode} / Guided ${guidedModeFor(feed.flightState.vehicleType) ?? '—'}`}</strong></div>
+        </section>
+
         <MissionPanel
           mission={feed.mission}
           replayMode={feed.replayMode}
           hasVehicle={vehicle !== null}
           connectionState={feed.connectionState}
           onLoadMission={() => vehicle !== null && feed.requestMission(vehicle.sysId, vehicle.compId)}
-          onSelectWaypoint={(latDeg, lonDeg) => {
-            // Same hand-over as a manual drag: Follow's per-frame recentre
-            // would otherwise snap straight back to the vehicle before the
-            // operator ever sees the waypoint they just clicked.
-            handOverCamera()
-            mapHandleRef.current?.panTo(latDeg, lonDeg)
-          }}
+          onSelectWaypoint={selectMissionWaypoint}
         />
-
-        <GuidedRepositionPanel vehicle={vehicle} flightState={feed.flightState}
-          status={feed.guidedReposition} connectionState={feed.connectionState}
-          replayMode={feed.replayMode}
-          onSend={(actor, draft) => vehicle !== null
-            && feed.sendGuidedReposition(vehicle.sysId, vehicle.compId, actor, draft)} />
 
         {visibleViews.video ? (
           <section className="panel">
@@ -272,6 +285,23 @@ export function NodeView({
                   maxZoom={tileSource.maxZoom}
                 />
               </>
+            ) : null}
+            {option.id === 'mission' ? (
+              <div className="mission-workspace">
+                <MissionPanel
+                  mission={feed.mission}
+                  replayMode={feed.replayMode}
+                  hasVehicle={vehicle !== null}
+                  connectionState={feed.connectionState}
+                  onLoadMission={() => vehicle !== null && feed.requestMission(vehicle.sysId, vehicle.compId)}
+                  onSelectWaypoint={selectMissionWaypoint}
+                />
+                <GuidedRepositionPanel vehicle={vehicle} flightState={feed.flightState}
+                  status={feed.guidedReposition} connectionState={feed.connectionState}
+                  replayMode={feed.replayMode}
+                  onSend={(actor, draft) => vehicle !== null
+                    && feed.sendGuidedReposition(vehicle.sysId, vehicle.compId, actor, draft)} />
+              </div>
             ) : null}
           </div>
         ))}

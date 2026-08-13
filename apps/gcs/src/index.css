@@ -181,6 +181,18 @@ body {
   text-transform: uppercase;
 }
 
+.panel-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 5px;
+}
+
+.panel-heading h2 {
+  margin-bottom: 0;
+}
+
 .stat {
   display: flex;
   justify-content: space-between;
@@ -264,7 +276,7 @@ body {
   min-height: 0;
 }
 
-.gcs-main.has-map.has-instruments.has-video {
+.gcs-main.has-map.has-instruments.has-video:not(.has-mission) {
   grid-template-columns: minmax(380px, 1.35fr) minmax(290px, 1fr);
   grid-template-rows: minmax(0, 1fr) minmax(0, 2fr);
   grid-template-areas:
@@ -272,28 +284,60 @@ body {
     'map instruments';
 }
 
-.gcs-main.has-map.has-instruments:not(.has-video) {
+.gcs-main.has-map.has-instruments:not(.has-video):not(.has-mission) {
   grid-template-columns: minmax(380px, 1.5fr) minmax(300px, 1fr);
   grid-template-areas: 'map instruments';
 }
 
-.gcs-main.has-map.has-video:not(.has-instruments) {
+.gcs-main.has-map.has-video:not(.has-instruments):not(.has-mission) {
   grid-template-columns: minmax(380px, 1.5fr) minmax(240px, 1fr);
   grid-template-areas: 'map video';
 }
 
-.gcs-main.has-instruments.has-video:not(.has-map) {
+.gcs-main.has-instruments.has-video:not(.has-map):not(.has-mission) {
   grid-template-columns: minmax(300px, 1fr) minmax(240px, 0.8fr);
   grid-template-areas: 'instruments video';
 }
 
-.gcs-main.has-map:not(.has-instruments):not(.has-video) { grid-template-areas: 'map'; }
-.gcs-main.has-instruments:not(.has-map):not(.has-video) { grid-template-areas: 'instruments'; }
-.gcs-main.has-video:not(.has-map):not(.has-instruments) { grid-template-areas: 'video'; }
+.gcs-main.has-map:not(.has-instruments):not(.has-video):not(.has-mission) { grid-template-areas: 'map'; }
+.gcs-main.has-instruments:not(.has-map):not(.has-video):not(.has-mission) { grid-template-areas: 'instruments'; }
+.gcs-main.has-video:not(.has-map):not(.has-instruments):not(.has-mission) { grid-template-areas: 'video'; }
+
+/* Mission introduces a fourth independently selectable workspace. Auto-fit
+ * keeps every subset useful without maintaining fifteen named-grid variants. */
+.gcs-main.has-mission {
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  grid-template-rows: minmax(0, 1fr);
+  grid-auto-rows: minmax(0, 1fr);
+  grid-template-areas: none;
+}
+
+.gcs-main.has-mission .view-pane { grid-area: auto; }
+
+/* Full operator workspace: each visual column has a primary view with its
+ * companion below it. Mission sits under Map just as Instruments sits under
+ * Video, keeping planning and geographic context adjacent. */
+.gcs-main.has-map.has-instruments.has-video.has-mission {
+  grid-template-columns: minmax(380px, 1.35fr) minmax(290px, 1fr);
+  grid-template-rows: repeat(6, minmax(0, 1fr));
+  grid-template-areas:
+    'map video'
+    'map video'
+    'map instruments'
+    'map instruments'
+    'mission instruments'
+    'mission instruments';
+}
+
+.gcs-main.has-map.has-instruments.has-video.has-mission .view-pane--map { grid-area: map; }
+.gcs-main.has-map.has-instruments.has-video.has-mission .view-pane--video { grid-area: video; }
+.gcs-main.has-map.has-instruments.has-video.has-mission .view-pane--instruments { grid-area: instruments; }
+.gcs-main.has-map.has-instruments.has-video.has-mission .view-pane--mission { grid-area: mission; }
 
 .view-pane--map { grid-area: map; }
 .view-pane--instruments { grid-area: instruments; }
 .view-pane--video { grid-area: video; }
+.view-pane--mission { grid-area: mission; }
 
 .view-pane {
   position: relative;
@@ -301,6 +345,13 @@ body {
   min-height: 0;
   overflow: hidden;
   background: var(--bg);
+}
+
+.mission-workspace {
+  height: 100%;
+  overflow-y: auto;
+  padding: 8px 10px;
+  background: var(--panel);
 }
 
 /* Borders follow visual adjacency, not JSX order (which stays stable for mounts). */
@@ -312,6 +363,10 @@ body {
 
 .gcs-main.has-map.has-instruments.has-video .view-pane--video {
   border-bottom: 1px solid var(--border);
+}
+
+.gcs-main.has-map.has-instruments.has-video.has-mission .view-pane--mission {
+  border-top: 1px solid var(--border);
 }
 
 /* Tablet/narrow desktop: give the sidebar a bounded row and stack the working
@@ -339,6 +394,23 @@ body {
       'video'
       'instruments';
     overflow-y: auto;
+  }
+
+  .gcs-main.has-mission {
+    grid-template-columns: 1fr;
+    grid-template-rows: none;
+    grid-auto-rows: minmax(220px, 65vh);
+    overflow-y: auto;
+  }
+
+  .gcs-main.has-map.has-instruments.has-video.has-mission {
+    grid-template-columns: 1fr;
+    grid-template-rows: none;
+    grid-template-areas: none;
+  }
+
+  .gcs-main.has-map.has-instruments.has-video.has-mission .view-pane {
+    grid-area: auto;
   }
 
   .gcs-main.has-map.has-instruments.has-video .view-pane--video,
@@ -853,12 +925,11 @@ body {
   min-height: 0;
 }
 
-/* The global scope picker, pushed right of the app title in the header. */
+/* Scope is part of the node subbar's left-aligned navigation group. */
 .node-picker {
   display: flex;
   align-items: center;
   gap: 6px;
-  margin-left: auto;
 }
 
 .node-picker-label {
