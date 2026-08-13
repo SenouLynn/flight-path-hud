@@ -233,6 +233,14 @@ Run the reversible acceptance with `pnpm sitl-test:mode-change`; it exercises
 both vehicles one at a time and restores their original modes in cleanup. Remove
 the stopped stack with `pnpm sitl-test:mode-change:down`.
 
+Regenerate the successful lifecycle fixture only from a reviewed passing run:
+
+```bash
+node apps/mavlink-bridge/src/curateModeChangeFixture.js \
+  apps/mavlink-bridge/recordings/<successful-session>.jsonl \
+  apps/mavlink-bridge/test-fixtures/mixed-sitl-mode-change-v2.jsonl
+```
+
 Malformed datagrams are dropped and counted in `decodeErrorCount`.
 
 ### Read-only parameter request

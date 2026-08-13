@@ -135,6 +135,11 @@ Acceptance passed on 2026-08-13 against ArduPilot 4.6.2. Both targets accepted
 to custom mode `0` (`STABILIZE` for Copter, `MANUAL` for Plane). Neither vehicle
 armed during the scenario.
 
+The sanitized `mixed-sitl-mode-change-v2.jsonl` fixture retains all 12 lifecycle
+events from the four accepted transitions. Regression tests reconstruct the
+vehicle-specific `LOITER` and restored mode outcomes, require successful ACK and
+HEARTBEAT observation in every terminal frame, and prove replay emits no MAVLink.
+
 ## Acceptance checklist
 
 1. The GCS fleet roster lists `1:1` and `2:1`, with no bridge decode errors for

@@ -8,6 +8,8 @@
   post-condition verification, bounded retries, and passive lifecycle replay.
 - Added mixed Copter/Plane mode-change SITL acceptance proving disarmed-only
   `LOITER` transitions, peer isolation, and restoration to `STABILIZE`/`MANUAL`.
+- Added a sanitized deterministic fixture for all four accepted mode-change
+  lifecycles, including ACK and HEARTBEAT post-condition evidence.
 
 - Added the portable Stage 3 mission-replacement protocol and state-machine
   foundation, including exact-target correlation, bounded retries, final ACK,

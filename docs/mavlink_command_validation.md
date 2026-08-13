@@ -143,6 +143,8 @@ post-condition verification. The initial allowlists contain only Copter
 `STABILIZE`/`LOITER` and Plane `MANUAL`/`LOITER`. Mixed-SITL acceptance passed
 with both vehicles disarmed, target-isolation checks, and restoration to each
 vehicle's original custom mode. Arm/disarm and Guided operations remain unimplemented.
+A sanitized 12-event lifecycle fixture deterministically replays all four accepted
+mode transitions without outbound traffic.
 
 These are state-changing and potentially safety-critical. Add only after a command policy,
 operator confirmation UX, target identity display, current-mode/armed-state verification,
