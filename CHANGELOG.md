@@ -1,5 +1,9 @@
 # Changelog
 
+- Added mixed-ArduPilot SITL acceptance for target-scoped message intervals,
+  including cadence statistics, cross-target isolation, and unconditional default
+  restoration.
+
 - Migrated the JavaScript/TypeScript monorepo from npm to a single pnpm 11
   workspace and lockfile, with a strict seven-day dependency release quarantine
   and no initial exceptions.

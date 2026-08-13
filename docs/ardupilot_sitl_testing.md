@@ -79,6 +79,19 @@ Keep the GCS WebSocket URL at `ws://localhost:8080/telemetry`. Use
 `pnpm sitl-test:logs` to follow container output, and stop everything with
 `pnpm sitl-test:down`.
 
+`pnpm sitl-test:message-interval` runs a separate bridge-path acceptance scenario.
+It enables interval commands only inside the Compose override, sets distinct
+`ATTITUDE` cadences on `1:1` and `2:1`, measures monotonic WebSocket arrival
+intervals, and restores both streams to their autopilot defaults in cleanup.
+Copter validates a reduction to 2 Hz. Plane validates an increase to 10 Hz:
+MAVProxy's legacy 4 Hz stream remains additive on Plane, so accepting a slower
+per-message interval does not reduce its aggregate `ATTITUDE` cadence.
+
+Acceptance passed on 2026-08-13 against ArduPilot 4.6.2. Copter measured a
+500.0 ms median interval with a 505.3 ms maximum; Plane measured 100.2 ms with a
+105.0 ms maximum. Every measured interval was within tolerance. Both vehicles
+accepted the cleanup request restoring their autopilot-default intervals.
+
 ## Acceptance checklist
 
 1. The GCS fleet roster lists `1:1` and `2:1`, with no bridge decode errors for

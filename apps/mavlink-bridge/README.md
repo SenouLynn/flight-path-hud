@@ -59,6 +59,17 @@ mission overlays. `pnpm sitl-test:logs` follows Compose logs.
 This validates one simulated mixed-fleet scenario only; it is not a field or
 arbitrary-fleet validation claim.
 
+Validate target-scoped message intervals against both real SITL vehicles with:
+
+```bash
+pnpm sitl-test:message-interval
+```
+
+The controller requests distinct `ATTITUDE` cadences for Copter and Plane,
+measures bridge-WebSocket arrival intervals, and restores both targets to their
+autopilot defaults in unconditional cleanup. After interruption, remove the
+override stack with `pnpm sitl-test:message-interval:down`.
+
 See [ArduPilot SITL Testing Nuances](../../docs/ardupilot_sitl_testing.md) for
 the Compose topology, acceptance criteria, frame/mission behavior, and the
 important distinction between loading a mission and making a simulator fly it.

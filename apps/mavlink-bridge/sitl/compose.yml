@@ -9,6 +9,7 @@ services:
       # bind mount so it cannot replace macOS Rolldown/Vite bindings used by the
       # browser GCS.
       - bridge_node_modules:/workspace/node_modules
+      - bridge_pnpm_store:/workspace/.pnpm-store
       - ../recordings:/workspace/apps/mavlink-bridge/recordings
     ports:
       - "8080:8080"
@@ -37,3 +38,4 @@ services:
 
 volumes:
   bridge_node_modules:
+  bridge_pnpm_store:

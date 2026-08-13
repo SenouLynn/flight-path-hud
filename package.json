@@ -7,6 +7,8 @@
     "gcs:sitl-test": "docker compose -f apps/mavlink-bridge/sitl/compose.yml up --build --detach && pnpm --filter @flight-path-hud/gcs dev",
     "sitl-test:motion": "docker compose -f apps/mavlink-bridge/sitl/compose.yml -f apps/mavlink-bridge/sitl/compose.motion.yml up --build --abort-on-container-exit --exit-code-from motion-controller",
     "sitl-test:motion:down": "docker compose -f apps/mavlink-bridge/sitl/compose.yml -f apps/mavlink-bridge/sitl/compose.motion.yml down",
+    "sitl-test:message-interval": "docker compose -f apps/mavlink-bridge/sitl/compose.yml -f apps/mavlink-bridge/sitl/compose.message-interval.yml up --build --abort-on-container-exit --exit-code-from message-interval-controller",
+    "sitl-test:message-interval:down": "docker compose -f apps/mavlink-bridge/sitl/compose.yml -f apps/mavlink-bridge/sitl/compose.message-interval.yml down",
     "dev:hud": "pnpm --filter @flight-path-hud/hud dev",
     "build:hud": "pnpm --filter @flight-path-hud/hud build",
     "lint:hud": "pnpm --filter @flight-path-hud/hud lint",
