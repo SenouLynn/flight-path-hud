@@ -14,6 +14,7 @@ const SUPPORTED_MESSAGE_DECODERS = {
   47: decodeMissionAck,
   73: decodeMissionItemInt,
   74: decodeVfrHud,
+  77: decodeCommandAck,
   242: decodeHomePosition,
 }
 
@@ -29,6 +30,7 @@ const MESSAGE_CRC_EXTRA = {
   47: 153,
   73: 38,
   74: 20,
+  77: 143,
   242: 104,
 }
 
@@ -231,6 +233,21 @@ function decodeVfrHud(frame) {
         groundSpeedMps: readFloatLE(frame.payload, 4),
         climbMps: readFloatLE(frame.payload, 12),
         headingDeg: frame.payload.readInt16LE(16),
+      },
+    },
+  }
+}
+
+function decodeCommandAck(frame) {
+  const payload = payloadPaddedTo(frame.payload, 10)
+  if (payload === null || payload.length < 3) return null
+  return {
+    messageName: 'COMMAND_ACK',
+    payload: {
+      timestampMs: frame.recvTimestampMs,
+      commandAck: {
+        command: payload.readUInt16LE(0),
+        result: payload.readUInt8(2),
       },
     },
   }

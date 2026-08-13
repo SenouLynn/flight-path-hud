@@ -14,7 +14,7 @@ export function createReplayIngress(filePath, { speed = 1, loop = false } = {}) 
   return {
     describe: () => `replay ${filePath} (${entries.length} datagrams, ${speed}x${loop ? ', looping' : ''})`,
 
-    start(onDatagram) {
+    start(onDatagram, onEvent = () => undefined) {
       if (entries.length === 0) {
         console.warn(`[mavlink-bridge] recording ${filePath} is empty`)
         return () => undefined
@@ -47,7 +47,8 @@ export function createReplayIngress(filePath, { speed = 1, loop = false } = {}) 
             return
           }
 
-          onDatagram(entry.data, { source: 'replay', atMs: entry.atMs })
+          if (entry.data !== null) onDatagram(entry.data, { source: 'replay', atMs: entry.atMs })
+          if (entry.event !== null) onEvent(entry.event, { source: 'replay', atMs: entry.atMs })
           previousMs = entry.tMs
           index += 1
           scheduleNext()

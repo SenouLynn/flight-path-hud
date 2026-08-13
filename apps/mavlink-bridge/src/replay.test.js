@@ -95,6 +95,38 @@ test('recording preserves the raw bytes, so replay re-runs the decoder', async (
   })
 })
 
+test('recording preserves normalized command lifecycle events alongside datagrams', async () => {
+  const file = tempFile('command-events')
+  let clock = 100
+  const recorder = createJsonlRecorder(file, { now: () => (clock += 10) })
+  const event = { type: 'commandStatus', requestId: 'request-1', status: 'acknowledged' }
+  recorder.record(Buffer.from([1, 2, 3]))
+  recorder.recordEvent(event)
+  await recorder.close()
+
+  const entries = readRecording(file)
+  fs.unlinkSync(file)
+  assert.ok(entries[0].data.equals(Buffer.from([1, 2, 3])))
+  assert.equal(entries[0].event, null)
+  assert.equal(entries[1].data, null)
+  assert.deepEqual(entries[1].event, event)
+})
+
+test('replay ingress emits command events without treating them as MAVLink bytes', async () => {
+  const file = tempFile('command-event-replay')
+  const event = { type: 'commandStatus', requestId: 'request-2', status: 'timedOut' }
+  const recorder = createJsonlRecorder(file)
+  recorder.recordEvent(event)
+  await recorder.close()
+  const ingress = createReplayIngress(file, { speed: 1000 })
+
+  const seen = await new Promise((resolve) => {
+    ingress.start(() => assert.fail('event must not be emitted as a datagram'), (value) => resolve(value))
+  })
+  fs.unlinkSync(file)
+  assert.deepEqual(seen, event)
+})
+
 test('replay ingress emits datagrams in order with the recorded pacing', async () => {
   const file = tempFile('pacing')
 

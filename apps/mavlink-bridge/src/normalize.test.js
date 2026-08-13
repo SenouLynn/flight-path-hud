@@ -2,7 +2,7 @@ import assert from 'node:assert/strict'
 import test from 'node:test'
 import { computeFrameCrc, crcAccumulate, parseIncomingDatagram, encodeMissionCount, encodeMissionItemInt } from './normalize.js'
 
-const CRC_EXTRA = { 0: 50, 24: 24, 30: 39, 33: 104, 42: 28, 44: 221, 47: 153, 73: 38, 74: 20, 242: 104 }
+const CRC_EXTRA = { 0: 50, 24: 24, 30: 39, 33: 104, 42: 28, 44: 221, 47: 153, 73: 38, 74: 20, 77: 143, 242: 104 }
 
 function buildMavlinkV1Frame(messageId, payload, { sequence = 7, sysId = 1, compId = 1, corruptCrc = false } = {}) {
   const frame = Buffer.alloc(6 + payload.length + 2)
@@ -204,6 +204,15 @@ test('parses MISSION_ACK', () => {
 
   const result = parseIncomingDatagram(buildMavlinkV1Frame(47, payload))
   assert.equal(result.envelopes[0].payload.missionAck.type, 13)
+})
+
+test('parses COMMAND_ACK for command lifecycle correlation', () => {
+  const payload = Buffer.alloc(10)
+  payload.writeUInt16LE(400, 0)
+  payload.writeUInt8(3, 2)
+  const result = parseIncomingDatagram(buildMavlinkV1Frame(77, payload, { sysId: 2, compId: 1 }))
+  assert.equal(result.envelopes[0].messageName, 'COMMAND_ACK')
+  assert.deepEqual(result.envelopes[0].payload.commandAck, { command: 400, result: 3 })
 })
 
 test('parses HOME_POSITION', () => {

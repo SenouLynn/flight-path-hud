@@ -1,5 +1,9 @@
 # Changelog
 
+- Added the Stage 0 MAVLink command foundation: confirmed target-explicit envelopes,
+  an empty-by-default allowlist, exact-route send/retry handling, `COMMAND_ACK`
+  correlation, normalized timeouts/results, and deterministic lifecycle recording/replay.
+
 All notable changes to this project are recorded here. This is a **living document**
 maintained by humans and AI agents.
 

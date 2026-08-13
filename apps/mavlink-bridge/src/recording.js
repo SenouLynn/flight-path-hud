@@ -39,6 +39,19 @@ export function createJsonlRecorder(filePath, { now = Date.now, maxBytes = Infin
       stream.write(line)
     },
 
+    recordEvent(event) {
+      if (stopped) return
+      const atMs = now()
+      const line = `${JSON.stringify({ tMs: atMs - startedAtMs, atMs, event })}\n`
+      if (bytesWritten + line.length > maxBytes) {
+        stopped = true
+        console.warn(`[mavlink-bridge] recording hit its ${Math.round(maxBytes / 1e6)} MB cap; no longer recording to ${filePath}`)
+        return
+      }
+      bytesWritten += line.length
+      stream.write(line)
+    },
+
     bytesWritten: () => bytesWritten,
     isStopped: () => stopped,
 
@@ -114,7 +127,8 @@ export function readRecording(filePath) {
       return {
         tMs: entry.tMs,
         atMs: entry.atMs,
-        data: Buffer.from(entry.base64, 'base64'),
+        data: typeof entry.base64 === 'string' ? Buffer.from(entry.base64, 'base64') : null,
+        event: entry.event ?? null,
       }
     })
 }

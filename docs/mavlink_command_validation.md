@@ -71,6 +71,12 @@ loss-of-link behavior. Do not turn the ESP32 HUD into a transparent proxy for br
 
 ### 0. Command foundation — before any write action
 
+Implemented on the `multi-node-figure8` branch with an intentionally empty
+production allowlist. The bridge now validates and normalizes command envelopes,
+binds sends/retries/acknowledgements to an exact target route, rejects replay and
+stale routes, records lifecycle events, and passively reconstructs them in replay.
+No browser command UI or operational command family is enabled yet.
+
 - Add a command envelope containing request ID, target `sysId:compId`, command family,
   actor, timestamp, and explicit confirmation state.
 - Maintain a per-command allowlist and reject replay-originated commands.
