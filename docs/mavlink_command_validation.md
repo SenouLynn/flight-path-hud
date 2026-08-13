@@ -99,10 +99,12 @@ without changing vehicle state.
 
 ### 2. Reversible, low-consequence SITL actions
 
-In progress: the first action is a Docker-SITL-only `LOG_DISARMED` boolean write.
+The first action is validated: a Docker-SITL-only `LOG_DISARMED` boolean write.
 It requires explicit confirmation, exact-target routing, bounded values, returned
 `PARAM_VALUE`, independent read-back, cross-target isolation, and unconditional
-restoration of the original values. The production feature flag remains off.
+restoration of the original values. A sanitized lifecycle fixture proves passive,
+deterministic replay without outbound packets. The production feature flag remains
+off; no browser write control exists.
 
 Behind an explicit SITL-only feature flag, validate small parameter writes and camera/gimbal
 commands when supported. Confirm the returned acknowledgement and the subsequent telemetry

@@ -167,6 +167,19 @@ rebases timestamps deterministically, and removes repetitive simulator traffic.
 Run `pnpm test:bridge` after curating; do not promote an arbitrary or failed
 recording merely because it is newest.
 
+The successful parameter-write lifecycle fixture is regenerated deliberately:
+
+```bash
+node apps/mavlink-bridge/src/curateParameterWriteFixture.js \
+  apps/mavlink-bridge/recordings/<successful-session>.jsonl \
+  apps/mavlink-bridge/test-fixtures/mixed-sitl-parameter-write-v2.jsonl
+```
+
+Unlike the motion fixture, this fixture contains only normalized parameter-read
+and parameter-write lifecycle events. The curator removes raw simulator traffic,
+replaces request IDs, and rebases timestamps so replay remains deterministic and
+cannot transmit MAVLink packets.
+
 Note: a recording is read fully into memory on replay, so it is bounded by the
 per-run cap above.
 

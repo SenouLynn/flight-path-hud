@@ -3,6 +3,8 @@
 - Added a disabled-by-default, allowlisted `PARAM_SET` transaction and mixed-SITL
   acceptance workflow with independent read-back, target-isolation checks, and
   unconditional restoration.
+- Added a deterministic, sanitized real-SITL parameter lifecycle fixture proving
+  isolated writes, independent read-back, restoration, and transmit-free replay.
 
 - Added mixed-ArduPilot SITL acceptance for target-scoped message intervals,
   including cadence statistics, cross-target isolation, and unconditional default

@@ -100,6 +100,9 @@ re-reads both originals in unconditional cleanup.
 
 Acceptance passed on 2026-08-13 against ArduPilot 4.6.2. Copter and Plane each
 changed from `0` to `1` without affecting the peer, then both restored to `0`.
+The sanitized `mixed-sitl-parameter-write-v2.jsonl` fixture preserves all 32
+read/write lifecycle events from that run. Its regression tests passively rebuild
+both targets' changed and restored states and fail if replay attempts to send.
 
 ## Acceptance checklist
 
