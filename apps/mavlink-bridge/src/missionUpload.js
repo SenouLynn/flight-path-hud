@@ -97,6 +97,12 @@ export function createMissionUpload({ send, now = Date.now, sysId = 255, compId 
       status = 'complete'; reason = null; return true
     },
 
+    abort(failureReason) {
+      if (['complete', 'failed', 'idle'].includes(status)) return false
+      fail(failureReason)
+      return true
+    },
+
     tick(nowMs = now()) {
       if (awaitingSince === null || !['clearing', 'uploading'].includes(status)) return false
       if (nowMs - awaitingSince < timeoutMs) return false

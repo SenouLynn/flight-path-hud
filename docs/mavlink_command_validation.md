@@ -112,12 +112,13 @@ or parameter state. Reset the simulator state between scenarios.
 
 ### 3. Mission write transaction
 
-Foundation implemented: portable numeric codecs and a transport-neutral replacement
+In progress: portable numeric codecs and a transport-neutral replacement
 state machine now cover `MISSION_CLEAR_ALL`, `MISSION_COUNT`, vehicle-driven
 `MISSION_REQUEST_INT`/`MISSION_ITEM_INT`, final `MISSION_ACK`, bounded retries, exact-target
-correlation, and independent read-back comparison. It is not connected to the WebSocket
-or production bridge yet; the next slice is the disabled-by-default policy/router boundary,
-then mixed Copter/Plane SITL acceptance.
+correlation, and independent read-back comparison. A disabled-by-default policy/router
+boundary adds explicit confirmation, a fixed clear-then-replace policy, per-target
+serialization, lifecycle recording/replay, and automatic read-back. No browser control
+exists. Mixed Copter/Plane SITL acceptance remains before this stage is validated.
 
 Implement mission upload as a complete transaction: clear/replace policy, item count,
 ordered item transfer, timeout/retry behavior, final acknowledgement, and read-back

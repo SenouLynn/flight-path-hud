@@ -3,6 +3,9 @@
 - Added the portable Stage 3 mission-replacement protocol and state-machine
   foundation, including exact-target correlation, bounded retries, final ACK,
   and independent read-back comparison before completion.
+- Added a disabled-by-default mission-upload policy/router with explicit
+  confirmation, clear-then-replace semantics, per-target serialization,
+  lifecycle recording/replay, and automatic read-back verification.
 
 - Added a disabled-by-default, allowlisted `PARAM_SET` transaction and mixed-SITL
   acceptance workflow with independent read-back, target-isolation checks, and

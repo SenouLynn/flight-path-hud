@@ -192,6 +192,7 @@ per-run cap above.
 | `MAVLINK_BRIDGE_SYSTEM_TTL_MS` | `10000` | Drop a quiet system and its UDP return route from the roster |
 | `MAVLINK_BRIDGE_ENABLE_MESSAGE_INTERVAL` | `0` | `1` enables allowlisted, target-scoped stream interval changes |
 | `MAVLINK_BRIDGE_ENABLE_PARAMETER_WRITE` | `0` | `1` enables narrowly allowlisted parameter writes |
+| `MAVLINK_BRIDGE_ENABLE_MISSION_UPLOAD` | `0` | `1` enables confirmed full mission replacement; keep disabled outside isolated validation |
 | `MAVLINK_BRIDGE_SAMPLE_PORT` | `14549` | Sample sender's single-instance lock |
 
 ## Envelope shape
@@ -221,6 +222,13 @@ Identical concurrent target/query pairs are rejected because MAVLink
 
 This request is read-only. `PARAM_SET` remains a separate, disabled-by-default
 transaction with its own exact-name and value allowlist; no browser UI enables it.
+
+Mission upload is also a separate disabled-by-default transaction. A client must
+send `uploadMission` with a unique request ID, exact non-broadcast target, actor,
+timestamp, `confirmation: true`, `policy: "clearThenReplace"`, and a complete
+bounded `items` array. The bridge clears and replaces the mission, serves
+vehicle-requested items, requires the final ACK, then downloads and compares the
+stored mission before reporting `complete`. There is no browser control for it.
 
 One-shot `HOME_POSITION` and `GPS_GLOBAL_ORIGIN` reads use
 `{"type":"requestMessage","requestId":"message-1","sysId":1,"compId":1,"messageName":"HOME_POSITION"}`.
