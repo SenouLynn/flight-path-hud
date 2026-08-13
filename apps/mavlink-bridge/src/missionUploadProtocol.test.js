@@ -3,7 +3,7 @@ import test from 'node:test'
 import { computeFrameCrc } from './mavlinkFrame.js'
 import { parseIncomingDatagram } from './normalize.js'
 import {
-  encodeMissionClearAll, encodeMissionUploadCount, encodeMissionUploadItemInt,
+  encodeMissionClearAll, encodeMissionUploadCount, encodeMissionUploadItem, encodeMissionUploadItemInt,
 } from './missionUploadProtocol.js'
 
 function assertFrame(frame, messageId, crcExtra) {
@@ -33,6 +33,16 @@ test('mission replacement codecs produce CRC-correct exact-target frames', () =>
   assert.deepEqual([...item.subarray(38, 43)], [2, 1, 3, 0, 1])
 })
 
+test('legacy MISSION_ITEM fallback carries float coordinates for MAVLink 1 peers', () => {
+  const item = encodeMissionUploadItem({ sysId: 255, compId: 190, targetSystemId: 2, targetComponentId: 1,
+    item: { seq: 0, command: 16, frameId: 3, current: true, autocontinue: true,
+      latDegE7: -353632610, lonDegE7: 1491652300, altM: 80 } })
+  assertFrame(item, 39, 254)
+  assert.ok(Math.abs(item.readFloatLE(22) - -35.363261) < 1e-5)
+  assert.ok(Math.abs(item.readFloatLE(26) - 149.16523) < 1e-5)
+  assert.deepEqual([...item.subarray(38, 43)], [2, 1, 3, 1, 1])
+})
+
 test('normalizer decodes an addressed MISSION_REQUEST_INT', () => {
   // The pull encoder has the same wire layout/CRC as a vehicle upload request.
   const request = Buffer.from([0xfe, 4, 9, 2, 1, 51, 7, 0, 255, 190, 0, 0])
@@ -40,4 +50,11 @@ test('normalizer decodes an addressed MISSION_REQUEST_INT', () => {
   const { envelopes, decodeErrors } = parseIncomingDatagram(request, 1234)
   assert.equal(decodeErrors, 0)
   assert.deepEqual(envelopes[0].payload.missionRequestInt, { seq: 7, targetSystem: 255, targetComponent: 190 })
+})
+
+test('normalizer decodes the MAVLink 1 MISSION_REQUEST fallback', () => {
+  const request = Buffer.from([0xfe, 4, 9, 2, 1, 40, 3, 0, 255, 190, 0, 0])
+  request.writeUInt16LE(computeFrameCrc(request, 1, 10, 230), 10)
+  const { envelopes } = parseIncomingDatagram(request, 1234)
+  assert.deepEqual(envelopes[0].payload.missionRequest, { seq: 3, targetSystem: 255, targetComponent: 190 })
 })

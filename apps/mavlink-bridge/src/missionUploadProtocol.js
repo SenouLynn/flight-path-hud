@@ -3,12 +3,14 @@ import { buildMavlinkV1Frame } from './mavlinkFrame.js'
 export const MISSION_CLEAR_ALL_MSG_ID = 45
 export const MISSION_COUNT_MSG_ID = 44
 export const MISSION_ITEM_INT_MSG_ID = 73
+export const MISSION_ITEM_MSG_ID = 39
 export const MAV_MISSION_ACCEPTED = 0
 
 const CRC_EXTRA = new Map([
   [MISSION_CLEAR_ALL_MSG_ID, 232],
   [MISSION_COUNT_MSG_ID, 221],
   [MISSION_ITEM_INT_MSG_ID, 38],
+  [MISSION_ITEM_MSG_ID, 254],
 ])
 
 let sequence = 0
@@ -52,4 +54,24 @@ export function encodeMissionUploadItemInt({ sysId, compId, targetSystemId, targ
   payload.writeUInt8(item.current ? 1 : 0, 35)
   payload.writeUInt8(item.autocontinue ? 1 : 0, 36)
   return frame(MISSION_ITEM_INT_MSG_ID, payload, sysId, compId)
+}
+
+/** MAVLink 1 fallback when the vehicle answers MISSION_COUNT with MISSION_REQUEST(40). */
+export function encodeMissionUploadItem({ sysId, compId, targetSystemId, targetComponentId, item }) {
+  const payload = Buffer.alloc(37)
+  payload.writeFloatLE(item.param1 ?? 0, 0)
+  payload.writeFloatLE(item.param2 ?? 0, 4)
+  payload.writeFloatLE(item.param3 ?? 0, 8)
+  payload.writeFloatLE(item.param4 ?? 0, 12)
+  payload.writeFloatLE(item.latDegE7 / 1e7, 16)
+  payload.writeFloatLE(item.lonDegE7 / 1e7, 20)
+  payload.writeFloatLE(item.altM, 24)
+  payload.writeUInt16LE(item.seq, 28)
+  payload.writeUInt16LE(item.command, 30)
+  payload.writeUInt8(targetSystemId, 32)
+  payload.writeUInt8(targetComponentId, 33)
+  payload.writeUInt8(item.frameId, 34)
+  payload.writeUInt8(item.current ? 1 : 0, 35)
+  payload.writeUInt8(item.autocontinue ? 1 : 0, 36)
+  return frame(MISSION_ITEM_MSG_ID, payload, sysId, compId)
 }

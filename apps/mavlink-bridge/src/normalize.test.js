@@ -119,6 +119,21 @@ test('parses MAVLink v1 ATTITUDE frames', () => {
   assert.equal(result.envelopes[0].payload.attitude.yawSpeedRadPerSec.toFixed(3), '0.600')
 })
 
+test('parses portable HEARTBEAT armed, mode, vehicle, and system state', () => {
+  const payload = Buffer.alloc(9)
+  payload.writeUInt32LE(17, 0)
+  payload.writeUInt8(2, 4) // MAV_TYPE_QUADROTOR
+  payload.writeUInt8(3, 5) // MAV_AUTOPILOT_ARDUPILOTMEGA
+  payload.writeUInt8(0x81, 6) // custom mode enabled + safety armed
+  payload.writeUInt8(4, 7) // MAV_STATE_ACTIVE
+  payload.writeUInt8(3, 8)
+  const result = parseIncomingDatagram(buildMavlinkV1Frame(0, payload))
+  assert.deepEqual(result.envelopes[0].payload.heartbeat, {
+    customMode: 17, vehicleType: 2, autopilotType: 3, baseMode: 0x81,
+    armed: true, systemStatus: 4, mavlinkVersion: 3,
+  })
+})
+
 test('parses PARAM_VALUE including its portable numeric type id', () => {
   const payload = Buffer.alloc(25)
   payload.writeFloatLE(42.5, 0)

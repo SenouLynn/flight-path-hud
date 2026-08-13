@@ -1,0 +1,12 @@
+services:
+  bridge:
+    environment:
+      MAVLINK_BRIDGE_ENABLE_MISSION_UPLOAD: "1"
+  mission-upload-controller:
+    image: node:22-bookworm-slim
+    working_dir: /workspace
+    entrypoint: ["node", "apps/mavlink-bridge/sitl/mission_upload_controller.js"]
+    volumes:
+      - ../../..:/workspace:ro
+    depends_on: [bridge, copter, plane]
+    stop_grace_period: 30s

@@ -9,6 +9,8 @@ const items = [
 const ack = (sysId = 2, type = 0) => ({ sysId, compId: 1, messageName: 'MISSION_ACK', payload: { missionAck: { type } } })
 const request = (seq, overrides = {}) => ({ sysId: 2, compId: 1, messageName: 'MISSION_REQUEST_INT',
   payload: { missionRequestInt: { seq, targetSystem: 255, targetComponent: 190, ...overrides } } })
+const legacyRequest = (seq) => ({ sysId: 2, compId: 1, messageName: 'MISSION_REQUEST',
+  payload: { missionRequest: { seq, targetSystem: 255, targetComponent: 190 } } })
 
 function harness(options = {}) {
   let nowMs = 1000
@@ -43,6 +45,16 @@ test('wrong targets and requests addressed to another GCS cannot advance upload'
   upload.ingestEnvelope(ack())
   assert.equal(upload.ingestEnvelope(request(0, { targetSystem: 42 })), false)
   assert.equal(sent.length, 2)
+})
+
+test('serves legacy MISSION_REQUEST with MISSION_ITEM and tolerates its float coordinate precision', () => {
+  const { upload, sent } = harness()
+  upload.start(items); upload.ingestEnvelope(ack()); upload.ingestEnvelope(legacyRequest(0)); upload.ingestEnvelope(legacyRequest(1)); upload.ingestEnvelope(ack())
+  assert.deepEqual(sent.map((frame) => frame[5]), [45, 44, 39, 39])
+  const quantized = items.map((item, seq) => ({ ...item, seq, param1: 0, param2: 0, param3: 0, param4: 0,
+    latDegE7: item.latDegE7 + 50, lonDegE7: item.lonDegE7 - 50 }))
+  upload.confirmReadback(quantized)
+  assert.equal(upload.getState().status, 'complete')
 })
 
 test('negative ACK, invalid sequence, premature ACK, and read-back mismatch fail closed', () => {

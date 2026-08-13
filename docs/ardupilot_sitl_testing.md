@@ -104,6 +104,26 @@ The sanitized `mixed-sitl-parameter-write-v2.jsonl` fixture preserves all 32
 read/write lifecycle events from that run. Its regression tests passively rebuild
 both targets' changed and restored states and fail if replay attempts to send.
 
+`pnpm sitl-test:mission-upload` validates complete mission replacement. The
+controller downloads and retains both original missions, shifts one waypoint on
+one exact target at a time, requires the bridge's final ACK plus automatic
+read-back comparison, independently downloads the result, proves the peer mission
+is unchanged, and restores both originals in unconditional cleanup.
+
+Acceptance passed on 2026-08-13 against ArduPilot 4.6.2. Copter's three-item and
+Plane's four-item missions were independently replaced and read back, with no
+cross-target changes. Both original missions were restored and re-read during the
+scenario and again in final cleanup. The run also established that MAVLink 1
+`MISSION_COUNT` negotiation uses `MISSION_REQUEST`/`MISSION_ITEM`; the bridge now
+supports that standard fallback alongside the integer-coordinate protocol.
+
+The sanitized `mixed-sitl-mission-upload-v2.jsonl` fixture retains all 67
+lifecycle events from the six successful upload transactions. Regression tests
+verify each target progresses through clearing, upload, automatic read-back, and
+completion three times, and that replay emits no MAVLink packets. Mission content
+and restoration are established by the live acceptance controller; the lifecycle
+fixture intentionally contains no mission coordinates.
+
 ## Acceptance checklist
 
 1. The GCS fleet roster lists `1:1` and `2:1`, with no bridge decode errors for

@@ -10,6 +10,7 @@ const SUPPORTED_MESSAGE_DECODERS = {
   24: decodeGpsRawInt,
   30: decodeAttitude,
   33: decodeGlobalPositionInt,
+  40: decodeMissionRequest,
   42: decodeMissionCurrent,
   44: decodeMissionCount,
   47: decodeMissionAck,
@@ -29,6 +30,7 @@ const MESSAGE_CRC_EXTRA = {
   24: 24,
   30: 39,
   33: 104,
+  40: 230,
   42: 28,
   44: 221,
   47: 153,
@@ -156,10 +158,22 @@ function payloadPaddedTo(payload, length) {
 }
 
 function decodeHeartbeat(frame) {
+  const payload = payloadPaddedTo(frame.payload, 9)
+  if (payload === null) return null
+  const baseMode = payload.readUInt8(6)
   return {
     messageName: 'HEARTBEAT',
     payload: {
       timestampMs: frame.recvTimestampMs,
+      heartbeat: {
+        customMode: payload.readUInt32LE(0),
+        vehicleType: payload.readUInt8(4),
+        autopilotType: payload.readUInt8(5),
+        baseMode,
+        armed: (baseMode & 0x80) !== 0,
+        systemStatus: payload.readUInt8(7),
+        mavlinkVersion: payload.readUInt8(8),
+      },
     },
   }
 }
@@ -333,6 +347,22 @@ function decodeMissionRequestInt(frame) {
     payload: {
       timestampMs: frame.recvTimestampMs,
       missionRequestInt: {
+        seq: payload.readUInt16LE(0),
+        targetSystem: payload.readUInt8(2),
+        targetComponent: payload.readUInt8(3),
+      },
+    },
+  }
+}
+
+function decodeMissionRequest(frame) {
+  const payload = payloadPaddedTo(frame.payload, 4)
+  if (payload === null) return null
+  return {
+    messageName: 'MISSION_REQUEST',
+    payload: {
+      timestampMs: frame.recvTimestampMs,
+      missionRequest: {
         seq: payload.readUInt16LE(0),
         targetSystem: payload.readUInt8(2),
         targetComponent: payload.readUInt8(3),

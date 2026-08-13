@@ -180,6 +180,18 @@ and parameter-write lifecycle events. The curator removes raw simulator traffic,
 replaces request IDs, and rebases timestamps so replay remains deterministic and
 cannot transmit MAVLink packets.
 
+The successful mission-upload lifecycle fixture follows the same deliberate flow:
+
+```bash
+node apps/mavlink-bridge/src/curateMissionUploadFixture.js \
+  apps/mavlink-bridge/recordings/<successful-session>.jsonl \
+  apps/mavlink-bridge/test-fixtures/mixed-sitl-mission-upload-v2.jsonl
+```
+
+It retains normalized upload lifecycle events only. Tests verify six completed
+target-scoped transactions (test, restore, and cleanup for each SITL vehicle),
+including progression through automatic read-back, without emitting MAVLink.
+
 Note: a recording is read fully into memory on replay, so it is bounded by the
 per-run cap above.
 
@@ -205,6 +217,12 @@ Outbound frames are JSON:
 - `health`: `packetRateHz`, `decodeErrorCount`, `droppedPacketCount`,
   `messageRates[]`, `systems[]`
 
+Each decoded autopilot HEARTBEAT also emits a read-only `flightState` frame with
+the exact target, standard `armed` bit, raw numeric `baseMode`/`customMode`,
+vehicle/autopilot type, system status, and bridge observation time. Mode names
+are intentionally not inferred across vehicle classes. State older than three
+seconds is excluded from late-client snapshots and future command preconditions.
+
 Malformed datagrams are dropped and counted in `decodeErrorCount`.
 
 ### Read-only parameter request
@@ -229,6 +247,11 @@ timestamp, `confirmation: true`, `policy: "clearThenReplace"`, and a complete
 bounded `items` array. The bridge clears and replaces the mission, serves
 vehicle-requested items, requires the final ACK, then downloads and compares the
 stored mission before reporting `complete`. There is no browser control for it.
+
+Run the reversible mixed-SITL acceptance with `pnpm sitl-test:mission-upload`.
+It backs up both onboard missions, changes one target at a time, verifies the
+peer remains unchanged, and restores both originals in unconditional cleanup.
+Use `pnpm sitl-test:mission-upload:down` to remove the stack afterward.
 
 One-shot `HOME_POSITION` and `GPS_GLOBAL_ORIGIN` reads use
 `{"type":"requestMessage","requestId":"message-1","sysId":1,"compId":1,"messageName":"HOME_POSITION"}`.

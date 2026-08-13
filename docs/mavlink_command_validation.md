@@ -112,13 +112,19 @@ or parameter state. Reset the simulator state between scenarios.
 
 ### 3. Mission write transaction
 
-In progress: portable numeric codecs and a transport-neutral replacement
+Validated in mixed ArduCopter + ArduPlane SITL: portable numeric codecs and a transport-neutral replacement
 state machine now cover `MISSION_CLEAR_ALL`, `MISSION_COUNT`, vehicle-driven
 `MISSION_REQUEST_INT`/`MISSION_ITEM_INT`, final `MISSION_ACK`, bounded retries, exact-target
 correlation, and independent read-back comparison. A disabled-by-default policy/router
 boundary adds explicit confirmation, a fixed clear-then-replace policy, per-target
 serialization, lifecycle recording/replay, and automatic read-back. No browser control
-exists. Mixed Copter/Plane SITL acceptance remains before this stage is validated.
+exists. The acceptance controller proved per-target replacement, independent
+read-back, peer isolation, and unconditional restoration of both original missions.
+MAVLink 1 legacy `MISSION_REQUEST`/`MISSION_ITEM` negotiation is supported alongside
+`MISSION_REQUEST_INT`/`MISSION_ITEM_INT`, with bounded coordinate tolerance only for
+the legacy float representation.
+A sanitized 67-event lifecycle fixture preserves deterministic, transmit-free
+replay evidence for all six accepted transactions without retaining mission content.
 
 Implement mission upload as a complete transaction: clear/replace policy, item count,
 ordered item transfer, timeout/retry behavior, final acknowledgement, and read-back
@@ -126,6 +132,12 @@ comparison. Test Copter and Plane missions separately; do not infer cross-vehicl
 from shared message names.
 
 ### 4. Mode, arm, and Guided-mode operations
+
+Foundation in progress: HEARTBEAT decoding now retains portable numeric
+`base_mode`, `custom_mode`, vehicle/autopilot type, and system status, plus the
+standard armed bit. A per-target freshness tracker refuses to use stale state.
+Vehicle-specific mode interpretation and every state-changing command remain
+disabled until the policy and operator-confirmation layers consume this state.
 
 These are state-changing and potentially safety-critical. Add only after a command policy,
 operator confirmation UX, target identity display, current-mode/armed-state verification,

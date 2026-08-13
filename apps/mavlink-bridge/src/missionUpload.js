@@ -1,6 +1,6 @@
 import {
   MAV_MISSION_ACCEPTED, encodeMissionClearAll, encodeMissionUploadCount,
-  encodeMissionUploadItemInt,
+  encodeMissionUploadItem, encodeMissionUploadItemInt,
 } from './missionUploadProtocol.js'
 
 export const MISSION_UPLOAD_TIMEOUT_MS = 1500
@@ -34,8 +34,10 @@ function itemsEqual(expected, observed) {
   return expected.every((item, index) => {
     const other = observed[index]
     if (other === null || typeof other !== 'object') return false
-    return ['seq', 'command', 'frameId', 'current', 'autocontinue', 'latDegE7', 'lonDegE7']
+    return ['seq', 'command', 'frameId', 'current', 'autocontinue']
       .every((field) => item[field] === other[field])
+      && Math.abs(item.latDegE7 - other.latDegE7) <= 100
+      && Math.abs(item.lonDegE7 - other.lonDegE7) <= 100
       && ['param1', 'param2', 'param3', 'param4', 'altM']
         .every((field) => Math.abs(item[field] - other[field]) <= 1e-4)
   })
@@ -80,12 +82,14 @@ export function createMissionUpload({ send, now = Date.now, sysId = 255, compId 
           status = 'awaitingReadback'; awaitingSince = null; lastBuffer = null; return true
         }
       }
-      if (envelope.messageName === 'MISSION_REQUEST_INT' && status === 'uploading') {
-        const request = envelope.payload?.missionRequestInt
+      if ((envelope.messageName === 'MISSION_REQUEST_INT' || envelope.messageName === 'MISSION_REQUEST') && status === 'uploading') {
+        const request = envelope.messageName === 'MISSION_REQUEST_INT'
+          ? envelope.payload?.missionRequestInt : envelope.payload?.missionRequest
         if (request?.targetSystem !== sysId || request?.targetComponent !== compId) return false
         if (!Number.isInteger(request.seq) || request.seq < 0 || request.seq >= items.length) { fail(`vehicle requested invalid mission sequence ${request?.seq}`); return true }
         requested.add(request.seq)
-        transmit(encodeMissionUploadItemInt({ sysId, compId, targetSystemId, targetComponentId, item: items[request.seq] }))
+        const encode = envelope.messageName === 'MISSION_REQUEST_INT' ? encodeMissionUploadItemInt : encodeMissionUploadItem
+        transmit(encode({ sysId, compId, targetSystemId, targetComponentId, item: items[request.seq] }))
         return true
       }
       return false

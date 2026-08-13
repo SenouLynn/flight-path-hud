@@ -1,11 +1,20 @@
 # Changelog
 
+- Added read-only per-target flight-state observation for the Stage 4 safety
+  foundation, retaining raw HEARTBEAT mode/system fields and rejecting stale
+  state for future command pre/post-condition checks.
+
 - Added the portable Stage 3 mission-replacement protocol and state-machine
   foundation, including exact-target correlation, bounded retries, final ACK,
   and independent read-back comparison before completion.
 - Added a disabled-by-default mission-upload policy/router with explicit
   confirmation, clear-then-replace semantics, per-target serialization,
   lifecycle recording/replay, and automatic read-back verification.
+- Added mixed Copter/Plane mission-upload SITL acceptance with target isolation,
+  independent read-back, unconditional restoration, and MAVLink 1 legacy
+  `MISSION_REQUEST`/`MISSION_ITEM` interoperability.
+- Added a sanitized deterministic fixture containing all six successful
+  mixed-SITL mission-upload lifecycles, with transmit-free replay regression tests.
 
 - Added a disabled-by-default, allowlisted `PARAM_SET` transaction and mixed-SITL
   acceptance workflow with independent read-back, target-isolation checks, and

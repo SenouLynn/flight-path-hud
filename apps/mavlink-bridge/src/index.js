@@ -13,6 +13,7 @@ import { createMessageRequestRouter } from './messageRequestRouter.js'
 import { createMessageIntervalRouter } from './messageIntervalRouter.js'
 import { createParameterWriteRouter } from './parameterWriteRouter.js'
 import { createMissionUploadRouter } from './missionUploadRouter.js'
+import { createFlightStateTracker } from './flightStateTracker.js'
 
 const UDP_HOST = process.env.MAVLINK_BRIDGE_UDP_HOST ?? '0.0.0.0'
 const UDP_PORT = Number.parseInt(process.env.MAVLINK_BRIDGE_UDP_PORT ?? '14550', 10)
@@ -50,6 +51,7 @@ const REPLAY_LOOP = process.env.MAVLINK_BRIDGE_REPLAY_LOOP === '1'
 
 const wsServer = new WebSocketServer({ port: WS_PORT, path: WS_PATH })
 const core = createBridgeCore({ systemTtlMs: SYSTEM_TTL_MS })
+const flightStateTracker = createFlightStateTracker()
 
 // Ingress is chosen here and nowhere else: the core and the publish path are
 // identical whether frames arrive from a socket or a recording.
@@ -92,7 +94,7 @@ const parameterWriteRouter = createParameterWriteRouter({ send:(s,c,b)=>ingress.
 const missionUploadRouter = createMissionUploadRouter({ send:(s,c,b)=>ingress.sendTo?.(s,c,b), canSend:(s,c)=>ingress.hasRoute?.(s,c)===true,
   isLive:()=>typeof ingress.sendTo==='function', enabled:()=>process.env.MAVLINK_BRIDGE_ENABLE_MISSION_UPLOAD==='1', recordEvent:e=>recorder?.recordEvent(e) })
 
-const MISSION_MESSAGE_NAMES = new Set(['MISSION_COUNT', 'MISSION_ITEM_INT', 'MISSION_CURRENT', 'MISSION_ACK', 'MISSION_REQUEST_INT'])
+const MISSION_MESSAGE_NAMES = new Set(['MISSION_COUNT', 'MISSION_ITEM_INT', 'MISSION_CURRENT', 'MISSION_ACK', 'MISSION_REQUEST', 'MISSION_REQUEST_INT'])
 
 function startRecording() {
   if (RECORD_FILE === null) {
@@ -154,6 +156,8 @@ const stopIngress = ingress.start((datagram, meta) => {
     if (meta?.source !== undefined) {
       ingress.rememberSystem?.(envelope.sysId, envelope.compId, meta.source)
     }
+    const flightState = flightStateTracker.ingestEnvelope(envelope)
+    if (flightState !== null) publish(flightState)
     if (envelope.messageName === 'COMMAND_ACK') {
       const frame = commandRouter.ingestEnvelope(envelope)
       if (frame !== null) publish(frame)
@@ -220,6 +224,7 @@ wsServer.on('connection', (ws) => {
   messageIntervalRouter.snapshotForNewClient().forEach((frame) => ws.send(JSON.stringify(frame)))
   parameterWriteRouter.snapshotForNewClient().forEach((frame) => ws.send(JSON.stringify(frame)))
   missionUploadRouter.snapshotForNewClient().forEach((frame) => ws.send(JSON.stringify(frame)))
+  flightStateTracker.snapshot().forEach((frame) => ws.send(JSON.stringify(frame)))
 
   ws.on('message', (raw) => {
     let message = null
