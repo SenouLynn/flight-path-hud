@@ -14,6 +14,7 @@ const SUPPORTED_MESSAGE_DECODERS = {
   44: decodeMissionCount,
   47: decodeMissionAck,
   49: decodeGpsGlobalOrigin,
+  51: decodeMissionRequestInt,
   73: decodeMissionItemInt,
   74: decodeVfrHud,
   77: decodeCommandAck,
@@ -32,6 +33,7 @@ const MESSAGE_CRC_EXTRA = {
   44: 221,
   47: 153,
   49: 39,
+  51: 196,
   73: 38,
   74: 20,
   77: 143,
@@ -318,6 +320,22 @@ function decodeMissionItemInt(frame) {
         latDegE7: payload.readInt32LE(16),
         lonDegE7: payload.readInt32LE(20),
         altM: readFloatLE(payload, 24),
+      },
+    },
+  }
+}
+
+function decodeMissionRequestInt(frame) {
+  const payload = payloadPaddedTo(frame.payload, 4)
+  if (payload === null) return null
+  return {
+    messageName: 'MISSION_REQUEST_INT',
+    payload: {
+      timestampMs: frame.recvTimestampMs,
+      missionRequestInt: {
+        seq: payload.readUInt16LE(0),
+        targetSystem: payload.readUInt8(2),
+        targetComponent: payload.readUInt8(3),
       },
     },
   }
