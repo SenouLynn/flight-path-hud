@@ -97,6 +97,10 @@ tagged release exists.
   `BasemapControl`, since Follow and Track up have no meaning on a fleet map.
 
 ### Added
+- **Deterministic CI validation.** GitHub Actions now runs all JavaScript,
+  TypeScript, and ESP32-native tests plus GCS/HUD builds on pull requests and
+  pushes to `main`. The fast real-SITL motion fixture runs through
+  `test:bridge`; resource-heavy live Docker SITL remains a manual evidence gate.
 - **Mixed-SITL session handoff.**
   [docs/session_handoff_2026-08-12.md](docs/session_handoff_2026-08-12.md)
   records the completed smoke run, remaining acceptance evidence, platform
