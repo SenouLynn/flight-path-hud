@@ -1,0 +1,38 @@
+{
+  "schema": "contracts/wire/telemetry-frame.schema.json",
+  "provenance": "Minimal protocol-v0 frames constructed from current createBridgeCore output and the checked-in strict producer schema.",
+  "cases": [
+    {
+      "caseId": "published-health-forbidden",
+      "mustConformForPhaseB": true,
+      "currentlyConforms": false,
+      "reason": "The bridge core attaches health, but telemetry-frame.schema.json has additionalProperties false and no health property.",
+      "frame": {
+        "recvTimestampMs": 1000,
+        "sysId": 1,
+        "compId": 1,
+        "messageName": "VFR_HUD",
+        "sequence": 1,
+        "payload": { "timestampMs": 1000, "vfrHud": { "headingDeg": 90 } },
+        "health": { "packetRateHz": 0, "decodeErrorCount": 0, "droppedPacketCount": 0, "messageRates": [], "systems": [] }
+      }
+    },
+    {
+      "caseId": "published-heartbeat-payload-forbidden",
+      "mustConformForPhaseB": true,
+      "currentlyConforms": false,
+      "reason": "Node publishes HEARTBEAT envelopes, but telemetrySample has no heartbeat property.",
+      "frame": {
+        "recvTimestampMs": 1000,
+        "sysId": 1,
+        "compId": 1,
+        "messageName": "HEARTBEAT",
+        "sequence": 1,
+        "payload": {
+          "timestampMs": 1000,
+          "heartbeat": { "customMode": 0, "vehicleType": 2, "autopilotType": 3, "baseMode": 0, "armed": false, "systemStatus": 3, "mavlinkVersion": 3 }
+        }
+      }
+    }
+  ]
+}

@@ -154,7 +154,7 @@ every implementation detail:
 - Health contains the packet-rate window, decode/drop counters, sorted message
   rates, and sorted live-system roster.
 - When a normalized input sequence is zero, `bridgeCore` currently substitutes a
-  process-global envelope count modulo 256. Preserve this **protocol-v0 output**
+  per-core-instance envelope count modulo 256. Preserve this **protocol-v0 output**
   in the first slice and record it as compatibility debt; do not generalize it
   into a new protocol design.
 - Node recognizes the signed-v2 incompatibility flag and advances by the 13-byte

@@ -62,6 +62,10 @@ tests do not add rows. Evidence provenance is recorded beside each artifact.
 - Phase A: contracts and fixtures inspected; no unresolved authority conflict found.
   Signed-v2 support, snapshot retention, and live resource limits are intentionally
   deferred by the handoff, not open questions in this phase.
-- Phase B: pending.
-- Phase C: pending.
-- Phase D: pending.
+- Phase B: audited `telemetry-frame.schema.json`, `envelope.schema.json`, all 15
+  Node decoders, core health behavior, and framing tests. OQ-001 and OQ-002 block
+  the output and malformed-accounting gates; see `go_bridge_open_questions.md`.
+- Phase C: pending; fixed-core equivalence inherits OQ-001, and malformed-counter
+  equivalence inherits OQ-002.
+- Phase D: pending; pure lifecycle work may proceed, but end-to-end PARAM_VALUE
+  publication inherits OQ-001.
