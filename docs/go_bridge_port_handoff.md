@@ -293,15 +293,17 @@ The Go scripts must enter the nested module themselves. Also run
 Deliver:
 
 - MAVLink v1 and unsigned-v2 frame extraction, CRC validation, v2 truncation
-  handling, and safe rejection of malformed, signed, or unsupported input;
+  handling, deterministic rejection of malformed/signed input, and safe ignore
+  of complete unsupported IDs whose CRC metadata is unavailable;
 - normalization for all 15 message families currently handled by Node:
   `HEARTBEAT`, `PARAM_VALUE`, `ATTITUDE`, `GPS_RAW_INT`,
   `GLOBAL_POSITION_INT`, `VFR_HUD`, `COMMAND_ACK`, `MISSION_COUNT`,
   `MISSION_ITEM_INT`, `MISSION_REQUEST_INT`, `MISSION_REQUEST`,
   `MISSION_CURRENT`, `MISSION_ACK`, `HOME_POSITION`, and
   `GPS_GLOBAL_ORIGIN`;
-- the existing JSON-envelope datagram input behavior;
-- pure bridge health, global protocol-v0 sequence fallback, system roster, TTL,
+- strict 15-family JSON-envelope datagram input with exact family/payload
+  correlation (OQ-003's authorized hardening correction);
+- pure bridge health, per-`createBridgeCore` protocol-v0 sequence fallback, system roster, TTL,
   rate sorting, and duplicate-source conflict behavior; and
 - malformed/truncated/oversized decoder cases that return errors without panic.
 
