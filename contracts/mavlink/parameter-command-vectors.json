@@ -1,0 +1,30 @@
+{
+  "provenance": "Payload layouts independently transcribed from MAVLink common.xml field order (wire size ordering) for PARAM_REQUEST_READ id 20 and PARAM_REQUEST_LIST id 21. Payload bytes intentionally exclude mutable frame sequence and CRC.",
+  "source": { "sysId": 255, "compId": 190 },
+  "vectors": [
+    {
+      "caseId": "PARAM-VEC-NAME",
+      "messageId": 20,
+      "crcExtra": 214,
+      "target": { "sysId": 2, "compId": 1 },
+      "selector": { "name": "ARSPD_FBW_MIN" },
+      "payloadHex": "ffff020141525350445f4642575f4d494e000000"
+    },
+    {
+      "caseId": "PARAM-VEC-INDEX",
+      "messageId": 20,
+      "crcExtra": 214,
+      "target": { "sysId": 1, "compId": 1 },
+      "selector": { "index": 42 },
+      "payloadHex": "2a00010100000000000000000000000000000000"
+    },
+    {
+      "caseId": "PARAM-VEC-LIST",
+      "messageId": 21,
+      "crcExtra": 159,
+      "target": { "sysId": 2, "compId": 1 },
+      "selector": { "list": true },
+      "payloadHex": "0201"
+    }
+  ]
+}

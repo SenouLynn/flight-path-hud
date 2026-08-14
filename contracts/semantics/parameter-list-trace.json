@@ -1,0 +1,29 @@
+{
+  "provenance": "Hand-authored ordered semantic trace derived from MAVLink PARAM_VALUE indexing rules and the reviewed Node parameter-list fold; it is not a live/SITL capture.",
+  "defaults": { "idleTimeoutMs": 3000, "maxRetries": 2, "gcsSysId": 255, "gcsCompId": 190 },
+  "orderingScenario": {
+    "request": { "requestId": "list-order", "sysId": 2, "compId": 1 },
+    "steps": [
+      { "caseId": "PARAM-LIST-START", "kind": "start", "atMs": 0, "wantStatus": "pending", "wantReceivedCount": 0, "wantRecord": true },
+      { "caseId": "PARAM-LIST-PEER", "kind": "value", "atMs": 10, "sysId": 1, "compId": 1, "index": 0, "count": 3, "wantOutput": false },
+      { "caseId": "PARAM-LIST-OUT-OF-ORDER", "kind": "value", "atMs": 20, "sysId": 2, "compId": 1, "index": 2, "count": 3, "wantReceivedCount": 1, "wantRecord": false },
+      { "caseId": "PARAM-LIST-DUPLICATE", "kind": "value", "atMs": 30, "sysId": 2, "compId": 1, "index": 2, "count": 3, "value": 22, "wantReceivedCount": 1, "wantRecord": false },
+      { "caseId": "PARAM-LIST-OUT-OF-ORDER-CONTINUED", "kind": "value", "atMs": 40, "sysId": 2, "compId": 1, "index": 0, "count": 3, "wantReceivedCount": 2, "wantRecord": false },
+      { "caseId": "PARAM-LIST-COMPLETE", "kind": "value", "atMs": 50, "sysId": 2, "compId": 1, "index": 1, "count": 3, "wantStatus": "complete", "wantReceivedCount": 3, "wantIndexes": [0, 1, 2], "wantRecord": true }
+    ]
+  },
+  "idleScenario": {
+    "request": { "requestId": "list-idle", "sysId": 1, "compId": 1 },
+    "steps": [
+      { "caseId": "PARAM-LIST-IDLE-BEFORE", "kind": "tick", "atMs": 2999, "wantOutputs": 0 },
+      { "caseId": "PARAM-LIST-IDLE-RETRY-1", "kind": "tick", "atMs": 3000, "wantAttempts": 2 },
+      { "caseId": "PARAM-LIST-IDLE-RETRY-2", "kind": "tick", "atMs": 6000, "wantAttempts": 3 },
+      { "caseId": "PARAM-LIST-IDLE", "kind": "tick", "atMs": 9000, "wantStatus": "failed", "wantReason": "parameter list idle timeout" }
+    ]
+  },
+  "independentCases": [
+    { "caseId": "PARAM-ROUTE-LOSS", "kind": "routeLossAtDueTick", "wantReason": "parameter list idle timeout", "wantAdditionalSends": 0 },
+    { "caseId": "PARAM-REPLAY", "kind": "startReplay", "wantStatus": "failed", "wantSends": 0 },
+    { "caseId": "PARAM-INVALID-TARGET", "kind": "start", "sysId": 0, "compId": 1, "wantStatus": "failed", "wantSends": 0 }
+  ]
+}

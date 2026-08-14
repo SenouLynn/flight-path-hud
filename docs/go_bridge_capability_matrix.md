@@ -40,21 +40,21 @@ tests do not add rows. Evidence provenance is recorded beside each artifact.
 | REPLAY-FIXED-CLOCK | unpaced raw replay uses every `atMs` explicitly | mixed MAVLink recording | complete: `goConformance.test.js` explicit schedule | partial: reader dispatches exact `atMs`; core blocked | OQ-001/OQ-002 prevent core equality claim |
 | REPLAY-NO-SEND | replay API has no outbound-send method | compile/API and behavior tests | complete: replay/router tests | complete: `reader_test.go` reflection/API test | none |
 | REPLAY-NO-TIMERS | offline replay creates no goroutines/timers | implementation inspection plus deterministic test | n/a | complete: synchronous `Replay.Dispatch` | Go-only structural gate |
-| PARAM-VEC-NAME | PARAM_REQUEST_READ by name payload | `contracts/mavlink/parameter-command-vectors.json`, common dialect | unstarted | unstarted | none expected |
-| PARAM-VEC-INDEX | PARAM_REQUEST_READ by index payload | same | unstarted | unstarted | none expected |
-| PARAM-VEC-LIST | PARAM_REQUEST_LIST payload | same | unstarted | unstarted | none expected |
-| PARAM-READ-NAME | name correlation | Node tests + semantic trace | unstarted | unstarted | none expected |
-| PARAM-READ-INDEX | index correlation | Node tests + semantic trace | unstarted | unstarted | none expected |
-| PARAM-LIST-START | list start lifecycle | `contracts/semantics/parameter-list-trace.json`, independently reviewed policy trace | unstarted | unstarted | none expected |
-| PARAM-LIST-OUT-OF-ORDER | out-of-order values | same | unstarted | unstarted | none expected |
-| PARAM-LIST-DUPLICATE | duplicate index replacement/no count advance | same | unstarted | unstarted | none expected |
-| PARAM-LIST-PEER | peer-target value ignored | same | unstarted | unstarted | none expected |
-| PARAM-LIST-COMPLETE | deterministic index-order completion | same | unstarted | unstarted | none expected |
-| PARAM-LIST-IDLE | idle retry then failure | same | unstarted | unstarted | none expected |
-| PARAM-ROUTE-LOSS | pending transaction fails on route loss | same | unstarted | unstarted | none expected |
-| PARAM-REPLAY | replay request rejected without bytes | same | unstarted | unstarted | none expected |
-| PARAM-INVALID-TARGET | broadcast/invalid target rejected | same | unstarted | unstarted | none expected |
-| PARAM-RECORDED-READ | passive recorded parameterRead folding | sanitized mixed-SITL parameter-write recording | unstarted | unstarted | none expected |
+| PARAM-VEC-NAME | PARAM_REQUEST_READ by name payload | `contracts/mavlink/parameter-command-vectors.json`, common dialect | complete: `parameterConformance.test.js` | complete: `parameter_test.go` | none |
+| PARAM-VEC-INDEX | PARAM_REQUEST_READ by index payload | same | complete: same test | complete: same test | none |
+| PARAM-VEC-LIST | PARAM_REQUEST_LIST payload | same | complete: same test | complete: same test | none |
+| PARAM-READ-NAME | name correlation | Node tests + semantic trace | complete: `parameterRouter.test.js` | complete: `transactions_test.go` | none |
+| PARAM-READ-INDEX | index correlation | Node tests + semantic trace | complete: `parameterRouter.test.js` | complete: `transactions_test.go` | none |
+| PARAM-LIST-START | list start lifecycle | `contracts/semantics/parameter-list-trace.json`, independently reviewed policy trace | complete: `parameterConformance.test.js` | complete: `transactions_test.go` | none |
+| PARAM-LIST-OUT-OF-ORDER | out-of-order values | same | complete: same test | complete: same test | none |
+| PARAM-LIST-DUPLICATE | duplicate index replacement/no count advance | same | complete: same test | complete: same test | none |
+| PARAM-LIST-PEER | peer-target value ignored | same | complete: same test | complete: same test | none |
+| PARAM-LIST-COMPLETE | deterministic index-order completion | same | complete: same test | complete: same test | none |
+| PARAM-LIST-IDLE | idle retry then failure | same | complete: same test | complete: same test | none |
+| PARAM-ROUTE-LOSS | pending transaction fails on route loss | same | complete: same test | complete: same test | Node's generic list-timeout reason retained |
+| PARAM-REPLAY | replay request rejected without bytes | same | complete: same test | complete: same test | none |
+| PARAM-INVALID-TARGET | broadcast/invalid target rejected | same | complete: same test | complete: same test | none |
+| PARAM-RECORDED-READ | passive recorded parameterRead folding | sanitized mixed-SITL parameter-write recording | complete: fixture tests | complete: `transactions_test.go` folds 20 events | none |
 | PARAM-LIST-LIVE-EVIDENCE | live parameterList producer sequence | unavailable until live adapter/SITL capture | unstarted | partial: semantic trace only | intentionally deferred |
 
 ## Phase gate audits
@@ -70,5 +70,13 @@ tests do not add rows. Evidence provenance is recorded beside each artifact.
   ownership/dispatch, and finite transmit-free replay are complete. Fixed-core
   equality remains partial because OQ-001 blocks the output boundary and OQ-002
   blocks malformed counter semantics. No additional open question found.
-- Phase D: pending; pure lifecycle work may proceed, but end-to-end PARAM_VALUE
-  publication inherits OQ-001.
+- Phase D: audited both Node parameter routers/codecs/tests, lifecycle schema and
+  valid fixtures, and all 32 sanitized parameter-write recording events. Request
+  vectors, pure read/list folds, exact-target behavior, retries, passive recorded
+  reads, and transmit-free replay rejection are complete. The list evidence row
+  remains intentionally partial, and end-to-end published PARAM_VALUE parity is
+  blocked by OQ-001. No additional open question found.
+
+The Go folds intentionally retain only active transactions. Completed request IDs
+and late-client snapshots remain caller policy; this is the handoff's required
+bounded-snapshot deferral rather than an unexplained Node parity difference.
