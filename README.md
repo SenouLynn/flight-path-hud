@@ -151,6 +151,7 @@ pnpm clean:recordings -- --dry-run
 - [docs/mavlink_command_validation.md](docs/mavlink_command_validation.md) — staged browser-GCS command validation roadmap
 - [docs/pid_tuning_workflow.md](docs/pid_tuning_workflow.md) — phased linked tuning plan, in-flight authority model, safety invariants, and evidence gates
 - [docs/vehicle_configuration_roadmap.md](docs/vehicle_configuration_roadmap.md) — next-step read-first vehicle configuration plan, portable contracts, SITL/UI gates, and Go/transport migration seam
+- [docs/go_bridge_port_handoff.md](docs/go_bridge_port_handoff.md) — worktree-ready phased handoff for the contract-compatible Go bridge port and Pi 5 evidence gates
 - [docs/ardupilot_sitl_testing.md](docs/ardupilot_sitl_testing.md) — mixed Copter/Plane SITL runbook and acceptance nuances
 - [contracts/README.md](contracts/README.md) — portable schemas, behavioral vectors, golden MAVLink bytes, and conformance roadmap
 - [docs/gcs_architecture_precedents.md](docs/gcs_architecture_precedents.md) — lessons adopted from QGroundControl and Mission Planner

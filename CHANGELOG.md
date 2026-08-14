@@ -1,5 +1,11 @@
 # Changelog
 
+- Added a worktree-ready Go bridge port handoff with explicit ownership,
+  protocol-v0 compatibility rules, phased conformance/read/live/SITL/Pi gates,
+  command-family sequencing, cutover criteria, and stop conditions. The first
+  agent delivery ends at the read-only parameter slice rather than attempting a
+  default-runtime rewrite.
+
 - Established read-only vehicle configuration as the next major GCS capability
   and the parent foundation for PID tuning. The roadmap preserves the existing
   contract/unit/SITL/UI iteration model, excludes calibration and writes from

@@ -221,6 +221,8 @@ ordering, recording/replay, unknown-field policy, and browser operability.
 Go does not itself make a later C++ or Elixir rewrite automatic. The portable
 assets are the contracts, semantic traces, golden bytes, and port boundaries;
 the Go implementation is another consumer and a stronger production candidate.
+The executable work breakdown, ownership rules, and review gates live in the
+[Go bridge port agent handoff](go_bridge_port_handoff.md).
 
 ## Evidence gate
 
