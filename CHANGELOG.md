@@ -1,5 +1,14 @@
 # Changelog
 
+- Established read-only vehicle configuration as the next major GCS capability
+  and the parent foundation for PID tuning. The roadmap preserves the existing
+  contract/unit/SITL/UI iteration model, excludes calibration and writes from
+  the first milestone, and defines a contract-preserving Go bridge experiment
+  without coupling backend migration to gRPC or a client-target decision.
+  Raspberry Pi 5 Linux/arm64 is a definitive offline-capable runtime target while
+  its locally attached or remote UI technology remains open
+  (ADR-0034 and ADR-0035).
+
 - Documented the phased linked PID-tuning workflow from disarmed wireless edits
   through separately gated co-pilot in-flight deltas, including pilot authority,
   parameter protocol caveats, rollback policy, metadata requirements, and

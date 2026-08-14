@@ -1,21 +1,33 @@
-# GCS Runtime Blueprint (Portable Web + Pi)
+# GCS Runtime Blueprint (Portable Clients + Raspberry Pi 5)
 
 This blueprint defines a portable runtime shape for the receive-only MAVLink GCS so the same domain/UI contracts support:
 
 - cloud-relayed browser viewing, and
-- Raspberry Pi local direct-link operation.
+- definitive Raspberry Pi 5 Linux/arm64 local direct-link operation.
 
-## Recommended Baseline
+Raspberry Pi 5 running 64-bit Linux is a required deployment target, not an
+example edge device. The bridge must support headless operation and locally
+attached clients while offline. The local UI technology remains open.
 
-Primary stack:
-- Frontend: React (existing `apps/hud`)
-- Realtime/server hub: Phoenix (Channels)
-- MAVLink ingest: adapter process (Node or Go; swappable)
+## Current Baseline and Open Targets
 
-Why this baseline:
-- Preserves the current React validation harness and telemetry resolver work.
-- Supports high-rate, multi-client fan-out for telemetry streams.
-- Keeps ingest transport concerns (UDP/serial/replay) isolated behind adapter ports.
+Validated today:
+- UI harness: React in a browser (`apps/gcs` and `apps/hud`)
+- MAVLink ingest/transactions: Node adapter process
+- Realtime client transport: WebSocket JSON protocol v0
+
+These are current implementations, not commitments to a final UI technology.
+Pi 5 Linux/arm64 is the committed local host; browser/Chromium kiosk, packaged
+webview, native desktop, remote browser, and specialized clients remain UI
+candidates. Phoenix remains an option for a future cloud fan-out hub. Go is the preferred bounded experiment for the edge
+MAVLink bridge, beginning with read-only vehicle configuration. See ADR-0035.
+
+Why preserve the boundaries:
+- Keeps the current React validation harness and telemetry resolver work useful.
+- Allows high-rate multi-client fan-out to evolve independently.
+- Keeps UDP/serial/replay concerns isolated behind adapter ports.
+- Allows client, backend language, IDL, and transport decisions to be evaluated
+  separately rather than bundled into one rewrite.
 
 Video extension:
 - Treat video as a first-class sidecar using the same ports and adapters discipline.
@@ -123,24 +135,26 @@ Telemetry/video alignment:
 
 ## Runtime Profiles
 
-## Profile A: Local Pi Direct-Link
+## Profile A: Local Raspberry Pi 5 Direct-Link
 
 Use case:
-- Pi at the ground station consumes receiver link directly; GUI is available even without internet.
+- A Raspberry Pi 5 running 64-bit Linux consumes the receiver link directly;
+  operator access remains available without internet through a locally attached
+  or LAN client.
 
 Process layout:
-- `mavlink-ingest` (UDP/serial adapters)
+- `mavlink-bridge` (UDP/serial adapters, transactions, recording/replay)
 - `video-ingest` (analog capture/UVC adapters)
-- `stream-hub` (Phoenix)
 - `media-router` (MediaMTX)
-- `web-ui` (served locally)
+- optional `stream-hub`/relay adapter for multiple or remote clients
+- operator client, locally attached or over the Pi's LAN (implementation open)
 
 Flow:
 1. Receiver feeds UDP/serial into ingest adapters.
 2. Ingest decodes MAVLink and emits normalized envelopes.
 3. Video ingest publishes camera stream to media router.
-4. Stream hub fans out telemetry envelopes over channel topics.
-5. Local browser/kiosk subscribes and renders HUD/map/mission views plus video.
+4. The configured local client adapter exposes telemetry and lifecycle state.
+5. A locally attached or LAN client renders the operator experience and video.
 
 Optional:
 - Relay selected streams upstream when connectivity exists.
@@ -222,8 +236,11 @@ Domain contracts should remain in shared, framework-neutral modules.
 M1: Adapter contract locked
 - Port interfaces and envelope schema tested with fixtures.
 
-M2: Local Pi profile works
-- Local ingest + local stream hub + local web UI operational from SITL.
+M2: Local Raspberry Pi 5 profile works
+- Linux/arm64 local ingest + local stream hub + at least one local or LAN client
+  operate from SITL with networking upstream disabled.
+- Headless startup, supervised restart, direct-link reconnect, recording limits,
+  and bounded CPU/memory behavior are validated on Pi 5 hardware.
 
 M3: Cloud profile works
 - Edge relay to cloud hub with remote browser subscribers and stream health visibility.

@@ -54,6 +54,121 @@ The entries below were reconstructed from the initial implementation (commits `9
 `355baff`) and documented on 2026-07-23. Dates reflect when each decision was first made in
 the code.
 
+## ADR-0035: Evaluate Go as a contract-compatible bridge; defer transport selection
+
+- **Status:** Accepted
+- **Date:** 2026-08-14
+- **Deciders:** team
+- **Related:** [vehicle configuration roadmap](vehicle_configuration_roadmap.md),
+  [runtime blueprint](gcs_runtime_blueprint.md), and [ADR-0032](#adr-0032-borrow-mature-gcs-boundaries-make-contracts-and-evidence-the-portable-unit)
+
+### Context
+
+The Node MAVLink bridge proved the protocol and testing model, but its growing
+collection of concurrent target routes, timers, transaction lifecycles,
+recording, and edge-deployment responsibilities makes a statically built Go
+backend attractive. Protobuf/gRPC could generate Go, C++, and client types, but
+backend language, interface definition, serialization, transport, and UI target
+are separate choices. A browser cannot use native gRPC directly, and official
+gRPC-Web does not currently support client or bidirectional streaming.
+
+### Decision
+
+Use the read-only vehicle-configuration milestone as the bounded experiment for
+a Go implementation. Go must consume the same portable fixtures and produce
+equivalent normalized lifecycle results while protocol-v0 WebSocket JSON and the
+Node bridge remain stable. Progress from offline conformance, to mixed-SITL
+parity, to an optional runtime substitution with rollback.
+
+Do not make gRPC, protobuf, WASM, or any client/protocol-v1 choice a prerequisite.
+Raspberry Pi 5 Linux/arm64 is a required deployment target; the specific local
+or remote UI remains open. Evaluate IDL, transport, and other deployment profiles
+after the Go experiment proves the domain and adapter boundaries. Native gRPC may serve backend/edge or native
+clients; a browser client may retain WebSocket or use a split transport.
+Generated transport messages remain adapter types rather than the domain model.
+
+### Consequences
+
+- ✅ Go receives a real, read-safe proving slice instead of a speculative rewrite.
+- ✅ Node and Go parity is judged by contracts and evidence, not code structure.
+- ✅ The current React harness and replay recordings remain usable throughout.
+- ✅ Pi 5 Linux has a concrete headless/offline runtime target while browser,
+  kiosk, native, remote, and specialized clients remain viable.
+- ⚠️ Node and Go coexist temporarily, adding conformance and build maintenance.
+- ⚠️ JSON Schema and a future protobuf IDL could drift; ownership or explicit
+  cross-schema checks are required before adding a second definition.
+- ⚠️ Go's concurrency model does not remove the need for bounded queues,
+  cancellation, target serialization, deterministic clocks, or race testing.
+
+### Alternatives considered
+
+- Rewrite the bridge in Go and gRPC before configuration work — rejected: it
+  combines language, behavior, wire, and feature changes without a stable parity
+  target.
+- Keep Node permanently because it currently works — rejected as a decision now:
+  the bounded Go experiment can produce evidence before choosing.
+- Expose native gRPC directly to React — rejected: browsers require a distinct
+  path whose streaming behavior does not match the existing full-duplex socket.
+- Commit to Chromium/WASM because the current UI is React — rejected: the current
+  harness is evidence of a useful client, not enough evidence to constrain the
+  UI technology used on or with the required Pi 5 host.
+- Adopt Elixir/Phoenix immediately — deferred: it remains viable for a future
+  cloud fan-out hub, but is not required for the edge bridge experiment.
+
+## ADR-0034: Vehicle configuration is the next capability and PID tuning's parent domain
+
+- **Status:** Accepted
+- **Date:** 2026-08-14
+- **Deciders:** team
+- **Related:** [vehicle configuration roadmap](vehicle_configuration_roadmap.md),
+  [linked PID tuning workflow](pid_tuning_workflow.md), and
+  [command validation roadmap](mavlink_command_validation.md)
+
+### Context
+
+PID tuning needs vehicle/firmware identity, parameter discovery and metadata,
+typed values, snapshots, diffs, writes, independent verification, restoration,
+and audit. Those are general vehicle-configuration responsibilities. Building
+them inside a tuning screen would duplicate protocol behavior and make later
+configuration groups harder to validate or port. Full calibration and Mission
+Planner's breadth are substantially larger command/state-machine problems.
+
+### Decision
+
+Make portable vehicle configuration the next major GCS capability. Follow the
+established iteration order: validate behavior against current products and
+authoritative documentation, isolate contracts and semantic traces, unit test,
+prove exact-target behavior in mixed SITL, then validate the UI.
+
+The first milestone is strictly read-only: exact identity, complete typed
+parameter inventory, versioned metadata, immutable snapshots, diff/export, and
+deterministic replay. Only after that evidence gate passes will staged writes be
+specified and explored. PID tuning becomes the first specialized consumer of the
+shared transaction model. Calibration, firmware flashing, unrestricted editing,
+and automatic repair remain out of scope.
+
+### Consequences
+
+- ✅ Configuration and tuning share one identity, metadata, transaction, and
+  evidence model.
+- ✅ Read behavior can mature without exposing state-changing client controls.
+- ✅ Pure contracts and folds permit Node, Go, C++, or other implementations.
+- ✅ Curated setup pages can be added incrementally without cloning a complete GCS.
+- ⚠️ The first operator-visible release does not edit parameters.
+- ⚠️ Firmware-specific metadata and partial-list reconciliation must be solved
+  before the UI can claim a complete configuration.
+- ⚠️ Calibration requires a future capability design rather than being smuggled
+  into a generic parameter form.
+
+### Alternatives considered
+
+- Build PID tuning directly — rejected: it would hide reusable configuration
+  infrastructure inside a higher-authority specialized workflow.
+- Clone Mission Planner breadth first — rejected: the scope would defeat the
+  project's small, evidence-driven vertical slices.
+- Start with a generic writable parameter table — rejected: it places the widest
+  mutation surface ahead of identity, metadata, snapshot, and recovery evidence.
+
 ## ADR-0033: Linked PID tuning graduates by authority level; pilot retains abort authority
 
 - **Status:** Accepted
