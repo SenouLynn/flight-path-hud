@@ -1,11 +1,16 @@
 package main
 
 import (
+	"bytes"
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"os"
+	"os/exec"
+	"path/filepath"
+	"reflect"
 
+	"github.com/senoulynn/flight-path-hud/apps/mavlink-bridge-go/internal/bridge"
 	"github.com/senoulynn/flight-path-hud/apps/mavlink-bridge-go/internal/contractpath"
 	"github.com/senoulynn/flight-path-hud/apps/mavlink-bridge-go/internal/mavlink"
 )
@@ -14,7 +19,99 @@ func main() {
 	scheduleSteps := countArray("contracts/semantics/bridge-core-schedule.json", "steps")
 	traceCases := countTraceCases()
 	vectorCount := verifyParameterVectors()
-	fmt.Printf("bridge-go conformance: %d fixed-clock steps, %d parameter vectors, %d parameter-list cases verified; Phase B core equality remains blocked by documented contract questions\n", scheduleSteps, vectorCount, traceCases)
+	goOutput := runSchedule()
+	compareNode(goOutput)
+	fmt.Printf("bridge-go conformance: Node/Go core equality passed for %d fixed-clock steps; %d parameter vectors and %d parameter-list cases verified\n", scheduleSteps, vectorCount, traceCases)
+}
+
+type schedule struct {
+	SystemTTL float64        `json:"systemTtlMs"`
+	Steps     []scheduleStep `json:"steps"`
+}
+type scheduleStep struct {
+	Kind     string          `json:"kind"`
+	AtMs     float64         `json:"atMs"`
+	Source   string          `json:"source"`
+	Envelope json.RawMessage `json:"envelope"`
+}
+type scheduleEvent struct {
+	Kind        string                  `json:"kind"`
+	AtMs        float64                 `json:"atMs"`
+	Envelopes   []bridge.OutputEnvelope `json:"envelopes,omitempty"`
+	Conflicts   []bridge.SourceConflict `json:"conflicts,omitempty"`
+	SystemCount *int                    `json:"systemCount,omitempty"`
+}
+type scheduleOutput struct {
+	Events []scheduleEvent `json:"events"`
+}
+
+func runSchedule() scheduleOutput {
+	path, err := contractpath.Find("contracts/semantics/bridge-core-schedule.json")
+	if err != nil {
+		fail(err)
+	}
+	data, err := os.ReadFile(path)
+	if err != nil {
+		fail(err)
+	}
+	var input schedule
+	if err := json.Unmarshal(data, &input); err != nil {
+		fail(err)
+	}
+	core := bridge.New(input.SystemTTL)
+	output := scheduleOutput{Events: []scheduleEvent{}}
+	for _, step := range input.Steps {
+		switch step.Kind {
+		case "ingest":
+			envelopes := core.Ingest(step.Envelope, step.AtMs, step.Source)
+			output.Events = append(output.Events, scheduleEvent{Kind: "ingest", AtMs: step.AtMs, Envelopes: envelopes})
+			if conflicts := core.TakeConflicts(); len(conflicts) > 0 {
+				output.Events = append(output.Events, scheduleEvent{Kind: "conflicts", AtMs: step.AtMs, Conflicts: conflicts})
+			}
+		case "tick":
+			core.Tick(step.AtMs)
+			count := core.SystemCount()
+			output.Events = append(output.Events, scheduleEvent{Kind: "tick", AtMs: step.AtMs, SystemCount: &count})
+		default:
+			fail(fmt.Errorf("unsupported schedule step %q", step.Kind))
+		}
+	}
+	return output
+}
+
+func compareNode(goOutput scheduleOutput) {
+	schedulePath, err := contractpath.Find("contracts/semantics/bridge-core-schedule.json")
+	if err != nil {
+		fail(err)
+	}
+	nodePath, err := contractpath.Find("apps/mavlink-bridge/src/goConformance.js")
+	if err != nil {
+		fail(err)
+	}
+	command := exec.Command("node", nodePath, schedulePath)
+	command.Dir = filepath.Dir(nodePath)
+	nodeBytes, err := command.Output()
+	if err != nil {
+		fail(fmt.Errorf("Node conformance harness: %w", err))
+	}
+	goBytes, err := json.Marshal(goOutput)
+	if err != nil {
+		fail(err)
+	}
+	var nodeValue, goValue any
+	decoder := json.NewDecoder(bytes.NewReader(nodeBytes))
+	decoder.UseNumber()
+	if err := decoder.Decode(&nodeValue); err != nil {
+		fail(err)
+	}
+	decoder = json.NewDecoder(bytes.NewReader(goBytes))
+	decoder.UseNumber()
+	if err := decoder.Decode(&goValue); err != nil {
+		fail(err)
+	}
+	if !reflect.DeepEqual(nodeValue, goValue) {
+		fail(fmt.Errorf("Node/Go fixed-clock core mismatch\nnode: %s\ngo:   %s", bytes.TrimSpace(nodeBytes), goBytes))
+	}
 }
 
 func readObject(relative string) map[string]json.RawMessage {

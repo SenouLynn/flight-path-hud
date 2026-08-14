@@ -23,6 +23,42 @@ type ParamValue struct {
 	ParamType  int     `json:"paramType"`
 }
 
+// ParamValueFromEnvelope is the only normalization-to-transaction seam in the
+// offline slice. It preserves exact source identity for correlation by callers.
+func ParamValueFromEnvelope(envelope mavlink.Envelope) (Target, ParamValue, bool) {
+	if envelope.MessageName != "PARAM_VALUE" {
+		return Target{}, ParamValue{}, false
+	}
+	value, ok := envelope.Payload["paramValue"].(map[string]any)
+	if !ok {
+		return Target{}, ParamValue{}, false
+	}
+	number := func(key string) (float64, bool) {
+		item, ok := value[key]
+		if !ok {
+			return 0, false
+		}
+		switch typed := item.(type) {
+		case float64:
+			return typed, true
+		case int64:
+			return float64(typed), true
+		case int:
+			return float64(typed), true
+		}
+		return 0, false
+	}
+	parameterValue, okValue := number("value")
+	count, okCount := number("paramCount")
+	index, okIndex := number("paramIndex")
+	parameterType, okType := number("paramType")
+	id, okID := value["paramId"].(string)
+	if !(okValue && okCount && okIndex && okType && okID) {
+		return Target{}, ParamValue{}, false
+	}
+	return Target{SysID: envelope.SysID, CompID: envelope.CompID}, ParamValue{Value: parameterValue, ParamCount: int(count), ParamIndex: int(index), ParamID: id, ParamType: int(parameterType)}, true
+}
+
 func validTarget(target Target) bool { return target.SysID > 0 && target.CompID > 0 }
 
 func stringPointer(value string) *string { return &value }

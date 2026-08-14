@@ -6,6 +6,7 @@ import (
 	"reflect"
 	"testing"
 
+	"github.com/senoulynn/flight-path-hud/apps/mavlink-bridge-go/internal/bridge"
 	"github.com/senoulynn/flight-path-hud/apps/mavlink-bridge-go/internal/contractpath"
 )
 
@@ -37,6 +38,34 @@ func TestReadRawFixtureAndDispatchAtMsUnpaced(t *testing.T) {
 	}
 	if len(times) != 17 || times[0] != entries[0].AtMs || times[16] != entries[16].AtMs {
 		t.Fatalf("explicit times not preserved: %#v", times)
+	}
+}
+
+func TestRawRecordingReentersCoreWithRecordedClock(t *testing.T) {
+	path, err := contractpath.Find("apps/mavlink-bridge/test-fixtures/mixed-mavlink-v2.jsonl")
+	if err != nil {
+		t.Fatal(err)
+	}
+	entries, err := ReadFile(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	core := bridge.New(10000)
+	frames := 0
+	err = NewReplay(entries).Dispatch(func(data []byte, atMs float64) error {
+		for _, frame := range core.Ingest(data, atMs, "replay") {
+			frames++
+			if frame.RecvTimestampMs != atMs || frame.Payload["timestampMs"] != atMs {
+				t.Fatalf("recorded clock not injected: %#v", frame)
+			}
+		}
+		return nil
+	}, func(json.RawMessage, float64) error { t.Fatal("raw fixture emitted event"); return nil })
+	if err != nil {
+		t.Fatal(err)
+	}
+	if frames != 17 {
+		t.Fatalf("normalized frames = %d, want 17", frames)
 	}
 }
 
