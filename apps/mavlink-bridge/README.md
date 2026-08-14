@@ -218,10 +218,17 @@ per-run cap above.
 Outbound frames are JSON:
 
 - `recvTimestampMs`, `sysId`, `compId`, `messageName`, `sequence` (uint8, wraps)
-- `payload`: a `TelemetrySample` (`timestampMs` plus `attitude`, `vfrHud`,
-  `globalPositionInt`, `gpsRawInt` as available)
+- `payload`: `timestampMs` plus exactly the section named by `messageName`.
+  Raw public families are `HEARTBEAT`, `PARAM_VALUE`, `GPS_RAW_INT`, `ATTITUDE`,
+  `GLOBAL_POSITION_INT`, `VFR_HUD`, `COMMAND_ACK`, and `GPS_GLOBAL_ORIGIN`.
 - `health`: `packetRateHz`, `decodeErrorCount`, `droppedPacketCount`,
   `messageRates[]`, `systems[]`
+
+`HOME_POSITION` and the six normalized mission families are never also
+published raw. They pass through the mission router and use the tagged `home`
+or `mission` public contracts. Unknown normalized names are dropped defensively;
+JSON ingress must satisfy the strict fifteen-family internal contract before it
+reaches this publish policy.
 
 Each decoded autopilot HEARTBEAT also emits a read-only `flightState` frame with
 the exact target, standard `armed` bit, raw numeric `baseMode`/`customMode`,

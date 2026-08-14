@@ -1,0 +1,137 @@
+{
+  "provenance": "Hand-transcribed from the MAVLink upstream common.xml generated common.h table (MAVLINK_COMMON_XML_HASH -5143269391812745838), independently of the Node and Go implementations. Extension fields are listed in XML declaration/wire order.",
+  "payloadLengthPolicy": {
+    "mavlink1": "exact-minimum",
+    "unsignedMavlink2": "one-through-maximum",
+    "signedMavlink2": "reject-until-signature-policy-exists"
+  },
+  "messages": [
+    { "messageId": 0, "messageName": "HEARTBEAT", "crcExtra": 50, "minLength": 9, "maxLength": 9, "extensionFields": [] },
+    { "messageId": 22, "messageName": "PARAM_VALUE", "crcExtra": 220, "minLength": 25, "maxLength": 25, "extensionFields": [] },
+    { "messageId": 24, "messageName": "GPS_RAW_INT", "crcExtra": 24, "minLength": 30, "maxLength": 52, "extensionFields": ["alt_ellipsoid", "h_acc", "v_acc", "vel_acc", "hdg_acc", "yaw"] },
+    { "messageId": 30, "messageName": "ATTITUDE", "crcExtra": 39, "minLength": 28, "maxLength": 28, "extensionFields": [] },
+    { "messageId": 33, "messageName": "GLOBAL_POSITION_INT", "crcExtra": 104, "minLength": 28, "maxLength": 28, "extensionFields": [] },
+    { "messageId": 40, "messageName": "MISSION_REQUEST", "crcExtra": 230, "minLength": 4, "maxLength": 5, "extensionFields": ["mission_type"] },
+    { "messageId": 42, "messageName": "MISSION_CURRENT", "crcExtra": 28, "minLength": 2, "maxLength": 18, "extensionFields": ["total", "mission_state", "mission_mode", "mission_id", "fence_id", "rally_points_id"] },
+    { "messageId": 44, "messageName": "MISSION_COUNT", "crcExtra": 221, "minLength": 4, "maxLength": 9, "extensionFields": ["mission_type", "opaque_id"] },
+    { "messageId": 47, "messageName": "MISSION_ACK", "crcExtra": 153, "minLength": 3, "maxLength": 8, "extensionFields": ["mission_type", "opaque_id"] },
+    { "messageId": 49, "messageName": "GPS_GLOBAL_ORIGIN", "crcExtra": 39, "minLength": 12, "maxLength": 20, "extensionFields": ["time_usec"] },
+    { "messageId": 51, "messageName": "MISSION_REQUEST_INT", "crcExtra": 196, "minLength": 4, "maxLength": 5, "extensionFields": ["mission_type"] },
+    { "messageId": 73, "messageName": "MISSION_ITEM_INT", "crcExtra": 38, "minLength": 37, "maxLength": 38, "extensionFields": ["mission_type"] },
+    { "messageId": 74, "messageName": "VFR_HUD", "crcExtra": 20, "minLength": 20, "maxLength": 20, "extensionFields": [] },
+    { "messageId": 77, "messageName": "COMMAND_ACK", "crcExtra": 143, "minLength": 3, "maxLength": 10, "extensionFields": ["progress", "result_param2", "target_system", "target_component"] },
+    { "messageId": 242, "messageName": "HOME_POSITION", "crcExtra": 104, "minLength": 52, "maxLength": 60, "extensionFields": ["time_usec"] }
+  ],
+  "normalizationAtMs": 1234,
+  "normalizationVectors": [
+    {
+      "caseId": "normalize-heartbeat-v1",
+      "messageId": 0,
+      "payloadHex": "110000000203810403",
+      "expectedPayload": { "timestampMs": 1234, "heartbeat": { "customMode": 17, "vehicleType": 2, "autopilotType": 3, "baseMode": 129, "armed": true, "systemStatus": 4, "mavlinkVersion": 3 } }
+    },
+    {
+      "caseId": "normalize-param-value-v1",
+      "messageId": 22,
+      "payloadHex": "00002a42b004110057504e41565f5350454544000000000009",
+      "expectedPayload": { "timestampMs": 1234, "paramValue": { "value": 42.5, "paramCount": 1200, "paramIndex": 17, "paramId": "WPNAV_SPEED", "paramType": 9 } }
+    },
+    {
+      "caseId": "normalize-gps-raw-int-v1",
+      "messageId": 24,
+      "payloadHex": "40e20100000000009efeebeacccee85840e908006400c800d204a05b030a",
+      "expectedPayload": { "timestampMs": 1234, "gpsRawInt": { "velCms": 1234, "cogCdeg": 23456 } }
+    },
+    {
+      "caseId": "normalize-attitude-v1",
+      "messageId": 30,
+      "payloadHex": "d20400000000a03f000020c0000070400000003f000080be0000403f",
+      "expectedPayload": { "timestampMs": 1234, "attitude": { "rollRad": 1.25, "pitchRad": -2.5, "yawRad": 3.75, "pitchSpeedRadPerSec": -0.25, "yawSpeedRadPerSec": 0.75 } }
+    },
+    {
+      "caseId": "normalize-global-position-int-v1",
+      "messageId": 33,
+      "payloadHex": "d20400009efeebeacccee85840e9080020480100f4ff2200fbff3930",
+      "expectedPayload": { "timestampMs": 1234, "globalPositionInt": { "latDegE7": -353632610, "lonDegE7": 1491652300, "altMm": 584000, "relativeAltMm": 84000, "vxCms": -12, "vyCms": 34, "vzCms": -5, "headingCdeg": 12345 } }
+    },
+    {
+      "caseId": "normalize-mission-request-v1",
+      "messageId": 40,
+      "payloadHex": "0700ffbe",
+      "expectedPayload": { "timestampMs": 1234, "missionRequest": { "seq": 7, "targetSystem": 255, "targetComponent": 190 } }
+    },
+    {
+      "caseId": "normalize-mission-current-v1",
+      "messageId": 42,
+      "payloadHex": "0500",
+      "expectedPayload": { "timestampMs": 1234, "missionCurrent": { "seq": 5 } }
+    },
+    {
+      "caseId": "normalize-mission-count-v1",
+      "messageId": 44,
+      "payloadHex": "03000101",
+      "expectedPayload": { "timestampMs": 1234, "missionCount": { "count": 3 } }
+    },
+    {
+      "caseId": "normalize-mission-ack-v1",
+      "messageId": 47,
+      "payloadHex": "01010d",
+      "expectedPayload": { "timestampMs": 1234, "missionAck": { "type": 13 } }
+    },
+    {
+      "caseId": "normalize-gps-global-origin-v1",
+      "messageId": 49,
+      "payloadHex": "9efeebeacccee85840e90800",
+      "expectedPayload": { "timestampMs": 1234, "gpsGlobalOrigin": { "latDegE7": -353632610, "lonDegE7": 1491652300, "altMm": 584000 } }
+    },
+    {
+      "caseId": "normalize-mission-request-int-v1",
+      "messageId": 51,
+      "payloadHex": "0700ffbe",
+      "expectedPayload": { "timestampMs": 1234, "missionRequestInt": { "seq": 7, "targetSystem": 255, "targetComponent": 190 } }
+    },
+    {
+      "caseId": "normalize-mission-item-int-v1",
+      "messageId": 73,
+      "payloadHex": "0000803f0000004000004040000080409efeebeacccee8580000a94202001000ffbe030101",
+      "expectedPayload": { "timestampMs": 1234, "missionItemInt": { "seq": 2, "command": 16, "frameId": 3, "current": true, "autocontinue": true, "param1": 1, "param2": 2, "param3": 3, "param4": 4, "latDegE7": -353632610, "lonDegE7": 1491652300, "altM": 84.5 } }
+    },
+    {
+      "caseId": "normalize-vfr-hud-v1",
+      "messageId": 74,
+      "payloadHex": "0000b4410000a2410000fa430000c0bfa5003200",
+      "expectedPayload": { "timestampMs": 1234, "vfrHud": { "airSpeedMps": 22.5, "groundSpeedMps": 20.25, "climbMps": -1.5, "headingDeg": 165 } }
+    },
+    {
+      "caseId": "normalize-command-ack-v1",
+      "messageId": 77,
+      "payloadHex": "900103",
+      "expectedPayload": { "timestampMs": 1234, "commandAck": { "command": 400, "result": 3 } }
+    },
+    {
+      "caseId": "normalize-home-position-v1",
+      "messageId": 242,
+      "payloadHex": "9efeebeacccee85840e9080000000000000000000000000000000000000000000000000000000000000000000000000000000000",
+      "expectedPayload": { "timestampMs": 1234, "homePosition": { "latDegE7": -353632610, "lonDegE7": 1491652300, "altMm": 584000 } }
+    }
+  ],
+  "requiredBoundaryCases": [
+    { "case": "v1-min", "version": 1, "length": "minLength", "accepted": true },
+    { "case": "v1-short", "version": 1, "length": "minLength-1", "accepted": false },
+    { "case": "v1-long", "version": 1, "length": "minLength+1", "accepted": false },
+    { "case": "v2-one", "version": 2, "length": 1, "accepted": true },
+    { "case": "v2-max", "version": 2, "length": "maxLength", "accepted": true },
+    { "case": "v2-empty", "version": 2, "length": 0, "accepted": false },
+    { "case": "v2-oversized", "version": 2, "length": "maxLength+1", "accepted": false }
+  ],
+  "malformedCases": [
+    { "caseId": "noise-only", "kind": "literal", "hex": "6e6f742061206672616d65", "expectedEnvelopes": 0, "expectedDecodeErrors": 1 },
+    { "caseId": "incomplete-v1", "kind": "literal", "hex": "fe09", "expectedEnvelopes": 0, "expectedDecodeErrors": 1 },
+    { "caseId": "incomplete-v2", "kind": "literal", "hex": "fd090000", "expectedEnvelopes": 0, "expectedDecodeErrors": 1 },
+    { "caseId": "bad-supported-crc", "kind": "supported", "version": 1, "messageId": 0, "payloadLength": 9, "corruptCrc": true, "expectedEnvelopes": 0, "expectedDecodeErrors": 1 },
+    { "caseId": "signed-v2", "kind": "supported", "version": 2, "messageId": 0, "payloadLength": 9, "signed": true, "expectedEnvelopes": 0, "expectedDecodeErrors": 1 },
+    { "caseId": "complete-unsupported", "kind": "unsupported", "version": 1, "messageId": 250, "payloadLength": 2, "expectedEnvelopes": 0, "expectedDecodeErrors": 0 },
+    { "caseId": "noise-before-valid", "kind": "noise-before-supported", "version": 1, "messageId": 0, "payloadLength": 9, "expectedEnvelopes": 1, "expectedDecodeErrors": 0 },
+    { "caseId": "crc-valid-nonfinite-attitude", "kind": "literal", "hex": "fe1c0701011e000000000000c07f000000000000000000000000000000000000000071d3", "expectedEnvelopes": 0, "expectedDecodeErrors": 1 }
+  ]
+}

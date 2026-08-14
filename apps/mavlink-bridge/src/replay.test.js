@@ -36,7 +36,9 @@ function buildSession() {
   return [
     Buffer.from(JSON.stringify({
       recvTimestampMs: 5000, sysId: 2, compId: 1, messageName: 'VFR_HUD', sequence: 3,
-      payload: { timestampMs: 5000, vfrHud: { headingDeg: 90 } },
+      payload: { timestampMs: 5000, vfrHud: {
+        headingDeg: 90, airSpeedMps: 12, groundSpeedMps: 11, climbMps: 0,
+      } },
     })),
     mavlinkV1Frame(0, Buffer.alloc(9), 1),
     mavlinkV1Frame(30, attitude, 2),

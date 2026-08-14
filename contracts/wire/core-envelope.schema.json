@@ -1,0 +1,43 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://flight-path-hud.local/contracts/wire/core-envelope.schema.json",
+  "title": "Strict health-decorated internal core envelope",
+  "oneOf": [
+    { "$ref": "#/$defs/heartbeatEnvelope" }, { "$ref": "#/$defs/paramValueEnvelope" },
+    { "$ref": "#/$defs/gpsRawIntEnvelope" }, { "$ref": "#/$defs/attitudeEnvelope" },
+    { "$ref": "#/$defs/globalPositionIntEnvelope" }, { "$ref": "#/$defs/missionRequestEnvelope" },
+    { "$ref": "#/$defs/missionCurrentEnvelope" }, { "$ref": "#/$defs/missionCountEnvelope" },
+    { "$ref": "#/$defs/missionAckEnvelope" }, { "$ref": "#/$defs/gpsGlobalOriginEnvelope" },
+    { "$ref": "#/$defs/missionRequestIntEnvelope" }, { "$ref": "#/$defs/missionItemIntEnvelope" },
+    { "$ref": "#/$defs/vfrHudEnvelope" }, { "$ref": "#/$defs/commandAckEnvelope" },
+    { "$ref": "#/$defs/homePositionEnvelope" }
+  ],
+  "$defs": {
+    "uint8": { "type": "integer", "minimum": 0, "maximum": 255, "x-wire-type": "uint8" },
+    "base": {
+      "type": "object",
+      "required": ["recvTimestampMs", "sysId", "compId", "messageName", "sequence", "payload", "health"],
+      "properties": {
+        "recvTimestampMs": { "type": "number" }, "sysId": { "$ref": "#/$defs/uint8" },
+        "compId": { "$ref": "#/$defs/uint8" }, "messageName": { "type": "string" },
+        "sequence": { "$ref": "#/$defs/uint8" }, "payload": { "type": "object" },
+        "health": { "$ref": "stream-health.schema.json" }
+      }
+    },
+    "heartbeatEnvelope": { "allOf": [{ "$ref": "#/$defs/base" }, { "properties": { "messageName": { "const": "HEARTBEAT" }, "payload": { "$ref": "normalized-envelope.schema.json#/$defs/heartbeatPayload" } } }], "unevaluatedProperties": false },
+    "paramValueEnvelope": { "allOf": [{ "$ref": "#/$defs/base" }, { "properties": { "messageName": { "const": "PARAM_VALUE" }, "payload": { "$ref": "normalized-envelope.schema.json#/$defs/paramValuePayload" } } }], "unevaluatedProperties": false },
+    "gpsRawIntEnvelope": { "allOf": [{ "$ref": "#/$defs/base" }, { "properties": { "messageName": { "const": "GPS_RAW_INT" }, "payload": { "$ref": "normalized-envelope.schema.json#/$defs/gpsRawIntPayload" } } }], "unevaluatedProperties": false },
+    "attitudeEnvelope": { "allOf": [{ "$ref": "#/$defs/base" }, { "properties": { "messageName": { "const": "ATTITUDE" }, "payload": { "$ref": "normalized-envelope.schema.json#/$defs/attitudePayload" } } }], "unevaluatedProperties": false },
+    "globalPositionIntEnvelope": { "allOf": [{ "$ref": "#/$defs/base" }, { "properties": { "messageName": { "const": "GLOBAL_POSITION_INT" }, "payload": { "$ref": "normalized-envelope.schema.json#/$defs/globalPositionIntPayload" } } }], "unevaluatedProperties": false },
+    "missionRequestEnvelope": { "allOf": [{ "$ref": "#/$defs/base" }, { "properties": { "messageName": { "const": "MISSION_REQUEST" }, "payload": { "$ref": "normalized-envelope.schema.json#/$defs/missionRequestPayload" } } }], "unevaluatedProperties": false },
+    "missionCurrentEnvelope": { "allOf": [{ "$ref": "#/$defs/base" }, { "properties": { "messageName": { "const": "MISSION_CURRENT" }, "payload": { "$ref": "normalized-envelope.schema.json#/$defs/missionCurrentPayload" } } }], "unevaluatedProperties": false },
+    "missionCountEnvelope": { "allOf": [{ "$ref": "#/$defs/base" }, { "properties": { "messageName": { "const": "MISSION_COUNT" }, "payload": { "$ref": "normalized-envelope.schema.json#/$defs/missionCountPayload" } } }], "unevaluatedProperties": false },
+    "missionAckEnvelope": { "allOf": [{ "$ref": "#/$defs/base" }, { "properties": { "messageName": { "const": "MISSION_ACK" }, "payload": { "$ref": "normalized-envelope.schema.json#/$defs/missionAckPayload" } } }], "unevaluatedProperties": false },
+    "gpsGlobalOriginEnvelope": { "allOf": [{ "$ref": "#/$defs/base" }, { "properties": { "messageName": { "const": "GPS_GLOBAL_ORIGIN" }, "payload": { "$ref": "normalized-envelope.schema.json#/$defs/gpsGlobalOriginPayload" } } }], "unevaluatedProperties": false },
+    "missionRequestIntEnvelope": { "allOf": [{ "$ref": "#/$defs/base" }, { "properties": { "messageName": { "const": "MISSION_REQUEST_INT" }, "payload": { "$ref": "normalized-envelope.schema.json#/$defs/missionRequestIntPayload" } } }], "unevaluatedProperties": false },
+    "missionItemIntEnvelope": { "allOf": [{ "$ref": "#/$defs/base" }, { "properties": { "messageName": { "const": "MISSION_ITEM_INT" }, "payload": { "$ref": "normalized-envelope.schema.json#/$defs/missionItemIntPayload" } } }], "unevaluatedProperties": false },
+    "vfrHudEnvelope": { "allOf": [{ "$ref": "#/$defs/base" }, { "properties": { "messageName": { "const": "VFR_HUD" }, "payload": { "$ref": "normalized-envelope.schema.json#/$defs/vfrHudPayload" } } }], "unevaluatedProperties": false },
+    "commandAckEnvelope": { "allOf": [{ "$ref": "#/$defs/base" }, { "properties": { "messageName": { "const": "COMMAND_ACK" }, "payload": { "$ref": "normalized-envelope.schema.json#/$defs/commandAckPayload" } } }], "unevaluatedProperties": false },
+    "homePositionEnvelope": { "allOf": [{ "$ref": "#/$defs/base" }, { "properties": { "messageName": { "const": "HOME_POSITION" }, "payload": { "$ref": "normalized-envelope.schema.json#/$defs/homePositionPayload" } } }], "unevaluatedProperties": false }
+  }
+}

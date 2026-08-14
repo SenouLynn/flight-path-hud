@@ -19,6 +19,7 @@ import { createArmDisarmRouter } from './armDisarmRouter.js'
 import { createGuidedRepositionRouter } from './guidedRepositionRouter.js'
 import { createGuidedTakeoffRouter } from './guidedTakeoffRouter.js'
 import { createGuidedLandRouter } from './guidedLandRouter.js'
+import { rawPublishDisposition } from './publishPolicy.js'
 
 const UDP_HOST = process.env.MAVLINK_BRIDGE_UDP_HOST ?? '0.0.0.0'
 const UDP_PORT = Number.parseInt(process.env.MAVLINK_BRIDGE_UDP_PORT ?? '14550', 10)
@@ -120,8 +121,6 @@ const guidedLandRouter = createGuidedLandRouter({ send:(s,c,b)=>ingress.sendTo?.
   enabled:()=>process.env.MAVLINK_BRIDGE_ENABLE_GUIDED_LAND==='1',
   isIsolatedSitl:()=>process.env.MAVLINK_BRIDGE_COMMAND_ENVIRONMENT==='sitl', recordEvent:e=>recorder?.recordEvent(e) })
 
-const MISSION_MESSAGE_NAMES = new Set(['MISSION_COUNT', 'MISSION_ITEM_INT', 'MISSION_CURRENT', 'MISSION_ACK', 'MISSION_REQUEST', 'MISSION_REQUEST_INT'])
-
 function startRecording() {
   if (RECORD_FILE === null) {
     return null
@@ -212,7 +211,8 @@ const stopIngress = ingress.start((datagram, meta) => {
       const writeFrame = parameterWriteRouter.ingestEnvelope(envelope)
       if (writeFrame !== null) publish(writeFrame)
     }
-    if (envelope.messageName === 'HOME_POSITION' || MISSION_MESSAGE_NAMES.has(envelope.messageName)) {
+    const publishDisposition = rawPublishDisposition(envelope.messageName)
+    if (publishDisposition === 'routed') {
       const frame = missionRouter.ingestEnvelope(envelope)
       if (frame !== null) {
         publish(frame)
@@ -220,7 +220,7 @@ const stopIngress = ingress.start((datagram, meta) => {
       return
     }
 
-    publish(envelope)
+    if (publishDisposition === 'raw') publish(envelope)
   })
   reportSourceConflicts()
 }, (event) => {

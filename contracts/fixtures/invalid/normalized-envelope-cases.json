@@ -1,0 +1,8 @@
+[
+  { "caseId": "NORMALIZED-UNKNOWN-NAME", "frame": { "recvTimestampMs": 1000, "sysId": 1, "compId": 1, "messageName": "FUTURE_MESSAGE", "sequence": 1, "payload": { "timestampMs": 1000 } } },
+  { "caseId": "NORMALIZED-WRONG-SECTION", "frame": { "recvTimestampMs": 1000, "sysId": 1, "compId": 1, "messageName": "HEARTBEAT", "sequence": 1, "payload": { "timestampMs": 1000, "vfrHud": { "airSpeedMps": 1, "groundSpeedMps": 1, "climbMps": 0, "headingDeg": 90 } } } },
+  { "caseId": "NORMALIZED-SECOND-SECTION", "frame": { "recvTimestampMs": 1000, "sysId": 1, "compId": 1, "messageName": "COMMAND_ACK", "sequence": 1, "payload": { "timestampMs": 1000, "commandAck": { "command": 400, "result": 0 }, "missionAck": { "type": 0 } } } },
+  { "caseId": "NORMALIZED-EXTRA-ENVELOPE-FIELD", "frame": { "recvTimestampMs": 1000, "sysId": 1, "compId": 1, "messageName": "MISSION_CURRENT", "sequence": 1, "payload": { "timestampMs": 1000, "missionCurrent": { "seq": 1 } }, "health": {} } },
+  { "caseId": "NORMALIZED-PARAM-ID-TOO-LONG", "frame": { "recvTimestampMs": 1000, "sysId": 1, "compId": 1, "messageName": "PARAM_VALUE", "sequence": 1, "payload": { "timestampMs": 1000, "paramValue": { "value": 1, "paramCount": 1, "paramIndex": 0, "paramId": "12345678901234567", "paramType": 9 } } } },
+  { "caseId": "NORMALIZED-PARAM-ID-NUL", "frame": { "recvTimestampMs": 1000, "sysId": 1, "compId": 1, "messageName": "PARAM_VALUE", "sequence": 1, "payload": { "timestampMs": 1000, "paramValue": { "value": 1, "paramCount": 1, "paramIndex": 0, "paramId": "BAD\u0000ID", "paramType": 9 } } } }
+]

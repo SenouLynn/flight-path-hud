@@ -1,59 +1,63 @@
-# Go bridge open questions
+# Go bridge open-question audit
 
-## OQ-001 — normalized/published envelopes conflict with the strict telemetry schema
+## Resolved in Phases B–D
 
-- **Affected contract/symbols:** `contracts/wire/telemetry-frame.schema.json`,
-  `contracts/wire/envelope.schema.json`, `createBridgeCore`, and the Phase B
-  15-family normalization/publish requirement.
-- **Evidence:**
-  `contracts/fixtures/open/bridge-core-telemetry-schema-conflict.json` contains
-  two minimal cases. The strict schema forbids the core's top-level `health` and
-  models only ATTITUDE, VFR_HUD, GLOBAL_POSITION_INT, and GPS_RAW_INT payloads.
-  The Node runtime publishes core envelopes for additional normalized families,
-  including HEARTBEAT, PARAM_VALUE, and COMMAND_ACK.
-- **Why authority does not resolve it:** language-neutral schemas outrank Node,
-  but the handoff separately requires protocol-v0 Node output parity, health on
-  every envelope, and all 15 normalized families. Satisfying either side without
-  a contract decision violates another explicit requirement.
-- **Safe options:**
-  1. Expand the strict producer schema to model health and every actually
-     published raw family. This codifies current Node output and widens the
-     portable producer contract.
-  2. Define a separate internal normalized-envelope contract and constrain the
-     public envelope schema/publish policy. This may require suppressing or
-     transforming currently published protocol-v0 frames.
-  3. Explicitly classify the strict schema as a selected consumer subset rather
-     than the producer boundary, then add a distinct full producer schema. This
-     changes the current contract-pack compatibility statement.
-- **Blocked phase:** Phase B's output-parity gate. Phase C fixed-core comparison
-  and Phase D end-to-end PARAM_VALUE path cannot be called complete until the
-  public/internal envelope boundary is selected.
+### OQ-001 — internal versus public normalized envelopes
 
-## OQ-002 — malformed supported-frame accounting is undefined across authorities
+- **Decision:** separate strict boundaries. `normalized-envelope.schema.json`
+  describes health-free JSON ingress, `core-envelope.schema.json` describes all
+  15 normalized core families with health, and `telemetry-frame.schema.json`
+  describes exactly the eight raw families published by protocol v0.
+- **Observable result:** the runtime shape did not change. `publishPolicy.js`
+  makes the existing suppression of HOME_POSITION and six mission families
+  countable and testable. Every raw public envelope requires health; lifecycle,
+  mission, home, and flight-state schemas remain distinct.
+- **Evidence:** all three schemas, their valid/invalid fixtures,
+  `portableContracts.test.ts`, and `publishPolicy.test.js`.
 
-- **Affected contract/symbols:** `parseIncomingDatagram`, Phase B's malformed and
-  truncation requirements, and `CORE-HEALTH` decode/drop counters.
-- **Evidence:** Node increments `decodeErrors` for a truncated whole frame or bad
-  CRC, but a CRC-valid supported frame whose decoder rejects a short payload is
-  silently dropped. Several padded decoders also accept nonempty short MAVLink v1
-  payloads. Valid unsupported message IDs are silently ignored without CRC
-  validation. No language-neutral negative cases define these distinctions.
-- **Why authority does not resolve it:** schemas do not define byte-decoder error
-  accounting, and the handoff requires malformed decoder errors while Node—the
-  remaining authority—is observably inconsistent by message family.
-- **Safe options:**
-  1. Add dialect-derived negative vectors that define corruption, unsupported
-     messages, v1 short payloads, and legitimate v2 trailing-zero truncation,
-     then align Node and Go in a separately reviewed compatibility change.
-  2. Preserve each current Node case exactly and document the uneven accounting
-     as protocol-v0 behavior. This retains malformed-v1 acceptance and makes
-     health semantics implementation-specific.
-- **Blocked phase:** Phase B decoder/core completion and any Phase C comparison
-  that claims decode/drop-counter parity for malformed input.
+### OQ-002 — malformed supported-frame accounting
+
+- **Decision:** supported MAVLink v1 uses the exact dialect minimum length;
+  unsigned v2 accepts one through the dialect maximum and zero-expands legal
+  trailing truncation. Bad CRC, incomplete candidates, invalid supported
+  lengths, and signed v2 each count exactly one decode/drop. Complete unsupported
+  IDs are ignored because their CRC extra is unavailable.
+- **Observable result:** Node was hardened first, then Go was matched. Noise can
+  resynchronize to a later valid prefix; noise-only input counts once.
+- **Evidence:** `normalization-frame-vectors.json`, consumed directly by both
+  Node and Go, pins the audited common-dialect hash, all 15 message definitions,
+  15 nonzero normalized payloads, every length boundary, and malformed cases.
+
+### OQ-003 — arbitrary JSON-envelope passthrough
+
+- **Decision:** JSON datagram ingress must conform to the strict 15-family
+  normalized-envelope contract. Identity and sequence are uint8 values and are
+  preserved, timestamps are finite, family/payload correlation is exact, and
+  extra fields are rejected.
+- **Observable result:** invalid or unknown JSON publishes nothing and contributes
+  exactly one decode/drop through the core. Mock, replay, and fixed-clock inputs
+  were updated to complete valid shapes.
+- **Evidence:** normalized-envelope valid/invalid fixtures plus Node and Go
+  conformance tests.
+
+## Phase gate audits
+
+- **Phase B:** audited the three envelope boundaries, the exact `index.js`
+  publish/suppression set, all 15 decoders, common-dialect length/CRC metadata,
+  strict JSON ingress, health/counters, per-core sequence fallback, roster/TTL,
+  rates, and source conflicts. **Unresolved questions: none found.**
+- **Phase C:** audited exact-target routes, both repository JSONL recordings,
+  raw/event dispatch, the no-send/no-timer replay API, and explicit `atMs` core
+  folding. **Unresolved questions: none found.**
+- **Phase D:** audited parameter vectors, read/list semantic traces, lifecycle
+  schemas, exact-target PARAM_VALUE correlation, retries, route loss, passive
+  events, and the absence of a process-lifetime result cache. **Unresolved
+  questions: none found.**
 
 ## Intentionally deferred decisions (not blocking Phases A–D)
 
-- Signed MAVLink v2 verification/support; first-slice Go behavior remains reject.
+- Signed MAVLink v2 verification/support; this slice rejects signed candidates.
 - Bounded live snapshot retention, queue/connection byte limits, global GCS
-  identity configuration, live clock policy, and WebSocket dependency selection.
-- Provenanced live parameter-list capture; Phase D evidence remains partial.
+  identity, live clock policy, and WebSocket dependency selection.
+- A provenanced live raw-plus-lifecycle parameter-list capture. Phase D's list
+  implementation evidence remains `partial` until later SITL work produces it.

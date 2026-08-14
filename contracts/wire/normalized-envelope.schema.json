@@ -1,0 +1,150 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://flight-path-hud.local/contracts/wire/normalized-envelope.schema.json",
+  "title": "Strict internal normalized MAVLink envelope",
+  "oneOf": [
+    { "$ref": "#/$defs/heartbeatEnvelope" },
+    { "$ref": "#/$defs/paramValueEnvelope" },
+    { "$ref": "#/$defs/gpsRawIntEnvelope" },
+    { "$ref": "#/$defs/attitudeEnvelope" },
+    { "$ref": "#/$defs/globalPositionIntEnvelope" },
+    { "$ref": "#/$defs/missionRequestEnvelope" },
+    { "$ref": "#/$defs/missionCurrentEnvelope" },
+    { "$ref": "#/$defs/missionCountEnvelope" },
+    { "$ref": "#/$defs/missionAckEnvelope" },
+    { "$ref": "#/$defs/gpsGlobalOriginEnvelope" },
+    { "$ref": "#/$defs/missionRequestIntEnvelope" },
+    { "$ref": "#/$defs/missionItemIntEnvelope" },
+    { "$ref": "#/$defs/vfrHudEnvelope" },
+    { "$ref": "#/$defs/commandAckEnvelope" },
+    { "$ref": "#/$defs/homePositionEnvelope" }
+  ],
+  "$defs": {
+    "uint8": { "type": "integer", "minimum": 0, "maximum": 255, "x-wire-type": "uint8" },
+    "uint16": { "type": "integer", "minimum": 0, "maximum": 65535, "x-wire-type": "uint16" },
+    "uint32": { "type": "integer", "minimum": 0, "maximum": 4294967295, "x-wire-type": "uint32" },
+    "int16": { "type": "integer", "minimum": -32768, "maximum": 32767, "x-wire-type": "int16" },
+    "int32": { "type": "integer", "minimum": -2147483648, "maximum": 2147483647, "x-wire-type": "int32" },
+    "base": {
+      "type": "object",
+      "required": ["recvTimestampMs", "sysId", "compId", "messageName", "sequence", "payload"],
+      "properties": {
+        "recvTimestampMs": { "type": "number", "x-wire-type": "float64-ms" },
+        "sysId": { "$ref": "#/$defs/uint8" },
+        "compId": { "$ref": "#/$defs/uint8" },
+        "messageName": { "type": "string" },
+        "sequence": { "$ref": "#/$defs/uint8" },
+        "payload": { "type": "object" }
+      }
+    },
+    "heartbeat": {
+      "type": "object", "additionalProperties": false,
+      "required": ["customMode", "vehicleType", "autopilotType", "baseMode", "armed", "systemStatus", "mavlinkVersion"],
+      "properties": {
+        "customMode": { "$ref": "#/$defs/uint32" }, "vehicleType": { "$ref": "#/$defs/uint8" },
+        "autopilotType": { "$ref": "#/$defs/uint8" }, "baseMode": { "$ref": "#/$defs/uint8" },
+        "armed": { "type": "boolean" }, "systemStatus": { "$ref": "#/$defs/uint8" },
+        "mavlinkVersion": { "$ref": "#/$defs/uint8" }
+      }
+    },
+    "paramValue": {
+      "type": "object", "additionalProperties": false,
+      "required": ["value", "paramCount", "paramIndex", "paramId", "paramType"],
+      "properties": {
+        "value": { "type": "number" }, "paramCount": { "$ref": "#/$defs/uint16" },
+        "paramIndex": { "$ref": "#/$defs/uint16" }, "paramId": { "type": "string", "maxLength": 16, "pattern": "^[\\u0001-\\u007f]*$" },
+        "paramType": { "$ref": "#/$defs/uint8" }
+      }
+    },
+    "gpsRawInt": {
+      "type": "object", "additionalProperties": false, "required": ["velCms", "cogCdeg"],
+      "properties": { "velCms": { "$ref": "#/$defs/uint16" }, "cogCdeg": { "$ref": "#/$defs/uint16" } }
+    },
+    "attitude": {
+      "type": "object", "additionalProperties": false,
+      "required": ["rollRad", "pitchRad", "yawRad", "pitchSpeedRadPerSec", "yawSpeedRadPerSec"],
+      "properties": {
+        "rollRad": { "type": "number" }, "pitchRad": { "type": "number" }, "yawRad": { "type": "number" },
+        "pitchSpeedRadPerSec": { "type": "number" }, "yawSpeedRadPerSec": { "type": "number" }
+      }
+    },
+    "globalPositionInt": {
+      "type": "object", "additionalProperties": false,
+      "required": ["latDegE7", "lonDegE7", "altMm", "relativeAltMm", "vxCms", "vyCms", "vzCms", "headingCdeg"],
+      "properties": {
+        "latDegE7": { "$ref": "#/$defs/int32" }, "lonDegE7": { "$ref": "#/$defs/int32" },
+        "altMm": { "$ref": "#/$defs/int32" }, "relativeAltMm": { "$ref": "#/$defs/int32" },
+        "vxCms": { "$ref": "#/$defs/int16" }, "vyCms": { "$ref": "#/$defs/int16" },
+        "vzCms": { "$ref": "#/$defs/int16" }, "headingCdeg": { "$ref": "#/$defs/uint16" }
+      }
+    },
+    "missionRequest": {
+      "type": "object", "additionalProperties": false, "required": ["seq", "targetSystem", "targetComponent"],
+      "properties": { "seq": { "$ref": "#/$defs/uint16" }, "targetSystem": { "$ref": "#/$defs/uint8" }, "targetComponent": { "$ref": "#/$defs/uint8" } }
+    },
+    "missionCurrent": {
+      "type": "object", "additionalProperties": false, "required": ["seq"],
+      "properties": { "seq": { "$ref": "#/$defs/uint16" } }
+    },
+    "missionCount": {
+      "type": "object", "additionalProperties": false, "required": ["count"],
+      "properties": { "count": { "$ref": "#/$defs/uint16" } }
+    },
+    "missionAck": {
+      "type": "object", "additionalProperties": false, "required": ["type"],
+      "properties": { "type": { "$ref": "#/$defs/uint8" } }
+    },
+    "position": {
+      "type": "object", "additionalProperties": false, "required": ["latDegE7", "lonDegE7", "altMm"],
+      "properties": { "latDegE7": { "$ref": "#/$defs/int32" }, "lonDegE7": { "$ref": "#/$defs/int32" }, "altMm": { "$ref": "#/$defs/int32" } }
+    },
+    "missionItemInt": {
+      "type": "object", "additionalProperties": false,
+      "required": ["seq", "command", "frameId", "current", "autocontinue", "param1", "param2", "param3", "param4", "latDegE7", "lonDegE7", "altM"],
+      "properties": {
+        "seq": { "$ref": "#/$defs/uint16" }, "command": { "$ref": "#/$defs/uint16" },
+        "frameId": { "$ref": "#/$defs/uint8" }, "current": { "type": "boolean" }, "autocontinue": { "type": "boolean" },
+        "param1": { "type": "number" }, "param2": { "type": "number" }, "param3": { "type": "number" }, "param4": { "type": "number" },
+        "latDegE7": { "$ref": "#/$defs/int32" }, "lonDegE7": { "$ref": "#/$defs/int32" }, "altM": { "type": "number" }
+      }
+    },
+    "vfrHud": {
+      "type": "object", "additionalProperties": false, "required": ["airSpeedMps", "groundSpeedMps", "climbMps", "headingDeg"],
+      "properties": { "airSpeedMps": { "type": "number" }, "groundSpeedMps": { "type": "number" }, "climbMps": { "type": "number" }, "headingDeg": { "$ref": "#/$defs/int16" } }
+    },
+    "commandAck": {
+      "type": "object", "additionalProperties": false, "required": ["command", "result"],
+      "properties": { "command": { "$ref": "#/$defs/uint16" }, "result": { "$ref": "#/$defs/uint8" } }
+    },
+    "heartbeatPayload": { "type": "object", "additionalProperties": false, "required": ["timestampMs", "heartbeat"], "properties": { "timestampMs": { "type": "number" }, "heartbeat": { "$ref": "#/$defs/heartbeat" } } },
+    "paramValuePayload": { "type": "object", "additionalProperties": false, "required": ["timestampMs", "paramValue"], "properties": { "timestampMs": { "type": "number" }, "paramValue": { "$ref": "#/$defs/paramValue" } } },
+    "gpsRawIntPayload": { "type": "object", "additionalProperties": false, "required": ["timestampMs", "gpsRawInt"], "properties": { "timestampMs": { "type": "number" }, "gpsRawInt": { "$ref": "#/$defs/gpsRawInt" } } },
+    "attitudePayload": { "type": "object", "additionalProperties": false, "required": ["timestampMs", "attitude"], "properties": { "timestampMs": { "type": "number" }, "attitude": { "$ref": "#/$defs/attitude" } } },
+    "globalPositionIntPayload": { "type": "object", "additionalProperties": false, "required": ["timestampMs", "globalPositionInt"], "properties": { "timestampMs": { "type": "number" }, "globalPositionInt": { "$ref": "#/$defs/globalPositionInt" } } },
+    "missionRequestPayload": { "type": "object", "additionalProperties": false, "required": ["timestampMs", "missionRequest"], "properties": { "timestampMs": { "type": "number" }, "missionRequest": { "$ref": "#/$defs/missionRequest" } } },
+    "missionCurrentPayload": { "type": "object", "additionalProperties": false, "required": ["timestampMs", "missionCurrent"], "properties": { "timestampMs": { "type": "number" }, "missionCurrent": { "$ref": "#/$defs/missionCurrent" } } },
+    "missionCountPayload": { "type": "object", "additionalProperties": false, "required": ["timestampMs", "missionCount"], "properties": { "timestampMs": { "type": "number" }, "missionCount": { "$ref": "#/$defs/missionCount" } } },
+    "missionAckPayload": { "type": "object", "additionalProperties": false, "required": ["timestampMs", "missionAck"], "properties": { "timestampMs": { "type": "number" }, "missionAck": { "$ref": "#/$defs/missionAck" } } },
+    "gpsGlobalOriginPayload": { "type": "object", "additionalProperties": false, "required": ["timestampMs", "gpsGlobalOrigin"], "properties": { "timestampMs": { "type": "number" }, "gpsGlobalOrigin": { "$ref": "#/$defs/position" } } },
+    "missionRequestIntPayload": { "type": "object", "additionalProperties": false, "required": ["timestampMs", "missionRequestInt"], "properties": { "timestampMs": { "type": "number" }, "missionRequestInt": { "$ref": "#/$defs/missionRequest" } } },
+    "missionItemIntPayload": { "type": "object", "additionalProperties": false, "required": ["timestampMs", "missionItemInt"], "properties": { "timestampMs": { "type": "number" }, "missionItemInt": { "$ref": "#/$defs/missionItemInt" } } },
+    "vfrHudPayload": { "type": "object", "additionalProperties": false, "required": ["timestampMs", "vfrHud"], "properties": { "timestampMs": { "type": "number" }, "vfrHud": { "$ref": "#/$defs/vfrHud" } } },
+    "commandAckPayload": { "type": "object", "additionalProperties": false, "required": ["timestampMs", "commandAck"], "properties": { "timestampMs": { "type": "number" }, "commandAck": { "$ref": "#/$defs/commandAck" } } },
+    "homePositionPayload": { "type": "object", "additionalProperties": false, "required": ["timestampMs", "homePosition"], "properties": { "timestampMs": { "type": "number" }, "homePosition": { "$ref": "#/$defs/position" } } },
+    "heartbeatEnvelope": { "allOf": [{ "$ref": "#/$defs/base" }, { "properties": { "messageName": { "const": "HEARTBEAT" }, "payload": { "$ref": "#/$defs/heartbeatPayload" } } }], "unevaluatedProperties": false },
+    "paramValueEnvelope": { "allOf": [{ "$ref": "#/$defs/base" }, { "properties": { "messageName": { "const": "PARAM_VALUE" }, "payload": { "$ref": "#/$defs/paramValuePayload" } } }], "unevaluatedProperties": false },
+    "gpsRawIntEnvelope": { "allOf": [{ "$ref": "#/$defs/base" }, { "properties": { "messageName": { "const": "GPS_RAW_INT" }, "payload": { "$ref": "#/$defs/gpsRawIntPayload" } } }], "unevaluatedProperties": false },
+    "attitudeEnvelope": { "allOf": [{ "$ref": "#/$defs/base" }, { "properties": { "messageName": { "const": "ATTITUDE" }, "payload": { "$ref": "#/$defs/attitudePayload" } } }], "unevaluatedProperties": false },
+    "globalPositionIntEnvelope": { "allOf": [{ "$ref": "#/$defs/base" }, { "properties": { "messageName": { "const": "GLOBAL_POSITION_INT" }, "payload": { "$ref": "#/$defs/globalPositionIntPayload" } } }], "unevaluatedProperties": false },
+    "missionRequestEnvelope": { "allOf": [{ "$ref": "#/$defs/base" }, { "properties": { "messageName": { "const": "MISSION_REQUEST" }, "payload": { "$ref": "#/$defs/missionRequestPayload" } } }], "unevaluatedProperties": false },
+    "missionCurrentEnvelope": { "allOf": [{ "$ref": "#/$defs/base" }, { "properties": { "messageName": { "const": "MISSION_CURRENT" }, "payload": { "$ref": "#/$defs/missionCurrentPayload" } } }], "unevaluatedProperties": false },
+    "missionCountEnvelope": { "allOf": [{ "$ref": "#/$defs/base" }, { "properties": { "messageName": { "const": "MISSION_COUNT" }, "payload": { "$ref": "#/$defs/missionCountPayload" } } }], "unevaluatedProperties": false },
+    "missionAckEnvelope": { "allOf": [{ "$ref": "#/$defs/base" }, { "properties": { "messageName": { "const": "MISSION_ACK" }, "payload": { "$ref": "#/$defs/missionAckPayload" } } }], "unevaluatedProperties": false },
+    "gpsGlobalOriginEnvelope": { "allOf": [{ "$ref": "#/$defs/base" }, { "properties": { "messageName": { "const": "GPS_GLOBAL_ORIGIN" }, "payload": { "$ref": "#/$defs/gpsGlobalOriginPayload" } } }], "unevaluatedProperties": false },
+    "missionRequestIntEnvelope": { "allOf": [{ "$ref": "#/$defs/base" }, { "properties": { "messageName": { "const": "MISSION_REQUEST_INT" }, "payload": { "$ref": "#/$defs/missionRequestIntPayload" } } }], "unevaluatedProperties": false },
+    "missionItemIntEnvelope": { "allOf": [{ "$ref": "#/$defs/base" }, { "properties": { "messageName": { "const": "MISSION_ITEM_INT" }, "payload": { "$ref": "#/$defs/missionItemIntPayload" } } }], "unevaluatedProperties": false },
+    "vfrHudEnvelope": { "allOf": [{ "$ref": "#/$defs/base" }, { "properties": { "messageName": { "const": "VFR_HUD" }, "payload": { "$ref": "#/$defs/vfrHudPayload" } } }], "unevaluatedProperties": false },
+    "commandAckEnvelope": { "allOf": [{ "$ref": "#/$defs/base" }, { "properties": { "messageName": { "const": "COMMAND_ACK" }, "payload": { "$ref": "#/$defs/commandAckPayload" } } }], "unevaluatedProperties": false },
+    "homePositionEnvelope": { "allOf": [{ "$ref": "#/$defs/base" }, { "properties": { "messageName": { "const": "HOME_POSITION" }, "payload": { "$ref": "#/$defs/homePositionPayload" } } }], "unevaluatedProperties": false }
+  }
+}

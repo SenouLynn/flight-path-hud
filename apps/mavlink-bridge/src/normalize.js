@@ -4,42 +4,25 @@ const UINT8_MAX = 255
 const MAVLINK_V1_MAGIC = 0xFE
 const MAVLINK_V2_MAGIC = 0xFD
 
-const SUPPORTED_MESSAGE_DECODERS = {
-  0: decodeHeartbeat,
-  22: decodeParamValue,
-  24: decodeGpsRawInt,
-  30: decodeAttitude,
-  33: decodeGlobalPositionInt,
-  40: decodeMissionRequest,
-  42: decodeMissionCurrent,
-  44: decodeMissionCount,
-  47: decodeMissionAck,
-  49: decodeGpsGlobalOrigin,
-  51: decodeMissionRequestInt,
-  73: decodeMissionItemInt,
-  74: decodeVfrHud,
-  77: decodeCommandAck,
-  242: decodeHomePosition,
-}
-
-// Per-message CRC_EXTRA seed from the MAVLink dialect, mixed in after the frame
-// bytes so a message whose field layout changed fails the checksum.
-const MESSAGE_CRC_EXTRA = {
-  0: 50,
-  22: 220,
-  24: 24,
-  30: 39,
-  33: 104,
-  40: 230,
-  42: 28,
-  44: 221,
-  47: 153,
-  49: 39,
-  51: 196,
-  73: 38,
-  74: 20,
-  77: 143,
-  242: 104,
+// common.xml wire metadata. MAVLink 1 carries exactly minLength bytes; MAVLink 2
+// may trim trailing zero bytes down to one and may carry extension fields through
+// maxLength. Keeping these values beside the decoder makes length policy explicit.
+const MESSAGE_DEFINITIONS = {
+  0: { decoder: decodeHeartbeat, crcExtra: 50, minLength: 9, maxLength: 9 },
+  22: { decoder: decodeParamValue, crcExtra: 220, minLength: 25, maxLength: 25 },
+  24: { decoder: decodeGpsRawInt, crcExtra: 24, minLength: 30, maxLength: 52 },
+  30: { decoder: decodeAttitude, crcExtra: 39, minLength: 28, maxLength: 28 },
+  33: { decoder: decodeGlobalPositionInt, crcExtra: 104, minLength: 28, maxLength: 28 },
+  40: { decoder: decodeMissionRequest, crcExtra: 230, minLength: 4, maxLength: 5 },
+  42: { decoder: decodeMissionCurrent, crcExtra: 28, minLength: 2, maxLength: 18 },
+  44: { decoder: decodeMissionCount, crcExtra: 221, minLength: 4, maxLength: 9 },
+  47: { decoder: decodeMissionAck, crcExtra: 153, minLength: 3, maxLength: 8 },
+  49: { decoder: decodeGpsGlobalOrigin, crcExtra: 39, minLength: 12, maxLength: 20 },
+  51: { decoder: decodeMissionRequestInt, crcExtra: 196, minLength: 4, maxLength: 5 },
+  73: { decoder: decodeMissionItemInt, crcExtra: 38, minLength: 37, maxLength: 38 },
+  74: { decoder: decodeVfrHud, crcExtra: 20, minLength: 20, maxLength: 20 },
+  77: { decoder: decodeCommandAck, crcExtra: 143, minLength: 3, maxLength: 10 },
+  242: { decoder: decodeHomePosition, crcExtra: 104, minLength: 52, maxLength: 60 },
 }
 
 function isFiniteNumber(value) {
@@ -58,61 +41,131 @@ function clampUint8(value, fallback) {
   return Math.min(UINT8_MAX, value)
 }
 
-function isTelemetryPayload(payload) {
-  return payload !== null
-    && typeof payload === 'object'
-    && isFiniteNumber(payload.timestampMs)
-}
-
-function normalizeMessageName(value) {
-  if (typeof value !== 'string') {
-    return null
-  }
-
-  const trimmed = value.trim()
-  return trimmed.length === 0 ? null : trimmed
-}
-
 function maybeObject(value) {
-  return value !== null && typeof value === 'object' ? value : null
+  return value !== null && typeof value === 'object' && !Array.isArray(value) ? value : null
 }
 
-function normalizeEnvelopeCandidate(candidate, nowMs) {
+function hasExactKeys(value, keys) {
+  const actual = Object.keys(value)
+  return actual.length === keys.length && keys.every((key) => Object.hasOwn(value, key))
+}
+
+function isIntegerInRange(value, minimum, maximum) {
+  return Number.isInteger(value) && value >= minimum && value <= maximum
+}
+
+const uint8 = (value) => isIntegerInRange(value, 0, 0xFF)
+const uint16 = (value) => isIntegerInRange(value, 0, 0xFFFF)
+const uint32 = (value) => isIntegerInRange(value, 0, 0xFFFFFFFF)
+const int16 = (value) => isIntegerInRange(value, -0x8000, 0x7FFF)
+const int32 = (value) => isIntegerInRange(value, -0x80000000, 0x7FFFFFFF)
+
+function exactSection(keys, validators) {
+  return (candidate) => {
+    const section = maybeObject(candidate)
+    return section !== null
+      && hasExactKeys(section, keys)
+      && keys.every((key) => validators[key](section[key]))
+  }
+}
+
+const finite = isFiniteNumber
+const boolean = (value) => typeof value === 'boolean'
+const asciiParamId = (value) => typeof value === 'string'
+  && value.length <= 16
+  && /^[\x01-\x7F]*$/.test(value)
+
+const JSON_PAYLOAD_SECTIONS = {
+  HEARTBEAT: ['heartbeat', exactSection(
+    ['customMode', 'vehicleType', 'autopilotType', 'baseMode', 'armed', 'systemStatus', 'mavlinkVersion'],
+    { customMode: uint32, vehicleType: uint8, autopilotType: uint8, baseMode: uint8,
+      armed: boolean, systemStatus: uint8, mavlinkVersion: uint8 },
+  )],
+  PARAM_VALUE: ['paramValue', exactSection(
+    ['value', 'paramCount', 'paramIndex', 'paramId', 'paramType'],
+    { value: finite, paramCount: uint16, paramIndex: uint16, paramId: asciiParamId, paramType: uint8 },
+  )],
+  GPS_RAW_INT: ['gpsRawInt', exactSection(
+    ['velCms', 'cogCdeg'], { velCms: uint16, cogCdeg: uint16 },
+  )],
+  ATTITUDE: ['attitude', exactSection(
+    ['rollRad', 'pitchRad', 'yawRad', 'pitchSpeedRadPerSec', 'yawSpeedRadPerSec'],
+    { rollRad: finite, pitchRad: finite, yawRad: finite,
+      pitchSpeedRadPerSec: finite, yawSpeedRadPerSec: finite },
+  )],
+  GLOBAL_POSITION_INT: ['globalPositionInt', exactSection(
+    ['latDegE7', 'lonDegE7', 'altMm', 'relativeAltMm', 'vxCms', 'vyCms', 'vzCms', 'headingCdeg'],
+    { latDegE7: int32, lonDegE7: int32, altMm: int32, relativeAltMm: int32,
+      vxCms: int16, vyCms: int16, vzCms: int16, headingCdeg: uint16 },
+  )],
+  MISSION_REQUEST: ['missionRequest', exactSection(
+    ['seq', 'targetSystem', 'targetComponent'], { seq: uint16, targetSystem: uint8, targetComponent: uint8 },
+  )],
+  MISSION_CURRENT: ['missionCurrent', exactSection(['seq'], { seq: uint16 })],
+  MISSION_COUNT: ['missionCount', exactSection(['count'], { count: uint16 })],
+  MISSION_ACK: ['missionAck', exactSection(['type'], { type: uint8 })],
+  GPS_GLOBAL_ORIGIN: ['gpsGlobalOrigin', exactSection(
+    ['latDegE7', 'lonDegE7', 'altMm'], { latDegE7: int32, lonDegE7: int32, altMm: int32 },
+  )],
+  MISSION_REQUEST_INT: ['missionRequestInt', exactSection(
+    ['seq', 'targetSystem', 'targetComponent'], { seq: uint16, targetSystem: uint8, targetComponent: uint8 },
+  )],
+  MISSION_ITEM_INT: ['missionItemInt', exactSection(
+    ['seq', 'command', 'frameId', 'current', 'autocontinue', 'param1', 'param2', 'param3', 'param4',
+      'latDegE7', 'lonDegE7', 'altM'],
+    { seq: uint16, command: uint16, frameId: uint8, current: boolean, autocontinue: boolean,
+      param1: finite, param2: finite, param3: finite, param4: finite,
+      latDegE7: int32, lonDegE7: int32, altM: finite },
+  )],
+  VFR_HUD: ['vfrHud', exactSection(
+    ['airSpeedMps', 'groundSpeedMps', 'climbMps', 'headingDeg'],
+    { airSpeedMps: finite, groundSpeedMps: finite, climbMps: finite, headingDeg: int16 },
+  )],
+  COMMAND_ACK: ['commandAck', exactSection(
+    ['command', 'result'], { command: uint16, result: uint8 },
+  )],
+  HOME_POSITION: ['homePosition', exactSection(
+    ['latDegE7', 'lonDegE7', 'altMm'], { latDegE7: int32, lonDegE7: int32, altMm: int32 },
+  )],
+}
+
+function normalizeEnvelopeCandidate(candidate) {
   const envelopeCandidate = maybeObject(candidate)
-  if (envelopeCandidate === null) {
+  const envelopeKeys = ['recvTimestampMs', 'sysId', 'compId', 'messageName', 'sequence', 'payload']
+  if (envelopeCandidate === null || !hasExactKeys(envelopeCandidate, envelopeKeys)) {
     return null
   }
 
-  const messageName = normalizeMessageName(envelopeCandidate.messageName)
-  if (messageName === null) {
+  if (typeof envelopeCandidate.messageName !== 'string'
+      || !Object.hasOwn(JSON_PAYLOAD_SECTIONS, envelopeCandidate.messageName)
+      || !isFiniteNumber(envelopeCandidate.recvTimestampMs)
+      || !uint8(envelopeCandidate.sysId)
+      || !uint8(envelopeCandidate.compId)
+      || !uint8(envelopeCandidate.sequence)) {
     return null
   }
 
-  const payload = envelopeCandidate.payload
-  if (!isTelemetryPayload(payload)) {
+  const sectionDefinition = JSON_PAYLOAD_SECTIONS[envelopeCandidate.messageName]
+  const payload = maybeObject(envelopeCandidate.payload)
+  const [sectionName, validateSection] = sectionDefinition
+  if (payload === null
+      || !hasExactKeys(payload, ['timestampMs', sectionName])
+      || !isFiniteNumber(payload.timestampMs)
+      || !validateSection(payload[sectionName])) {
     return null
   }
-
-  // Sequence is a uint8 on the wire and consumers validate it as one, so wrap rather than pass through.
-  const sequence = isNonNegativeInteger(envelopeCandidate.sequence)
-    ? envelopeCandidate.sequence % 256
-    : 0
-
-  const recvTimestampMs = isFiniteNumber(envelopeCandidate.recvTimestampMs)
-    ? envelopeCandidate.recvTimestampMs
-    : nowMs
 
   return {
-    recvTimestampMs,
-    sysId: clampUint8(envelopeCandidate.sysId, 1),
-    compId: clampUint8(envelopeCandidate.compId, 1),
-    messageName,
-    sequence,
+    recvTimestampMs: envelopeCandidate.recvTimestampMs,
+    sysId: envelopeCandidate.sysId,
+    compId: envelopeCandidate.compId,
+    messageName: envelopeCandidate.messageName,
+    sequence: envelopeCandidate.sequence,
     payload,
   }
 }
 
-function tryParseJsonEnvelope(rawBuffer, nowMs) {
+function tryParseJsonEnvelope(rawBuffer) {
   let parsed
 
   try {
@@ -121,7 +174,7 @@ function tryParseJsonEnvelope(rawBuffer, nowMs) {
     return null
   }
 
-  return normalizeEnvelopeCandidate(parsed, nowMs)
+  return normalizeEnvelopeCandidate(parsed)
 }
 
 function readFloatLE(payload, offset) {
@@ -431,13 +484,13 @@ function decodeGpsGlobalOrigin(frame) {
 }
 
 function decodeSupportedFrame(frame) {
-  const decoder = SUPPORTED_MESSAGE_DECODERS[frame.msgId]
-  if (decoder === undefined) {
+  const definition = MESSAGE_DEFINITIONS[frame.msgId]
+  if (definition === undefined) {
     return null
   }
 
-  const decoded = decoder(frame)
-  if (decoded === null) {
+  const decoded = definition.decoder(frame)
+  if (decoded === null || !allNumbersFinite(decoded)) {
     return null
   }
 
@@ -448,6 +501,13 @@ function decodeSupportedFrame(frame) {
     sequence: frame.sequence,
     ...decoded,
   }
+}
+
+function allNumbersFinite(value) {
+  if (typeof value === 'number') return Number.isFinite(value)
+  if (Array.isArray(value)) return value.every(allNumbersFinite)
+  if (value !== null && typeof value === 'object') return Object.values(value).every(allNumbersFinite)
+  return true
 }
 
 export { computeFrameCrc, crcAccumulate } from './mavlinkFrame.js'
@@ -505,19 +565,46 @@ function parseMavlinkFrames(rawBuffer, nowMs) {
       break
     }
 
-    const crcExtra = MESSAGE_CRC_EXTRA[msgId]
-    if (crcExtra !== undefined) {
-      const expectedCrc = rawBuffer.readUInt16LE(offset + frameLength - 2)
-      const actualCrc = computeFrameCrc(rawBuffer, offset + 1, payloadOffset + payloadLength, crcExtra)
+    // Signed v2 needs a verified signature policy. Reject the complete candidate
+    // once, before looking at its message id or checksum bytes.
+    if (magic === MAVLINK_V2_MAGIC && (rawBuffer[offset + 2] & 0x01) === 0x01) {
+      decodeErrors += 1
+      offset += frameLength
+      continue
+    }
+
+    const definition = MESSAGE_DEFINITIONS[msgId]
+    if (definition === undefined) {
+      // Without dialect metadata there is no CRC_EXTRA to validate. A complete,
+      // well-framed unsupported message is ignored, not mislabeled corruption.
+      offset += frameLength
+      continue
+    }
+
+    const validPayloadLength = magic === MAVLINK_V1_MAGIC
+      ? payloadLength === definition.minLength
+      : payloadLength >= 1 && payloadLength <= definition.maxLength
+    if (!validPayloadLength) {
+      decodeErrors += 1
+      offset += frameLength
+      continue
+    }
+
+    {
+      const expectedCrc = rawBuffer.readUInt16LE(payloadOffset + payloadLength)
+      const actualCrc = computeFrameCrc(rawBuffer, offset + 1, payloadOffset + payloadLength, definition.crcExtra)
 
       if (expectedCrc !== actualCrc) {
-        // A bad checksum means this may not be a real frame header at all, so the
-        // length field can't be trusted to find the next one — resync a byte at a time.
         decodeErrors += 1
-        offset += 1
+        offset += frameLength
         continue
       }
     }
+
+    const wirePayload = rawBuffer.subarray(payloadOffset, payloadOffset + payloadLength)
+    const payload = magic === MAVLINK_V2_MAGIC && payloadLength < definition.maxLength
+      ? (() => { const expanded = Buffer.alloc(definition.maxLength); wirePayload.copy(expanded); return expanded })()
+      : wirePayload
 
     const frame = {
       recvTimestampMs: nowMs,
@@ -525,12 +612,16 @@ function parseMavlinkFrames(rawBuffer, nowMs) {
       sysId: clampUint8(rawBuffer[sysIdOffset], 1),
       compId: clampUint8(rawBuffer[compIdOffset], 1),
       msgId,
-      payload: rawBuffer.subarray(payloadOffset, payloadOffset + payloadLength),
+      payload,
     }
 
     const envelope = decodeSupportedFrame(frame)
     if (envelope !== null) {
       envelopes.push(envelope)
+    } else {
+      // A supported, CRC-valid frame that cannot satisfy the normalized
+      // language-neutral contract is one malformed candidate.
+      decodeErrors += 1
     }
 
     offset += frameLength
@@ -548,7 +639,7 @@ function parseMavlinkFrames(rawBuffer, nowMs) {
  * rather than picking up the wall clock of the replay run.
  */
 export function parseIncomingDatagram(rawBuffer, nowMs = Date.now()) {
-  const jsonEnvelope = tryParseJsonEnvelope(rawBuffer, nowMs)
+  const jsonEnvelope = tryParseJsonEnvelope(rawBuffer)
   if (jsonEnvelope !== null) {
     return { envelopes: [jsonEnvelope], decodeErrors: 0 }
   }

@@ -1,0 +1,36 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://flight-path-hud.local/contracts/wire/stream-health.schema.json",
+  "title": "Bridge stream health snapshot",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["packetRateHz", "decodeErrorCount", "droppedPacketCount", "messageRates", "systems"],
+  "properties": {
+    "packetRateHz": { "type": "integer", "minimum": 0 },
+    "decodeErrorCount": { "type": "integer", "minimum": 0 },
+    "droppedPacketCount": { "type": "integer", "minimum": 0 },
+    "messageRates": {
+      "type": "array",
+      "items": {
+        "type": "object", "additionalProperties": false,
+        "required": ["messageName", "rateHz"],
+        "properties": {
+          "messageName": { "type": "string", "pattern": ".*\\S.*" },
+          "rateHz": { "type": "integer", "minimum": 0 }
+        }
+      }
+    },
+    "systems": {
+      "type": "array",
+      "items": {
+        "type": "object", "additionalProperties": false,
+        "required": ["sysId", "compId", "lastSeenTimestampMs"],
+        "properties": {
+          "sysId": { "type": "integer", "minimum": 0, "maximum": 255, "x-wire-type": "uint8" },
+          "compId": { "type": "integer", "minimum": 0, "maximum": 255, "x-wire-type": "uint8" },
+          "lastSeenTimestampMs": { "type": "number", "x-wire-type": "float64-ms" }
+        }
+      }
+    }
+  }
+}

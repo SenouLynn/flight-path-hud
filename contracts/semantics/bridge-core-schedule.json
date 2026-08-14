@@ -12,7 +12,18 @@
         "compId": 1,
         "messageName": "HEARTBEAT",
         "sequence": 0,
-        "payload": { "timestampMs": 1000 }
+        "payload": {
+          "timestampMs": 1000,
+          "heartbeat": {
+            "customMode": 0,
+            "vehicleType": 0,
+            "autopilotType": 0,
+            "baseMode": 0,
+            "armed": false,
+            "systemStatus": 0,
+            "mavlinkVersion": 3
+          }
+        }
       }
     },
     { "kind": "tick", "atMs": 2000 },
@@ -26,7 +37,15 @@
         "compId": 1,
         "messageName": "VFR_HUD",
         "sequence": 9,
-        "payload": { "timestampMs": 2100, "vfrHud": { "headingDeg": 120 } }
+        "payload": {
+          "timestampMs": 2100,
+          "vfrHud": {
+            "headingDeg": 120,
+            "airSpeedMps": 12,
+            "groundSpeedMps": 11,
+            "climbMps": 0
+          }
+        }
       }
     },
     { "kind": "tick", "atMs": 7101 }

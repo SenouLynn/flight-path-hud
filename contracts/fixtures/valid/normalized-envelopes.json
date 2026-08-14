@@ -1,0 +1,17 @@
+[
+  { "recvTimestampMs": 1000, "sysId": 1, "compId": 1, "messageName": "HEARTBEAT", "sequence": 1, "payload": { "timestampMs": 1000, "heartbeat": { "customMode": 4, "vehicleType": 2, "autopilotType": 3, "baseMode": 129, "armed": true, "systemStatus": 4, "mavlinkVersion": 3 } } },
+  { "recvTimestampMs": 1001, "sysId": 1, "compId": 1, "messageName": "PARAM_VALUE", "sequence": 2, "payload": { "timestampMs": 1001, "paramValue": { "value": 12.5, "paramCount": 3, "paramIndex": 1, "paramId": "ARSPD_FBW_MIN", "paramType": 9 } } },
+  { "recvTimestampMs": 1002, "sysId": 1, "compId": 1, "messageName": "GPS_RAW_INT", "sequence": 3, "payload": { "timestampMs": 1002, "gpsRawInt": { "velCms": 1200, "cogCdeg": 18000 } } },
+  { "recvTimestampMs": 1003, "sysId": 1, "compId": 1, "messageName": "ATTITUDE", "sequence": 4, "payload": { "timestampMs": 1003, "attitude": { "rollRad": 0.1, "pitchRad": -0.2, "yawRad": 1.5, "pitchSpeedRadPerSec": 0.01, "yawSpeedRadPerSec": 0.02 } } },
+  { "recvTimestampMs": 1004, "sysId": 1, "compId": 1, "messageName": "GLOBAL_POSITION_INT", "sequence": 5, "payload": { "timestampMs": 1004, "globalPositionInt": { "latDegE7": 473977420, "lonDegE7": 85455940, "altMm": 500000, "relativeAltMm": 100000, "vxCms": 100, "vyCms": -20, "vzCms": 3, "headingCdeg": 18000 } } },
+  { "recvTimestampMs": 1005, "sysId": 1, "compId": 1, "messageName": "MISSION_REQUEST", "sequence": 6, "payload": { "timestampMs": 1005, "missionRequest": { "seq": 1, "targetSystem": 255, "targetComponent": 190 } } },
+  { "recvTimestampMs": 1006, "sysId": 1, "compId": 1, "messageName": "MISSION_CURRENT", "sequence": 7, "payload": { "timestampMs": 1006, "missionCurrent": { "seq": 1 } } },
+  { "recvTimestampMs": 1007, "sysId": 1, "compId": 1, "messageName": "MISSION_COUNT", "sequence": 8, "payload": { "timestampMs": 1007, "missionCount": { "count": 2 } } },
+  { "recvTimestampMs": 1008, "sysId": 1, "compId": 1, "messageName": "MISSION_ACK", "sequence": 9, "payload": { "timestampMs": 1008, "missionAck": { "type": 0 } } },
+  { "recvTimestampMs": 1009, "sysId": 1, "compId": 1, "messageName": "GPS_GLOBAL_ORIGIN", "sequence": 10, "payload": { "timestampMs": 1009, "gpsGlobalOrigin": { "latDegE7": 473977420, "lonDegE7": 85455940, "altMm": 500000 } } },
+  { "recvTimestampMs": 1010, "sysId": 1, "compId": 1, "messageName": "MISSION_REQUEST_INT", "sequence": 11, "payload": { "timestampMs": 1010, "missionRequestInt": { "seq": 1, "targetSystem": 255, "targetComponent": 190 } } },
+  { "recvTimestampMs": 1011, "sysId": 1, "compId": 1, "messageName": "MISSION_ITEM_INT", "sequence": 12, "payload": { "timestampMs": 1011, "missionItemInt": { "seq": 1, "command": 16, "frameId": 6, "current": false, "autocontinue": true, "param1": 0, "param2": 0, "param3": 0, "param4": 0, "latDegE7": 473977420, "lonDegE7": 85455940, "altM": 100 } } },
+  { "recvTimestampMs": 1012, "sysId": 1, "compId": 1, "messageName": "VFR_HUD", "sequence": 13, "payload": { "timestampMs": 1012, "vfrHud": { "airSpeedMps": 18, "groundSpeedMps": 17, "climbMps": 1.2, "headingDeg": 180 } } },
+  { "recvTimestampMs": 1013, "sysId": 1, "compId": 1, "messageName": "COMMAND_ACK", "sequence": 14, "payload": { "timestampMs": 1013, "commandAck": { "command": 400, "result": 0 } } },
+  { "recvTimestampMs": 1014, "sysId": 1, "compId": 1, "messageName": "HOME_POSITION", "sequence": 15, "payload": { "timestampMs": 1014, "homePosition": { "latDegE7": 473977420, "lonDegE7": 85455940, "altMm": 500000 } } }
+]

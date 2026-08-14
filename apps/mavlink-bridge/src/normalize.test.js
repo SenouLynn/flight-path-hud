@@ -25,11 +25,12 @@ function buildMavlinkV1Frame(messageId, payload, { sequence = 7, sysId = 1, comp
  * MAVLink 2 framing, used here because only v2 performs the trailing-zero
  * payload trimming the truncation tests below depend on.
  */
-function buildMavlinkV2Frame(messageId, payload, { sequence = 7, sysId = 1, compId = 1 } = {}) {
-  const frame = Buffer.alloc(10 + payload.length + 2)
+function buildMavlinkV2Frame(messageId, payload, { sequence = 7, sysId = 1, compId = 1, signed = false } = {}) {
+  const signatureLength = signed ? 13 : 0
+  const frame = Buffer.alloc(10 + payload.length + 2 + signatureLength)
   frame[0] = 0xFD
   frame[1] = payload.length
-  frame[2] = 0 // incompat flags: unsigned
+  frame[2] = signed ? 1 : 0
   frame[3] = 0 // compat flags
   frame[4] = sequence
   frame[5] = sysId
@@ -42,6 +43,7 @@ function buildMavlinkV2Frame(messageId, payload, { sequence = 7, sysId = 1, comp
   const crcExtra = CRC_EXTRA[messageId]
   const crc = crcExtra === undefined ? 0 : computeFrameCrc(frame, 1, 10 + payload.length, crcExtra)
   frame.writeUInt16LE(crc, 10 + payload.length)
+  if (signed) frame.fill(0xA5, 12 + payload.length)
 
   return frame
 }
@@ -61,7 +63,14 @@ test('rejects MAVLink frames with a bad checksum', () => {
 
   const result = parseIncomingDatagram(buildMavlinkV1Frame(30, payload, { corruptCrc: true }))
   assert.equal(result.envelopes.length, 0)
-  assert.ok(result.decodeErrors >= 1)
+  assert.equal(result.decodeErrors, 1)
+})
+
+test('rejects a CRC-valid supported frame with non-finite normalized fields once', () => {
+  const payload = Buffer.alloc(28)
+  payload.writeFloatLE(Number.NaN, 4)
+  const result = parseIncomingDatagram(buildMavlinkV1Frame(30, payload), 1234)
+  assert.deepEqual(result, { envelopes: [], decodeErrors: 1 })
 })
 
 test('parses JSON envelope datagrams', () => {
@@ -75,6 +84,9 @@ test('parses JSON envelope datagrams', () => {
       timestampMs: 10,
       vfrHud: {
         headingDeg: 120,
+        airSpeedMps: 12.5,
+        groundSpeedMps: 11.5,
+        climbMps: -0.25,
       },
     },
   }))
@@ -85,19 +97,21 @@ test('parses JSON envelope datagrams', () => {
   assert.equal(result.envelopes[0].messageName, 'VFR_HUD')
 })
 
-test('wraps oversized JSON sequence numbers into uint8 range', () => {
+test('rejects oversized JSON sequence numbers instead of rewriting input', () => {
   const datagram = Buffer.from(JSON.stringify({
     recvTimestampMs: 10,
     sysId: 1,
     compId: 1,
     messageName: 'HEARTBEAT',
     sequence: 259,
-    payload: { timestampMs: 10 },
+    payload: { timestampMs: 10, heartbeat: {
+      customMode: 0, vehicleType: 0, autopilotType: 0, baseMode: 0,
+      armed: false, systemStatus: 0, mavlinkVersion: 3,
+    } },
   }))
 
-  // Consumers reject any sequence above 255, so a long-running sender must not overflow the field.
   const result = parseIncomingDatagram(datagram)
-  assert.equal(result.envelopes[0].sequence, 3)
+  assert.deepEqual(result, { envelopes: [], decodeErrors: 1 })
 })
 
 test('parses MAVLink v1 ATTITUDE frames', () => {
@@ -235,7 +249,7 @@ test('parses MISSION_ACK', () => {
 })
 
 test('parses COMMAND_ACK for command lifecycle correlation', () => {
-  const payload = Buffer.alloc(10)
+  const payload = Buffer.alloc(3)
   payload.writeUInt16LE(400, 0)
   payload.writeUInt8(3, 2)
   const result = parseIncomingDatagram(buildMavlinkV1Frame(77, payload, { sysId: 2, compId: 1 }))
@@ -244,7 +258,7 @@ test('parses COMMAND_ACK for command lifecycle correlation', () => {
 })
 
 test('parses HOME_POSITION', () => {
-  const payload = Buffer.alloc(12)
+  const payload = Buffer.alloc(52)
   payload.writeInt32LE(473977420, 0)
   payload.writeInt32LE(85455940, 4)
   payload.writeInt32LE(500000, 8)
@@ -317,6 +331,46 @@ test('decodes a MAVLink 2 MISSION_COUNT and HOME_POSITION with trimmed trailing 
 test('a zero-length mission payload is still rejected — MAVLink 2 never trims below one byte', () => {
   const result = parseIncomingDatagram(buildMavlinkV2Frame(73, Buffer.alloc(0)))
   assert.equal(result.envelopes.length, 0)
+  assert.equal(result.decodeErrors, 1)
+})
+
+test('enforces exact v1 minimum lengths and v2 one-through-maximum lengths', () => {
+  for (const payload of [Buffer.alloc(27), Buffer.alloc(29)]) {
+    const result = parseIncomingDatagram(buildMavlinkV1Frame(30, payload))
+    assert.equal(result.envelopes.length, 0)
+    assert.equal(result.decodeErrors, 1)
+  }
+  const oversizedV2 = parseIncomingDatagram(buildMavlinkV2Frame(30, Buffer.alloc(29)))
+  assert.equal(oversizedV2.envelopes.length, 0)
+  assert.equal(oversizedV2.decodeErrors, 1)
+
+  const commandWithExtensions = Buffer.alloc(10)
+  commandWithExtensions.writeUInt16LE(400, 0)
+  const acceptedV2 = parseIncomingDatagram(buildMavlinkV2Frame(77, commandWithExtensions))
+  assert.equal(acceptedV2.decodeErrors, 0)
+  assert.equal(acceptedV2.envelopes[0].payload.commandAck.command, 400)
+})
+
+test('rejects one complete signed-v2 candidate exactly once', () => {
+  const result = parseIncomingDatagram(buildMavlinkV2Frame(30, Buffer.alloc(28), { signed: true }))
+  assert.equal(result.envelopes.length, 0)
+  assert.equal(result.decodeErrors, 1)
+})
+
+test('incomplete candidates and noise-only datagrams count once', () => {
+  assert.deepEqual(parseIncomingDatagram(Buffer.from([0xFD, 28, 0])), { envelopes: [], decodeErrors: 1 })
+  assert.deepEqual(parseIncomingDatagram(Buffer.from('not a frame')), { envelopes: [], decodeErrors: 1 })
+})
+
+test('noise before a valid frame is skipped and unsupported complete frames are ignored', () => {
+  const attitude = Buffer.alloc(28)
+  const withNoise = parseIncomingDatagram(Buffer.concat([Buffer.from([1, 2, 3]), buildMavlinkV1Frame(30, attitude)]))
+  assert.equal(withNoise.decodeErrors, 0)
+  assert.equal(withNoise.envelopes.length, 1)
+
+  const unsupported = parseIncomingDatagram(buildMavlinkV1Frame(250, Buffer.alloc(2)))
+  assert.equal(unsupported.decodeErrors, 0)
+  assert.deepEqual(unsupported.envelopes, [])
 })
 
 test('encodeMissionCount round-trips through this file\'s own decoder', () => {

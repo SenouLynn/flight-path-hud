@@ -3,13 +3,17 @@ import test from 'node:test'
 import { createBridgeCore } from './bridgeCore.js'
 
 function jsonDatagram(sysId, messageName = 'HEARTBEAT') {
+  assert.equal(messageName, 'HEARTBEAT')
   return Buffer.from(JSON.stringify({
     recvTimestampMs: 1000,
     sysId,
     compId: 1,
     messageName,
     sequence: 4,
-    payload: { timestampMs: 1000 },
+    payload: { timestampMs: 1000, heartbeat: {
+      customMode: 0, vehicleType: 0, autopilotType: 0, baseMode: 0,
+      armed: false, systemStatus: 0, mavlinkVersion: 3,
+    } },
   }))
 }
 

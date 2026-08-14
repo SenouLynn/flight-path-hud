@@ -89,9 +89,20 @@ export function createMockFleet({ nodes, now = Date.now }) {
 
     const fixed = toGeodetic(node.origin, nodeState.position)
     const { headingDeg, rollRad, pitchRad, groundSpeedMps, climbMps, vNorthMps, vEastMps } = kinematics
+    const headingWireDeg = Math.round(headingDeg)
 
     return [
-      envelope(node, nodeState, nowMs, 'HEARTBEAT', {}),
+      envelope(node, nodeState, nowMs, 'HEARTBEAT', {
+        heartbeat: {
+          customMode: 0,
+          vehicleType: 0,
+          autopilotType: 0,
+          baseMode: 0,
+          armed: false,
+          systemStatus: 0,
+          mavlinkVersion: 3,
+        },
+      }),
 
       envelope(node, nodeState, nowMs, 'ATTITUDE', {
         attitude: {
@@ -102,13 +113,15 @@ export function createMockFleet({ nodes, now = Date.now }) {
           // indicator's wireframe opposite the map track; harmless while one
           // node flew a narrow heading band, actively misleading next to a node
           // that sweeps the full circle.
-          yawRad: wrapToPi((headingDeg * Math.PI) / 180),
+          yawRad: wrapToPi((headingWireDeg * Math.PI) / 180),
+          pitchSpeedRadPerSec: 0,
+          yawSpeedRadPerSec: 0,
         },
       }),
 
       envelope(node, nodeState, nowMs, 'VFR_HUD', {
         vfrHud: {
-          headingDeg,
+          headingDeg: headingWireDeg,
           airSpeedMps: groundSpeedMps,
           groundSpeedMps,
           climbMps,
@@ -121,18 +134,18 @@ export function createMockFleet({ nodes, now = Date.now }) {
           lonDegE7: fixed.lonDegE7,
           altMm: fixed.altMm,
           relativeAltMm: Math.round(nodeState.position.upM * 1000),
-          headingCdeg: headingDeg * 100,
-          vxCms: vNorthMps * 100,
-          vyCms: vEastMps * 100,
+          headingCdeg: headingWireDeg * 100,
+          vxCms: Math.round(vNorthMps * 100),
+          vyCms: Math.round(vEastMps * 100),
           // vz is positive-DOWN in MAVLink; climb is positive-up.
-          vzCms: -climbMps * 100,
+          vzCms: Math.round(-climbMps * 100),
         },
       }),
 
       envelope(node, nodeState, nowMs, 'GPS_RAW_INT', {
         gpsRawInt: {
-          cogCdeg: headingDeg * 100,
-          velCms: groundSpeedMps * 100,
+          cogCdeg: headingWireDeg * 100,
+          velCms: Math.round(groundSpeedMps * 100),
         },
       }),
     ]

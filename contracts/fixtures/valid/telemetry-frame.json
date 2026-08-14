@@ -1,15 +1,5 @@
 {
-  "recvTimestampMs": 1000,
-  "sysId": 1,
-  "compId": 1,
-  "messageName": "GLOBAL_POSITION_INT",
-  "sequence": 7,
-  "payload": {
-    "timestampMs": 999,
-    "globalPositionInt": {
-      "latDegE7": 473977420,
-      "lonDegE7": 85455940,
-      "headingCdeg": 18000
-    }
-  }
+  "recvTimestampMs": 1000, "sysId": 1, "compId": 1, "messageName": "GLOBAL_POSITION_INT", "sequence": 7,
+  "payload": { "timestampMs": 999, "globalPositionInt": { "latDegE7": 473977420, "lonDegE7": 85455940, "altMm": 500000, "relativeAltMm": 100000, "vxCms": 100, "vyCms": -20, "vzCms": 3, "headingCdeg": 18000 } },
+  "health": { "packetRateHz": 1, "decodeErrorCount": 0, "droppedPacketCount": 0, "messageRates": [{ "messageName": "GLOBAL_POSITION_INT", "rateHz": 1 }], "systems": [{ "sysId": 1, "compId": 1, "lastSeenTimestampMs": 1000 }] }
 }

@@ -1,0 +1,10 @@
+{
+  "provenance": "Apply this exact core health snapshot to each entry in valid/normalized-envelopes.json; the resulting fifteen objects are direct core-envelope fixtures.",
+  "health": {
+    "packetRateHz": 15,
+    "decodeErrorCount": 0,
+    "droppedPacketCount": 0,
+    "messageRates": [{ "messageName": "HEARTBEAT", "rateHz": 1 }],
+    "systems": [{ "sysId": 1, "compId": 1, "lastSeenTimestampMs": 1014 }]
+  }
+}

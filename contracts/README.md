@@ -23,8 +23,12 @@ covered by implementation tests rather than misleading JSON fixtures.
 
 ## Layout
 
-- `wire/`: strict producer schemas for the initial untagged telemetry family and
-  selected tagged state/lifecycle families.
+- `wire/`: strict schemas for three distinct bridge boundaries plus the tagged
+  state/lifecycle families. `normalized-envelope` is healthless ingress/core
+  input for all fifteen decoded families, `core-envelope` is the same complete
+  family set after required health decoration, and `telemetry-frame` is the
+  eight-family raw public subset. Home and mission messages are represented
+  publicly only by their tagged frames.
 - `fixtures/`: valid/invalid producer examples and tolerant-consumer cases.
 - `semantics/`: field metadata and shared known-answer vectors.
 - `mavlink/`: exact deterministic payload bytes plus decoded expectations.
@@ -57,8 +61,9 @@ files directly. Expected values must not be copied into source code.
 
 The initial vertical slice is complete:
 
-- strict producer schemas cover legacy telemetry plus selected tagged flight and
-  command-lifecycle frames;
+- strict schemas cover all fifteen normalized and health-decorated core
+  families, the exact eight raw public telemetry families, and selected tagged
+  flight and command-lifecycle frames;
 - tolerant consumer behavior is recorded separately where it intentionally
   differs from the producer contract;
 - heading known-answer cases are consumed by TypeScript and a small independent
