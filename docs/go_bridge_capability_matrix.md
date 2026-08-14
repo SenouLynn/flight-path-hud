@@ -33,13 +33,13 @@ tests do not add rows. Evidence provenance is recorded beside each artifact.
 | CORE-ROSTER | sorted roster and strict TTL boundary | fixed-clock schedule | unstarted | unstarted | none expected |
 | CORE-RATES | rate sorting by rate then name | fixed-clock schedule | unstarted | unstarted | none expected |
 | CORE-CONFLICTS | duplicate exact-system source conflict | fixed-clock schedule | unstarted | unstarted | none expected |
-| ROUTE-EXACT | exact `sysId:compId` route lookup | language-neutral route cases | unstarted | unstarted | none expected |
-| ROUTE-EXPIRY | explicit-time route expiration | language-neutral route cases | unstarted | unstarted | none expected |
-| REC-RAW | `base64` JSONL entry dispatches raw bytes | repository recording fixtures | unstarted | unstarted | none expected |
-| REC-EVENT | `event` JSONL entry dispatches lifecycle | parameter-write recording fixture | unstarted | unstarted | none expected |
-| REPLAY-FIXED-CLOCK | unpaced raw replay uses every `atMs` explicitly | mixed MAVLink recording | unstarted | unstarted | process replay intentionally excluded |
-| REPLAY-NO-SEND | replay API has no outbound-send method | compile/API and behavior tests | unstarted | unstarted | none expected |
-| REPLAY-NO-TIMERS | offline replay creates no goroutines/timers | implementation inspection plus deterministic test | n/a | unstarted | Go-only structural gate |
+| ROUTE-EXACT | exact `sysId:compId` route lookup | language-neutral route cases | complete: `systemRoutes.test.js` | complete: `routes_test.go` | none |
+| ROUTE-EXPIRY | explicit-time route expiration | language-neutral route cases | complete: `systemRoutes.test.js` | complete: `routes_test.go` | none |
+| REC-RAW | `base64` JSONL entry dispatches raw bytes | repository recording fixtures | complete: `mixedSitlFixture.test.js` | complete: `reader_test.go` | none |
+| REC-EVENT | `event` JSONL entry dispatches lifecycle | parameter-write recording fixture | complete: parameter fixture tests | complete: `reader_test.go` | none |
+| REPLAY-FIXED-CLOCK | unpaced raw replay uses every `atMs` explicitly | mixed MAVLink recording | complete: `goConformance.test.js` explicit schedule | partial: reader dispatches exact `atMs`; core blocked | OQ-001/OQ-002 prevent core equality claim |
+| REPLAY-NO-SEND | replay API has no outbound-send method | compile/API and behavior tests | complete: replay/router tests | complete: `reader_test.go` reflection/API test | none |
+| REPLAY-NO-TIMERS | offline replay creates no goroutines/timers | implementation inspection plus deterministic test | n/a | complete: synchronous `Replay.Dispatch` | Go-only structural gate |
 | PARAM-VEC-NAME | PARAM_REQUEST_READ by name payload | `contracts/mavlink/parameter-command-vectors.json`, common dialect | unstarted | unstarted | none expected |
 | PARAM-VEC-INDEX | PARAM_REQUEST_READ by index payload | same | unstarted | unstarted | none expected |
 | PARAM-VEC-LIST | PARAM_REQUEST_LIST payload | same | unstarted | unstarted | none expected |
@@ -65,7 +65,10 @@ tests do not add rows. Evidence provenance is recorded beside each artifact.
 - Phase B: audited `telemetry-frame.schema.json`, `envelope.schema.json`, all 15
   Node decoders, core health behavior, and framing tests. OQ-001 and OQ-002 block
   the output and malformed-accounting gates; see `go_bridge_open_questions.md`.
-- Phase C: pending; fixed-core equivalence inherits OQ-001, and malformed-counter
-  equivalence inherits OQ-002.
+- Phase C: audited Node `systemRoutes`, recording reader, replay adapter/tests,
+  both repository fixtures, and the fixed-clock harness. Exact routes, JSONL
+  ownership/dispatch, and finite transmit-free replay are complete. Fixed-core
+  equality remains partial because OQ-001 blocks the output boundary and OQ-002
+  blocks malformed counter semantics. No additional open question found.
 - Phase D: pending; pure lifecycle work may proceed, but end-to-end PARAM_VALUE
   publication inherits OQ-001.

@@ -1,0 +1,9 @@
+{
+  "provenance": "Hand-authored from ADR-0030 exact-target and strict-expiration semantics; sources are inert labels, not network endpoints.",
+  "cases": [
+    { "caseId": "exact-target", "sysId": 1, "compId": 1, "source": "copter", "atMs": 10, "lookupSysId": 1, "lookupCompId": 1, "want": "copter" },
+    { "caseId": "no-fallback", "sysId": 2, "compId": 1, "source": "plane", "atMs": 20, "lookupSysId": 9, "lookupCompId": 1, "want": null },
+    { "caseId": "equal-threshold-live", "sysId": 3, "compId": 1, "source": "equal", "atMs": 100, "expireAtMs": 200, "maxAgeMs": 100, "want": "equal" },
+    { "caseId": "past-threshold-expired", "sysId": 4, "compId": 1, "source": "stale", "atMs": 100, "expireAtMs": 201, "maxAgeMs": 100, "want": null }
+  ]
+}
