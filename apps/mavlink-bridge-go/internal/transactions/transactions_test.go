@@ -81,6 +81,21 @@ func TestReadReplayInvalidAndRecordedAreTransmitFree(t *testing.T) {
 	}
 }
 
+func TestReadMatchesOverlappingSelectorsInRequestOrder(t *testing.T) {
+	port := &fakePort{available: true, sendOK: true}
+	fold := NewDefaultReadFold()
+	name := "MATCH"
+	index := 7
+	fold.Start(ParameterReadRequest{RequestID: "by-name", Target: Target{SysID: 2, CompID: 1}, Name: &name}, 0, true, port)
+	fold.Start(ParameterReadRequest{RequestID: "by-index", Target: Target{SysID: 2, CompID: 1}, Index: &index}, 0, true, port)
+	value := ParamValue{ParamID: name, ParamIndex: index, ParamCount: 10, ParamType: 9, Value: 1}
+	first := fold.Ingest(Target{SysID: 2, CompID: 1}, value, 1)
+	second := fold.Ingest(Target{SysID: 2, CompID: 1}, value, 2)
+	if first == nil || second == nil || *first.RequestID != "by-name" || *second.RequestID != "by-index" {
+		t.Fatalf("completion order first=%#v second=%#v", first, second)
+	}
+}
+
 func TestExistingRecordedParameterReadsFoldPassively(t *testing.T) {
 	path, err := contractpath.Find("apps/mavlink-bridge/test-fixtures/mixed-sitl-parameter-write-v2.jsonl")
 	if err != nil {
@@ -186,6 +201,53 @@ func TestListIdleRouteLossReplayAndInvalid(t *testing.T) {
 	}
 	if got := NewDefaultListFold().Start(ParameterListRequest{RequestID: "x", Target: Target{SysID: 0, CompID: 1}}, 0, true, port); got.Frame.Status != "failed" {
 		t.Fatalf("invalid = %#v", got)
+	}
+}
+
+func TestListFailsIfExpectedCountChanges(t *testing.T) {
+	path, err := contractpath.Find("contracts/semantics/parameter-list-trace.json")
+	if err != nil {
+		t.Fatal(err)
+	}
+	data, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var trace struct {
+		Independent []struct {
+			CaseID       string `json:"caseId"`
+			FirstCount   int    `json:"firstCount"`
+			ChangedCount int    `json:"changedCount"`
+			WantStatus   string `json:"wantStatus"`
+			WantReason   string `json:"wantReason"`
+		} `json:"independentCases"`
+	}
+	if err := json.Unmarshal(data, &trace); err != nil {
+		t.Fatal(err)
+	}
+	var fixture struct {
+		FirstCount, ChangedCount int
+		WantStatus, WantReason   string
+	}
+	for _, candidate := range trace.Independent {
+		if candidate.CaseID == "PARAM-COUNT-CHANGE" {
+			fixture.FirstCount, fixture.ChangedCount = candidate.FirstCount, candidate.ChangedCount
+			fixture.WantStatus, fixture.WantReason = candidate.WantStatus, candidate.WantReason
+		}
+	}
+	if fixture.WantStatus == "" {
+		t.Fatal("PARAM-COUNT-CHANGE trace case missing")
+	}
+	port := &fakePort{available: true, sendOK: true}
+	fold := NewDefaultListFold()
+	fold.Start(ParameterListRequest{RequestID: "count-change", Target: Target{SysID: 2, CompID: 1}}, 0, true, port)
+	fold.Ingest(Target{SysID: 2, CompID: 1}, parameter(0, fixture.FirstCount, 0), 1)
+	changed := fold.Ingest(Target{SysID: 2, CompID: 1}, parameter(1, fixture.ChangedCount, 1), 2)
+	if changed == nil || changed.Frame.Status != fixture.WantStatus || changed.Frame.Reason == nil || *changed.Frame.Reason != fixture.WantReason || !changed.Record {
+		t.Fatalf("count change = %#v", changed)
+	}
+	if next := fold.Ingest(Target{SysID: 2, CompID: 1}, parameter(2, 3, 2), 3); next != nil {
+		t.Fatalf("failed list remained pending: %#v", next)
 	}
 }
 

@@ -46,7 +46,12 @@ export function createParameterListRouter({
       if (requestId === undefined) return null
       const item = pending.get(requestId)
       const value = envelope.payload?.paramValue
-      if (value === undefined || value.paramCount < 1 || value.paramIndex >= value.paramCount) return null
+      if (value === undefined || value.paramCount < 1 || value.paramIndex < 0 || value.paramIndex >= value.paramCount) return null
+      if (item.frame.expectedCount !== null && value.paramCount !== item.frame.expectedCount) {
+        pending.delete(requestId); targets.delete(item.key)
+        return emit({ ...item.frame, status: 'failed', reason: 'PARAM_VALUE paramCount changed during list',
+          latest: null, updatedAtMs: now() })
+      }
       item.values.set(value.paramIndex, value)
       const expectedCount = value.paramCount
       const complete = item.values.size === expectedCount && [...item.values.keys()].every((index) => index < expectedCount)

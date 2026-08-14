@@ -2,18 +2,25 @@ import assert from 'node:assert/strict'
 import test from 'node:test'
 import { createBridgeCore } from './bridgeCore.js'
 
-function jsonDatagram(sysId, messageName = 'HEARTBEAT') {
+function jsonDatagram(sysId, messageName = 'HEARTBEAT', sequence = 4) {
   assert.equal(messageName, 'HEARTBEAT')
   return Buffer.from(JSON.stringify({
     recvTimestampMs: 1000,
     sysId,
     compId: 1,
     messageName,
-    sequence: 4,
+    sequence,
     payload: { timestampMs: 1000, heartbeat: {
       customMode: 0, vehicleType: 0, autopilotType: 0, baseMode: 0,
       armed: false, systemStatus: 0, mavlinkVersion: 3,
     } },
+  }))
+}
+
+function normalizedDatagram(messageName, section, values, sequence = 4) {
+  return Buffer.from(JSON.stringify({
+    recvTimestampMs: 1000, sysId: 1, compId: 1, messageName, sequence,
+    payload: { timestampMs: 1000, [section]: values },
   }))
 }
 
@@ -82,4 +89,24 @@ test('evicts a system that stops transmitting', () => {
 
   core.tick(9000)
   assert.equal(core.systemCount(), 0, 'evicted once the TTL lapses')
+})
+
+test('wraps fallback sequence per core and sorts rates by count then name', () => {
+  const core = createBridgeCore({ now: () => 1000 })
+  let output
+  for (let index = 0; index < 257; index += 1) output = core.ingestDatagram(jsonDatagram(1, 'HEARTBEAT', 0), 1000)
+  assert.equal(output[0].sequence, 1)
+  core.ingestDatagram(normalizedDatagram('ATTITUDE', 'attitude', {
+    rollRad: 0, pitchRad: 0, yawRad: 0, pitchSpeedRadPerSec: 0, yawSpeedRadPerSec: 0,
+  }), 1000)
+  core.ingestDatagram(normalizedDatagram('VFR_HUD', 'vfrHud', {
+    airSpeedMps: 0, groundSpeedMps: 0, climbMps: 0, headingDeg: 0,
+  }), 1000)
+  core.tick(2000)
+  const health = core.ingestDatagram(jsonDatagram(1), 2001)[0].health
+  assert.deepEqual(health.messageRates, [
+    { messageName: 'HEARTBEAT', rateHz: 257 },
+    { messageName: 'ATTITUDE', rateHz: 1 },
+    { messageName: 'VFR_HUD', rateHz: 1 },
+  ])
 })

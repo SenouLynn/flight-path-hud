@@ -1,5 +1,14 @@
 # Changelog
 
+- Added the offline, read-only Go MAVLink bridge slice through parameter
+  read/list folds, with strict ingress/core/public envelope contracts,
+  dialect-derived framing and normalization vectors, deterministic Node/Go core
+  comparison, exact-target routes, passive JSONL replay, native/Linux cross-build
+  gates, and no live transport or vehicle-write surface. Hardened both decoders
+  for malformed lengths, CRC recovery, unsupported MAVLink-v2 incompatibility
+  flags, non-finite values, and invalid parameter IDs; parameter lists now fail
+  closed if the advertised count changes mid-transaction.
+
 - Added a worktree-ready Go bridge port handoff with explicit ownership,
   protocol-v0 compatibility rules, phased conformance/read/live/SITL/Pi gates,
   command-family sequencing, cutover criteria, and stop conditions. The first

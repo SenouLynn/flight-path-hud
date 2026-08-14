@@ -105,6 +105,16 @@ test('Node list router consumes route-loss, replay, and invalid-target trace cas
   assert.equal(routeLoss.reason, cases['PARAM-ROUTE-LOSS'].wantReason)
   assert.equal(sent.length - 1, cases['PARAM-ROUTE-LOSS'].wantAdditionalSends)
 
+  const countCase = cases['PARAM-COUNT-CHANGE']
+  const countRouter = createParameterListRouter({
+    now: () => nowMs, canSend: () => true, send: () => true,
+  })
+  countRouter.handleClientMessage({ type: 'requestParameterList', requestId: 'count-change', sysId: 2, compId: 1 })
+  countRouter.ingestEnvelope(valueEnvelope({ sysId: 2, compId: 1, index: 0, count: countCase.firstCount }))
+  const countChanged = countRouter.ingestEnvelope(valueEnvelope({ sysId: 2, compId: 1, index: 1, count: countCase.changedCount }))
+  assert.equal(countChanged.status, countCase.wantStatus)
+  assert.equal(countChanged.reason, countCase.wantReason)
+
   const replaySent = []
   const replay = createParameterListRouter({ isLive: () => false, canSend: () => true, send: (...args) => replaySent.push(args) })
   assert.equal(replay.handleClientMessage({ type: 'requestParameterList', requestId: 'replay', sysId: 1, compId: 1 }).status, cases['PARAM-REPLAY'].wantStatus)

@@ -23,6 +23,7 @@
   },
   "independentCases": [
     { "caseId": "PARAM-ROUTE-LOSS", "kind": "routeLossAtDueTick", "wantReason": "parameter list idle timeout", "wantAdditionalSends": 0 },
+    { "caseId": "PARAM-COUNT-CHANGE", "kind": "countChange", "firstCount": 3, "changedCount": 2, "wantStatus": "failed", "wantReason": "PARAM_VALUE paramCount changed during list" },
     { "caseId": "PARAM-REPLAY", "kind": "startReplay", "wantStatus": "failed", "wantSends": 0 },
     { "caseId": "PARAM-INVALID-TARGET", "kind": "start", "sysId": 0, "compId": 1, "wantStatus": "failed", "wantSends": 0 }
   ]

@@ -5,6 +5,7 @@ import (
 	"encoding/binary"
 	"encoding/hex"
 	"encoding/json"
+	"math"
 	"os"
 	"reflect"
 	"testing"
@@ -21,6 +22,8 @@ type malformedVector struct {
 	PayloadLength        int    `json:"payloadLength"`
 	CorruptCRC           bool   `json:"corruptCrc"`
 	Signed               bool   `json:"signed"`
+	IncompatFlags        byte   `json:"incompatFlags"`
+	PayloadHex           string `json:"payloadHex"`
 	ExpectedEnvelopes    int    `json:"expectedEnvelopes"`
 	ExpectedDecodeErrors int    `json:"expectedDecodeErrors"`
 }
@@ -98,8 +101,10 @@ func readNormalizationVectors(t *testing.T) normalizationVectors {
 	}
 	return result
 }
-func buildFixtureFrame(version int, id uint32, length int, extra byte, corrupt, signed bool) []byte {
-	payload := make([]byte, length)
+func buildFixtureFrame(version int, id uint32, length int, extra byte, corrupt, signed bool, incompatFlags byte, payload []byte) []byte {
+	if payload == nil {
+		payload = make([]byte, length)
+	}
 	if version == 1 {
 		frame := BuildV1(byte(id), payload, 7, 1, 1, extra)
 		if corrupt {
@@ -107,16 +112,17 @@ func buildFixtureFrame(version int, id uint32, length int, extra byte, corrupt, 
 		}
 		return frame
 	}
+	if signed && incompatFlags == 0 {
+		incompatFlags = 1
+	}
 	signature := 0
-	if signed {
+	if incompatFlags&1 != 0 {
 		signature = 13
 	}
 	frame := make([]byte, 10+length+2+signature)
 	frame[0] = 0xfd
 	frame[1] = byte(length)
-	if signed {
-		frame[2] = 1
-	}
+	frame[2] = incompatFlags
 	frame[4] = 7
 	frame[5] = 1
 	frame[6] = 1
@@ -128,7 +134,7 @@ func buildFixtureFrame(version int, id uint32, length int, extra byte, corrupt, 
 		crc ^= 0xffff
 	}
 	binary.LittleEndian.PutUint16(frame[10+length:], crc)
-	if signed {
+	if signature > 0 {
 		for i := 12 + length; i < len(frame); i++ {
 			frame[i] = 0xa5
 		}
@@ -147,7 +153,7 @@ func TestDialectBoundariesAllFamilies(t *testing.T) {
 			accepted        bool
 		}{{"v1-min", 1, m.MinLength, true}, {"v1-short", 1, m.MinLength - 1, false}, {"v1-long", 1, m.MinLength + 1, false}, {"v2-one", 2, 1, true}, {"v2-max", 2, m.MaxLength, true}, {"v2-empty", 2, 0, false}, {"v2-oversized", 2, m.MaxLength + 1, false}}
 		for _, c := range cases {
-			envelopes, errors := ParseDatagram(buildFixtureFrame(c.version, m.MessageID, c.length, m.CRCExtra, false, false), 1234)
+			envelopes, errors := ParseDatagram(buildFixtureFrame(c.version, m.MessageID, c.length, m.CRCExtra, false, false, 0, nil), 1234)
 			want := 0
 			if c.accepted {
 				want = 1
@@ -173,9 +179,19 @@ func TestMalformedFixtureAccounting(t *testing.T) {
 			}
 			raw = decoded
 		} else {
-			raw = buildFixtureFrame(fixture.Version, fixture.MessageID, fixture.PayloadLength, byID[fixture.MessageID], fixture.CorruptCRC, fixture.Signed)
+			var payload []byte
+			if fixture.PayloadHex != "" {
+				var err error
+				payload, err = hex.DecodeString(fixture.PayloadHex)
+				if err != nil {
+					t.Fatal(err)
+				}
+			}
+			raw = buildFixtureFrame(fixture.Version, fixture.MessageID, fixture.PayloadLength, byID[fixture.MessageID], fixture.CorruptCRC, fixture.Signed, fixture.IncompatFlags, payload)
 			if fixture.Kind == "noise-before-supported" {
 				raw = append([]byte{1, 2, 3}, raw...)
+			} else if fixture.Kind == "incomplete-prefix-before-supported" {
+				raw = append([]byte{0xfe, 0xff}, raw...)
 			}
 		}
 		envelopes, errors := ParseDatagram(raw, 1234)
@@ -237,4 +253,30 @@ func TestRejectsNonFiniteNormalizedBinaryValueOnce(t *testing.T) {
 	if len(envelopes) != 0 || errors != 1 {
 		t.Fatalf("envelopes=%d errors=%d", len(envelopes), errors)
 	}
+}
+
+func TestCanonicalizesNegativeZeroLikeNodeJSON(t *testing.T) {
+	payload := make([]byte, 28)
+	binary.LittleEndian.PutUint32(payload[4:], 0x80000000)
+	envelopes, errors := ParseDatagram(BuildV1(30, payload, 7, 1, 1, 39), 1234)
+	if errors != 0 || len(envelopes) != 1 {
+		t.Fatalf("envelopes=%d errors=%d", len(envelopes), errors)
+	}
+	roll := envelopes[0].Payload["attitude"].(map[string]any)["rollRad"].(float64)
+	if math.Signbit(roll) {
+		t.Fatal("negative zero would diverge from Node JSON output")
+	}
+}
+
+func FuzzParseDatagramNeverPanics(f *testing.F) {
+	for _, seed := range [][]byte{
+		{}, {0xfe}, {0xfd}, {0xfe, 0xff}, {0xfd, 0xff, 0xff, 0xff},
+		[]byte(`{"messageName":"HEARTBEAT"}`),
+		BuildV1(0, make([]byte, 9), 7, 1, 1, 50),
+	} {
+		f.Add(seed)
+	}
+	f.Fuzz(func(t *testing.T, raw []byte) {
+		ParseDatagram(raw, 1234)
+	})
 }

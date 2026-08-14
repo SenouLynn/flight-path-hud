@@ -3,7 +3,8 @@
   "payloadLengthPolicy": {
     "mavlink1": "exact-minimum",
     "unsignedMavlink2": "one-through-maximum",
-    "signedMavlink2": "reject-until-signature-policy-exists"
+    "signedMavlink2": "reject-until-signature-policy-exists",
+    "unknownIncompatibilityFlags": "reject"
   },
   "messages": [
     { "messageId": 0, "messageName": "HEARTBEAT", "crcExtra": 50, "minLength": 9, "maxLength": 9, "extensionFields": [] },
@@ -128,8 +129,11 @@
     { "caseId": "noise-only", "kind": "literal", "hex": "6e6f742061206672616d65", "expectedEnvelopes": 0, "expectedDecodeErrors": 1 },
     { "caseId": "incomplete-v1", "kind": "literal", "hex": "fe09", "expectedEnvelopes": 0, "expectedDecodeErrors": 1 },
     { "caseId": "incomplete-v2", "kind": "literal", "hex": "fd090000", "expectedEnvelopes": 0, "expectedDecodeErrors": 1 },
+    { "caseId": "corrupt-length-before-valid", "kind": "incomplete-prefix-before-supported", "version": 1, "messageId": 0, "payloadLength": 9, "expectedEnvelopes": 1, "expectedDecodeErrors": 1 },
     { "caseId": "bad-supported-crc", "kind": "supported", "version": 1, "messageId": 0, "payloadLength": 9, "corruptCrc": true, "expectedEnvelopes": 0, "expectedDecodeErrors": 1 },
     { "caseId": "signed-v2", "kind": "supported", "version": 2, "messageId": 0, "payloadLength": 9, "signed": true, "expectedEnvelopes": 0, "expectedDecodeErrors": 1 },
+    { "caseId": "unsupported-incompat-v2", "kind": "supported", "version": 2, "messageId": 0, "payloadLength": 9, "incompatFlags": 2, "expectedEnvelopes": 0, "expectedDecodeErrors": 1 },
+    { "caseId": "invalid-param-id-byte", "kind": "supported", "version": 1, "messageId": 22, "payloadLength": 25, "payloadHex": "00000000010000004180000000000000000000000000000009", "expectedEnvelopes": 0, "expectedDecodeErrors": 1 },
     { "caseId": "complete-unsupported", "kind": "unsupported", "version": 1, "messageId": 250, "payloadLength": 2, "expectedEnvelopes": 0, "expectedDecodeErrors": 0 },
     { "caseId": "noise-before-valid", "kind": "noise-before-supported", "version": 1, "messageId": 0, "payloadLength": 9, "expectedEnvelopes": 1, "expectedDecodeErrors": 0 },
     { "caseId": "crc-valid-nonfinite-attitude", "kind": "literal", "hex": "fe1c0701011e000000000000c07f000000000000000000000000000000000000000071d3", "expectedEnvelopes": 0, "expectedDecodeErrors": 1 }

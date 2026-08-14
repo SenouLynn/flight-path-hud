@@ -13,9 +13,10 @@ const vectors = JSON.parse(fs.readFileSync(
 const definitions = new Map(vectors.messages.map((definition) => [definition.messageId, definition]))
 
 function buildFrame(version, messageId, payloadLength, {
-  corruptCrc = false, signed = false, payload = Buffer.alloc(payloadLength),
+  corruptCrc = false, signed = false, incompatFlags = signed ? 1 : 0, payload, payloadHex,
 } = {}) {
-  assert.equal(payload.length, payloadLength)
+  const wirePayload = payload ?? (payloadHex === undefined ? Buffer.alloc(payloadLength) : Buffer.from(payloadHex, 'hex'))
+  assert.equal(wirePayload.length, payloadLength)
   const definition = definitions.get(messageId)
 
   if (version === 1) {
@@ -26,27 +27,27 @@ function buildFrame(version, messageId, payloadLength, {
     frame[3] = 1
     frame[4] = 1
     frame[5] = messageId
-    payload.copy(frame, 6)
+    wirePayload.copy(frame, 6)
     const crc = definition === undefined ? 0 : computeFrameCrc(frame, 1, 6 + payloadLength, definition.crcExtra)
     frame.writeUInt16LE(corruptCrc ? crc ^ 0xFFFF : crc, 6 + payloadLength)
     return frame
   }
 
-  const signatureLength = signed ? 13 : 0
+  const signatureLength = (incompatFlags & 0x01) === 0x01 ? 13 : 0
   const frame = Buffer.alloc(10 + payloadLength + 2 + signatureLength)
   frame[0] = 0xFD
   frame[1] = payloadLength
-  frame[2] = signed ? 1 : 0
+  frame[2] = incompatFlags
   frame[4] = 7
   frame[5] = 1
   frame[6] = 1
   frame[7] = messageId & 0xFF
   frame[8] = (messageId >> 8) & 0xFF
   frame[9] = (messageId >> 16) & 0xFF
-  payload.copy(frame, 10)
+  wirePayload.copy(frame, 10)
   const crc = definition === undefined ? 0 : computeFrameCrc(frame, 1, 10 + payloadLength, definition.crcExtra)
   frame.writeUInt16LE(corruptCrc ? crc ^ 0xFFFF : crc, 10 + payloadLength)
-  if (signed) frame.fill(0xA5, 12 + payloadLength)
+  if (signatureLength > 0) frame.fill(0xA5, 12 + payloadLength)
   return frame
 }
 
@@ -105,9 +106,9 @@ test('dialect-derived malformed framing cases have deterministic accounting', ()
       datagram = Buffer.from(fixture.hex, 'hex')
     } else {
       const frame = buildFrame(fixture.version, fixture.messageId, fixture.payloadLength, fixture)
-      datagram = fixture.kind === 'noise-before-supported'
-        ? Buffer.concat([Buffer.from([1, 2, 3]), frame])
-        : frame
+      if (fixture.kind === 'noise-before-supported') datagram = Buffer.concat([Buffer.from([1, 2, 3]), frame])
+      else if (fixture.kind === 'incomplete-prefix-before-supported') datagram = Buffer.concat([Buffer.from([0xFE, 0xFF]), frame])
+      else datagram = frame
     }
 
     const result = parseIncomingDatagram(datagram, 1234)

@@ -24,6 +24,7 @@ tests do not add rows. Evidence provenance is recorded beside each artifact.
 | FRAME-V1 | exact-minimum MAVLink v1 with CRC | common-dialect metadata/boundary fixture | complete | complete: `TestDialectBoundariesAllFamilies` | none |
 | FRAME-V2 | unsigned v2, CRC, legal zero truncation | common-dialect metadata + raw captures | complete | complete | none |
 | FRAME-SIGNED-V2 | signed v2 rejected once | dialect-derived malformed fixture | complete | complete | support intentionally deferred |
+| FRAME-INCOMPAT-V2 | unknown v2 incompatibility flags rejected once | dialect-derived malformed fixture | complete | complete | no incompatibility features supported in this slice |
 | FRAME-BAD-CRC | bad CRC rejected once | dialect-derived malformed fixture | complete | complete | none |
 | FRAME-TRUNCATED | incomplete/invalid lengths reject once, no panic | all-family boundary fixture | complete | complete | none |
 | FRAME-UNSUPPORTED | complete unsupported ID ignored | language-neutral malformed fixture | complete | complete | CRC unavailable by definition |
@@ -49,6 +50,7 @@ tests do not add rows. Evidence provenance is recorded beside each artifact.
 | PARAM-LIST-START | list start lifecycle | `contracts/semantics/parameter-list-trace.json`, independently reviewed policy trace | complete: `parameterConformance.test.js` | complete: `transactions_test.go` | none |
 | PARAM-LIST-OUT-OF-ORDER | out-of-order values | same | complete: same test | complete: same test | none |
 | PARAM-LIST-DUPLICATE | duplicate index replacement/no count advance | same | complete: same test | complete: same test | none |
+| PARAM-LIST-COUNT-CHANGE | inconsistent `paramCount` fails rather than falsely completing | same | complete: same test | complete: same test | none |
 | PARAM-LIST-PEER | peer-target value ignored | same | complete: same test | complete: same test | none |
 | PARAM-LIST-COMPLETE | deterministic index-order completion | same | complete: same test | complete: same test | none |
 | PARAM-LIST-IDLE | idle retry then failure | same | complete: same test | complete: same test | none |

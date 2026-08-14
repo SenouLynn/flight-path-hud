@@ -79,9 +79,17 @@ func parseBinary(raw []byte, nowMs float64) ([]Envelope, int) {
 		}
 		if offset+frameLength > len(raw) {
 			errors++
-			break
+			next := nextFramePrefix(raw, offset+1)
+			if next < 0 {
+				break
+			}
+			offset = next
+			continue
 		}
-		if magic == 0xfd && raw[offset+2]&1 != 0 {
+		// No v2 incompatibility feature is supported in this slice. MAVLink
+		// requires receivers to drop frames with an unknown incompatibility bit;
+		// signing (bit 0) is likewise rejected until verification is implemented.
+		if magic == 0xfd && raw[offset+2] != 0 {
 			errors++
 			offset += frameLength
 			continue
@@ -102,7 +110,11 @@ func parseBinary(raw []byte, nowMs float64) ([]Envelope, int) {
 		actual := ComputeCRC(raw[offset+1:crcOffset], definition.crcExtra)
 		if expected != actual {
 			errors++
-			offset += frameLength
+			next := nextFramePrefix(raw, offset+1)
+			if next < 0 {
+				break
+			}
+			offset = next
 			continue
 		}
 		payload := append([]byte(nil), raw[payloadOffset:crcOffset]...)
@@ -110,7 +122,7 @@ func parseBinary(raw []byte, nowMs float64) ([]Envelope, int) {
 			payload = append(payload, make([]byte, definition.max-len(payload))...)
 		}
 		decoded := definition.decode(payload, nowMs)
-		if !allFinite(decoded) {
+		if decoded == nil || !allFinite(decoded) {
 			errors++
 			offset += frameLength
 			continue
@@ -122,6 +134,15 @@ func parseBinary(raw []byte, nowMs float64) ([]Envelope, int) {
 		errors++
 	}
 	return result, errors
+}
+
+func nextFramePrefix(raw []byte, from int) int {
+	for index := from; index < len(raw); index++ {
+		if raw[index] == 0xfe || raw[index] == 0xfd {
+			return index
+		}
+	}
+	return -1
 }
 
 func allFinite(value any) bool {
@@ -305,7 +326,13 @@ func validJSONPayload(name string, payload map[string]any) bool {
 }
 
 func f32(p []byte, o int) float64 {
-	return float64(math.Float32frombits(binary.LittleEndian.Uint32(p[o:])))
+	value := float64(math.Float32frombits(binary.LittleEndian.Uint32(p[o:])))
+	// JSON.stringify canonicalizes JavaScript -0 to 0. Normalize here so a
+	// future Go JSON adapter emits the same protocol-v0 number spelling.
+	if value == 0 {
+		return 0
+	}
+	return value
 }
 func i32(p []byte, o int) int64 { return int64(int32(binary.LittleEndian.Uint32(p[o:]))) }
 func i16(p []byte, o int) int64 { return int64(int16(binary.LittleEndian.Uint16(p[o:]))) }
@@ -321,6 +348,11 @@ func decodeParamValue(p []byte, t float64) map[string]any {
 	end := bytes.IndexByte(p[8:24], 0)
 	if end < 0 {
 		end = 16
+	}
+	for _, value := range p[8 : 8+end] {
+		if value == 0 || value > 0x7f {
+			return nil
+		}
 	}
 	return sample(t, "paramValue", map[string]any{"value": f32(p, 0), "paramCount": u16(p, 4), "paramIndex": u16(p, 6), "paramId": string(p[8 : 8+end]), "paramType": int64(p[24])})
 }

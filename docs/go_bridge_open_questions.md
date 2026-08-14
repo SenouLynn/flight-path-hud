@@ -20,8 +20,9 @@
 - **Decision:** supported MAVLink v1 uses the exact dialect minimum length;
   unsigned v2 accepts one through the dialect maximum and zero-expands legal
   trailing truncation. Bad CRC, incomplete candidates, invalid supported
-  lengths, and signed v2 each count exactly one decode/drop. Complete unsupported
-  IDs are ignored because their CRC extra is unavailable.
+  lengths, signed v2, and unknown v2 incompatibility flags each count exactly
+  one decode/drop. Complete unsupported IDs are ignored because their CRC extra
+  is unavailable.
 - **Observable result:** Node was hardened first, then Go was matched. Noise can
   resynchronize to a later valid prefix; noise-only input counts once.
 - **Evidence:** `normalization-frame-vectors.json`, consumed directly by both
@@ -51,8 +52,9 @@
   folding. **Unresolved questions: none found.**
 - **Phase D:** audited parameter vectors, read/list semantic traces, lifecycle
   schemas, exact-target PARAM_VALUE correlation, retries, route loss, passive
-  events, and the absence of a process-lifetime result cache. **Unresolved
-  questions: none found.**
+  events, deterministic overlapping-selector matching, list-count consistency,
+  and the absence of a process-lifetime result cache. **Unresolved questions:
+  none found.**
 
 ## Intentionally deferred decisions (not blocking Phases A–D)
 

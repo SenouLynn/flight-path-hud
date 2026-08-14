@@ -100,6 +100,14 @@ func (f *ListFold) Ingest(target Target, value ParamValue, atMs float64) *ListOu
 	if value.ParamCount < 1 || value.ParamIndex < 0 || value.ParamIndex >= value.ParamCount {
 		return nil
 	}
+	if pending.frame.ExpectedCount != nil && value.ParamCount != *pending.frame.ExpectedCount {
+		delete(f.pending, requestID)
+		delete(f.targets, pending.key)
+		f.order = without(f.order, requestID)
+		pending.frame = listFailed(pending.frame, "PARAM_VALUE paramCount changed during list")
+		pending.frame.Latest, pending.frame.LatestSet, pending.frame.UpdatedAtMs = nil, true, atMs
+		return &ListOutput{Frame: pending.frame, Record: true}
+	}
 	pending.values[value.ParamIndex] = value
 	expected := value.ParamCount
 	complete := len(pending.values) == expected

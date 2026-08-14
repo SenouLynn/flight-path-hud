@@ -42,6 +42,17 @@ test('rejects concurrent same-target lists and retries after idle progress', () 
   assert.equal(sent.length, 2)
 })
 
+test('fails rather than falsely completing when paramCount changes', () => {
+  const { router, recorded } = setup()
+  router.handleClientMessage({ type: 'requestParameterList', requestId: 'count-change', sysId: 2, compId: 1 })
+  assert.equal(router.ingestEnvelope(value(2, 0, 3)).status, 'pending')
+  const changed = router.ingestEnvelope(value(2, 1, 2))
+  assert.equal(changed.status, 'failed')
+  assert.equal(changed.reason, 'PARAM_VALUE paramCount changed during list')
+  assert.deepEqual(recorded.map((frame) => frame.status), ['pending', 'failed'])
+  assert.equal(router.ingestEnvelope(value(2, 2, 3)), null, 'failed list must be removed')
+})
+
 test('replay and invalid targets never send', () => {
   const sent = []
   const router = createParameterListRouter({ send: (...args) => sent.push(args), canSend: () => true, isLive: () => false })

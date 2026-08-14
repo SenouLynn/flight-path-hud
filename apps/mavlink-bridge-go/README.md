@@ -14,8 +14,9 @@ The package boundaries are:
 - `cmd/conformance`: repository-fixture conformance output/checks.
 
 Pure folds own no goroutines and receive timestamps explicitly. Byte slices retained
-beyond a call are copied. The first slice accepts MAVLink v1 and unsigned v2 and
-deterministically rejects signed v2; signature verification is later protocol work.
+beyond a call are copied. The first slice accepts MAVLink v1 and unsigned v2 with
+no incompatibility flags. It deterministically rejects signed v2 and every unknown
+incompatibility bit; signature verification is later protocol work.
 
 Run through the repository scripts so nested-module working directories stay an
 implementation detail:

@@ -86,7 +86,14 @@ func (f *ReadFold) Start(request ParameterReadRequest, atMs float64, live bool, 
 }
 
 func (f *ReadFold) Ingest(target Target, value ParamValue, atMs float64) *ParameterReadFrame {
-	for requestID, pending := range f.pending {
+	// Match in request order, as Node's Map iteration does. A PARAM_VALUE can
+	// legitimately match a pending name read and a pending index read at once;
+	// ranging over the Go map would make which request completes nondeterministic.
+	for _, requestID := range append([]string(nil), f.order...) {
+		pending, exists := f.pending[requestID]
+		if !exists {
+			continue
+		}
 		if pending.frame.SysID == nil || pending.frame.CompID == nil || *pending.frame.SysID != int(target.SysID) || *pending.frame.CompID != int(target.CompID) {
 			continue
 		}

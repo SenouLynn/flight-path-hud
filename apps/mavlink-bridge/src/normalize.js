@@ -236,13 +236,15 @@ function decodeParamValue(frame) {
   if (payload === null || payload.length < 8) return null
   const terminator = payload.indexOf(0, 8)
   const end = terminator === -1 ? 24 : Math.min(terminator, 24)
+  const paramIdBytes = payload.subarray(8, end)
+  if ([...paramIdBytes].some((value) => value === 0 || value > 0x7F)) return null
   return {
     messageName: 'PARAM_VALUE',
     payload: {
       timestampMs: frame.recvTimestampMs,
       paramValue: {
         value: payload.readFloatLE(0), paramCount: payload.readUInt16LE(4),
-        paramIndex: payload.readUInt16LE(6), paramId: payload.toString('ascii', 8, end),
+        paramIndex: payload.readUInt16LE(6), paramId: paramIdBytes.toString('ascii'),
         paramType: payload.readUInt8(24),
       },
     },
@@ -517,6 +519,13 @@ function parseMavlinkFrames(rawBuffer, nowMs) {
   let decodeErrors = 0
   let sawFramePrefix = false
 
+  const nextFramePrefix = (from) => {
+    for (let index = from; index < rawBuffer.length; index += 1) {
+      if (rawBuffer[index] === MAVLINK_V1_MAGIC || rawBuffer[index] === MAVLINK_V2_MAGIC) return index
+    }
+    return -1
+  }
+
   for (let offset = 0; offset < rawBuffer.length;) {
     const magic = rawBuffer[offset]
 
@@ -562,12 +571,16 @@ function parseMavlinkFrames(rawBuffer, nowMs) {
 
     if (offset + frameLength > rawBuffer.length) {
       decodeErrors += 1
-      break
+      const next = nextFramePrefix(offset + 1)
+      if (next === -1) break
+      offset = next
+      continue
     }
 
-    // Signed v2 needs a verified signature policy. Reject the complete candidate
-    // once, before looking at its message id or checksum bytes.
-    if (magic === MAVLINK_V2_MAGIC && (rawBuffer[offset + 2] & 0x01) === 0x01) {
+    // This slice supports no MAVLink-v2 incompatibility flags. Per MAVLink, a
+    // receiver must drop a frame carrying an incompatibility flag it does not
+    // understand. Bit 0 (signing) remains unsupported until verification exists.
+    if (magic === MAVLINK_V2_MAGIC && rawBuffer[offset + 2] !== 0) {
       decodeErrors += 1
       offset += frameLength
       continue
@@ -596,7 +609,9 @@ function parseMavlinkFrames(rawBuffer, nowMs) {
 
       if (expectedCrc !== actualCrc) {
         decodeErrors += 1
-        offset += frameLength
+        const next = nextFramePrefix(offset + 1)
+        if (next === -1) break
+        offset = next
         continue
       }
     }
