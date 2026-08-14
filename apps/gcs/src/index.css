@@ -103,6 +103,30 @@ body {
   text-transform: uppercase;
 }
 
+.topbar-operator {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  margin-left: auto;
+  color: var(--muted);
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.topbar-operator input {
+  width: 150px;
+  padding: 2px 5px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--bg);
+  color: var(--text);
+  font: inherit;
+  font-size: 11px;
+  letter-spacing: normal;
+  text-transform: none;
+}
+
 /* Subordinate to the title. */
 .views-menu .segment {
   padding: 2px 7px;
@@ -193,6 +217,12 @@ body {
   margin-bottom: 0;
 }
 
+.panel-heading-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 5px;
+}
+
 .stat {
   display: flex;
   justify-content: space-between;
@@ -244,7 +274,6 @@ body {
   line-height: 1.5;
 }
 
-.guided-panel .segment { margin-bottom: 6px; }
 .guided-confirm { display: flex; gap: 6px; margin: 8px 0; color: var(--text); font-size: 10px; line-height: 1.4; }
 .guided-confirm input { flex: 0 0 auto; margin: 1px 0 0; }
 .guided-send { width: 100%; border-color: var(--warn); color: var(--warn); }
@@ -348,11 +377,113 @@ body {
 }
 
 .mission-workspace {
+  display: grid;
+  grid-template-columns: minmax(0, 0.85fr) minmax(0, 1.15fr);
+  align-items: start;
+  gap: 10px;
   height: 100%;
-  overflow-y: auto;
+  overflow: auto;
   padding: 8px 10px;
   background: var(--panel);
 }
+
+.mission-workspace > .panel {
+  min-width: 0;
+  margin: 0;
+}
+
+.mission-workspace > .panel + .panel {
+  padding-left: 10px;
+  border-left: 1px solid var(--border);
+}
+
+.guided-reposition-fields {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  column-gap: 8px;
+}
+
+.guided-reposition-fields input,
+.guided-reposition-fields select {
+  min-width: 0;
+}
+
+.guided-panel .panel-heading {
+  align-items: flex-start;
+  flex-wrap: wrap;
+}
+
+.guided-panel .panel-heading-actions {
+  margin-left: auto;
+}
+
+.map-workspace {
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+  height: 100%;
+  min-height: 0;
+}
+
+.map-stage {
+  position: relative;
+  min-height: 0;
+}
+
+.flight-modes-panel {
+  position: relative;
+  z-index: 1200;
+  padding: 7px 10px;
+  border-bottom: 1px solid var(--border);
+  background: var(--panel);
+}
+
+.flight-modes-heading,
+.flight-modes-heading > div,
+.guided-workflow-actions,
+.flight-mode-statuses {
+  display: flex;
+  align-items: center;
+}
+
+.flight-modes-heading {
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.flight-modes-heading > div { gap: 8px; }
+.flight-modes-heading h2 { margin: 0; font-size: 12px; }
+.flight-modes-heading > div > span { color: var(--muted); font-size: 10px; }
+
+.guided-workflow-actions {
+  flex-wrap: wrap;
+  gap: 0.45rem;
+  margin-top: 6px;
+}
+
+.guided-workflow-actions .segment { margin: 0; }
+.guided-workflow-actions .danger { border-color: #8f4545; color: #ffb0a8; }
+.guided-arm-control { position: relative; }
+
+.guided-arm-menu {
+  position: absolute;
+  top: calc(100% + 5px);
+  left: 0;
+  z-index: 1300;
+  width: 280px;
+  padding: 9px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--panel);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.55);
+}
+
+.guided-arm-menu input:not([type='checkbox']) { width: 100%; }
+.guided-arm-submit { width: 100%; border-color: var(--warn); color: var(--warn); }
+.flight-modes-warning { margin-top: 5px; }
+.flight-mode-statuses { flex-wrap: wrap; gap: 8px; margin-top: 5px; }
+.flight-mode-statuses .guided-result { display: flex; gap: 5px; margin: 0; padding: 0; border: 0; font-size: 10px; }
+.flight-mode-statuses .guided-result > span:first-child { color: var(--muted); }
+.flight-mode-statuses .warn { margin: 0; }
 
 /* Borders follow visual adjacency, not JSX order (which stays stable for mounts). */
 .gcs-main.has-map.has-instruments .view-pane--instruments,
@@ -1105,6 +1236,3 @@ body {
 .node-freshness.live { color: #6ee7a8; }
 .node-freshness.aging { color: var(--warn); }
 .node-freshness.stale { color: var(--error); }
-
-.guided-workflow-actions { display: flex; flex-wrap: wrap; gap: 0.45rem; margin-top: 0.65rem; }
-.guided-workflow-actions .danger { border-color: #8f4545; color: #ffb0a8; }

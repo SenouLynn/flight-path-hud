@@ -149,6 +149,7 @@ pnpm clean:recordings -- --dry-run
 - [docs/flight_path_marker.md](docs/flight_path_marker.md) — FPM, FPA, predictive trajectory
 - [docs/gcs_runtime_blueprint.md](docs/gcs_runtime_blueprint.md) — portable runtime architecture for cloud-web and Pi-local deployment
 - [docs/mavlink_command_validation.md](docs/mavlink_command_validation.md) — staged browser-GCS command validation roadmap
+- [docs/pid_tuning_workflow.md](docs/pid_tuning_workflow.md) — phased linked tuning plan, in-flight authority model, safety invariants, and evidence gates
 - [docs/ardupilot_sitl_testing.md](docs/ardupilot_sitl_testing.md) — mixed Copter/Plane SITL runbook and acceptance nuances
 - [contracts/README.md](contracts/README.md) — portable schemas, behavioral vectors, golden MAVLink bytes, and conformance roadmap
 - [docs/gcs_architecture_precedents.md](docs/gcs_architecture_precedents.md) — lessons adopted from QGroundControl and Mission Planner

@@ -54,6 +54,64 @@ The entries below were reconstructed from the initial implementation (commits `9
 `355baff`) and documented on 2026-07-23. Dates reflect when each decision was first made in
 the code.
 
+## ADR-0033: Linked PID tuning graduates by authority level; pilot retains abort authority
+
+- **Status:** Accepted
+- **Date:** 2026-08-13
+- **Deciders:** team
+- **Related:** [linked PID tuning workflow](pid_tuning_workflow.md),
+  [command validation roadmap](mavlink_command_validation.md), and
+  [ADR-0032](#adr-0032-borrow-mature-gcs-boundaries-make-contracts-and-evidence-the-portable-unit)
+
+### Context
+
+Manual field tuning currently requires landing, disarming, disconnecting the
+battery, attaching a computer, changing parameters, and repeating preflight. The
+existing telemetry link and exact-target parameter transactions can remove that
+cycle. ArduPilot also supports advanced in-flight tuning, but networked co-pilot
+writes add substantially more authority and failure modes than disarmed edits.
+
+### Decision
+
+Build one identity-bound tuning transaction model and graduate its authority in
+three separately evidenced phases: disarmed wireless tuning, armed isolated
+SITL/non-propulsive bench validation, then narrowly bounded in-flight deltas.
+In-flight tuning receives its own disabled-by-default capability gate; enabling
+ordinary parameter writes does not enable it.
+
+The pilot retains physical transmitter and mode-switch authority. Browser-side
+telemetry never triggers automatic emergency rollback. The co-pilot may restore
+a verified snapshot only after stable state is re-established. Every edit is
+staged, explicitly confirmed, exact-target, metadata- and policy-bounded,
+type-aware, independently read back, recorded, and replay-disabled.
+
+### Consequences
+
+- ✅ The first phase immediately removes the cable/power-cycle tuning loop.
+- ✅ One transaction/audit model can support later co-pilot tuning without
+  weakening the existing command boundary.
+- ✅ Pilot recovery does not depend on browser availability or link latency.
+- ✅ Vehicle and firmware differences remain explicit through live parameter
+  discovery, versioned metadata, and local safety policy.
+- ⚠️ In-flight tuning remains a flight-test capability requiring SITL, bench,
+  written test-card, and field evidence; it is not implied by UI completion.
+- ⚠️ Automatic rollback is deliberately unavailable during instability, so
+  operator training and an independent flight-mode escape remain mandatory.
+- ⚠️ Classic MAVLink parameter float encoding, dynamic lists, and unusual
+  ArduPilot acknowledgment behavior require type-aware reconciliation.
+
+### Alternatives considered
+
+- Generic editable parameter table — rejected as the primary tuning surface: it
+  lacks controller grouping, staged diffs, narrow bounds, and recovery semantics.
+- Enable in-flight writes with the current parameter feature gate — rejected:
+  disarmed convenience and airborne control authority require separate evidence.
+- Automatically restore gains when browser telemetry detects oscillation —
+  rejected: telemetry is delayed/lossy and another write during instability can
+  worsen the event; the pilot's direct mode escape is the immediate recovery.
+- Build a custom automatic tuner first — rejected: ArduPilot already owns
+  vehicle-specific AutoTune behavior and safety margins.
+
 ## ADR-0032: Borrow mature GCS boundaries; make contracts and evidence the portable unit
 
 - **Status:** Accepted

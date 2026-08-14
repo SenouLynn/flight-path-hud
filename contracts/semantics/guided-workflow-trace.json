@@ -49,12 +49,12 @@
     {
       "name": "target change consumes prior confirmation",
       "overrides": { "target": { "sysId": 2, "compId": 1 } },
-      "expected": { "confirmed": false, "canEnterGuided": false, "reason": "Confirm the exact target and isolated-SITL workflow" }
+      "expected": { "confirmed": false, "canEnterGuided": true, "reason": null }
     },
     {
       "name": "operator change consumes prior confirmation",
       "overrides": { "actor": "other-operator" },
-      "expected": { "confirmed": false, "canEnterGuided": false, "reason": "Confirm the exact target and isolated-SITL workflow" }
+      "expected": { "confirmed": false, "canEnterGuided": true, "reason": null }
     },
     {
       "name": "pending lifecycle blocks every next action",

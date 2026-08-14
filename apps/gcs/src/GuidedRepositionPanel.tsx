@@ -7,6 +7,7 @@ import { guidedConfirmationKey, guidedDefaults, showGuidedGateReason } from './g
 interface Props {
   vehicle: VehicleState | null
   flightState: FlightStateWireFrame | null
+  actor: string
   status: GuidedRepositionWireFrame | null
   connectionState: ConnectionState
   replayMode: boolean | null
@@ -20,10 +21,9 @@ interface Props {
 
 const numberValue = (value: string) => value.trim() === '' ? Number.NaN : Number(value)
 
-export function GuidedRepositionPanel({ vehicle, flightState, status, connectionState,
+export function GuidedRepositionPanel({ vehicle, flightState, actor, status, connectionState,
   replayMode, onSend, latitude, longitude, onCoordinatesChange, pickingOnMap,
   onToggleMapPicking }: Props) {
-  const [actor, setActor] = useState('')
   const [confirmedFor, setConfirmedFor] = useState<string | null>(null)
   const [submittedFor, setSubmittedFor] = useState<string | null>(null)
   const [altitude, setAltitude] = useState('')
@@ -60,18 +60,23 @@ export function GuidedRepositionPanel({ vehicle, flightState, status, connection
   }
 
   return <section className="panel guided-panel">
-    <h2>Guided reposition · isolated SITL</h2>
-    <button type="button" className="segment" onClick={useCurrentPosition} disabled={vehicle === null || vehicle.latDeg === null || vehicle.lonDeg === null}>Use current position</button>
-    <button type="button" className={pickingOnMap ? 'segment active' : 'segment'} onClick={onToggleMapPicking}>{pickingOnMap ? 'Cancel map pick' : 'Pick on map'}</button>
+    <div className="panel-heading">
+      <h2>Guided reposition</h2>
+      <div className="panel-heading-actions">
+        <button type="button" className="segment" onClick={useCurrentPosition} disabled={vehicle === null || vehicle.latDeg === null || vehicle.lonDeg === null}>Use current position</button>
+        <button type="button" className={pickingOnMap ? 'segment active' : 'segment'} onClick={onToggleMapPicking}>{pickingOnMap ? 'Cancel map pick' : 'Pick on map'}</button>
+      </div>
+    </div>
     {pickingOnMap ? <p className="map-pick-hint">Click the map to set the draft target · Esc cancels</p> : null}
-    <label className="control"><span>Latitude</span><input value={latitude} onChange={e => onCoordinatesChange(e.target.value, longitude)} inputMode="decimal" /></label>
-    <label className="control"><span>Longitude</span><input value={longitude} onChange={e => onCoordinatesChange(latitude, e.target.value)} inputMode="decimal" /></label>
-    <label className="control"><span>Relative altitude (m)</span><input value={altitude} onChange={e => setAltitude(e.target.value)} inputMode="decimal" /></label>
-    <label className="control"><span>Arrival radius (m, max 120)</span><input value={arrivalRadius} onChange={e => setArrivalRadius(e.target.value)} inputMode="decimal" /></label>
-    <label className="control"><span>Altitude tolerance (m, max 20)</span><input value={altitudeTolerance} onChange={e => setAltitudeTolerance(e.target.value)} inputMode="decimal" /></label>
-    {isPlane ? <><label className="control"><span>Loiter radius (m, max 100)</span><input value={loiterRadius} onChange={e => setLoiterRadius(e.target.value)} inputMode="decimal" /></label>
-      <label className="control"><span>Loiter direction</span><select value={loiterDirection} onChange={e => setLoiterDirection(e.target.value as typeof loiterDirection)}><option value="clockwise">Clockwise</option><option value="counterclockwise">Counterclockwise</option></select></label></> : null}
-    <label className="control"><span>Operator identity</span><input value={actor} onChange={e => setActor(e.target.value)} autoComplete="off" /></label>
+    <div className="guided-reposition-fields">
+      <label className="control"><span>Latitude</span><input value={latitude} onChange={e => onCoordinatesChange(e.target.value, longitude)} inputMode="decimal" /></label>
+      <label className="control"><span>Longitude</span><input value={longitude} onChange={e => onCoordinatesChange(latitude, e.target.value)} inputMode="decimal" /></label>
+      <label className="control"><span>Relative altitude (m)</span><input value={altitude} onChange={e => setAltitude(e.target.value)} inputMode="decimal" /></label>
+      <label className="control"><span>Arrival radius (m, max 120)</span><input value={arrivalRadius} onChange={e => setArrivalRadius(e.target.value)} inputMode="decimal" /></label>
+      <label className="control"><span>Altitude tolerance (m, max 20)</span><input value={altitudeTolerance} onChange={e => setAltitudeTolerance(e.target.value)} inputMode="decimal" /></label>
+      {isPlane ? <><label className="control"><span>Loiter radius (m, max 100)</span><input value={loiterRadius} onChange={e => setLoiterRadius(e.target.value)} inputMode="decimal" /></label>
+        <label className="control"><span>Loiter direction</span><select value={loiterDirection} onChange={e => setLoiterDirection(e.target.value as typeof loiterDirection)}><option value="clockwise">Clockwise</option><option value="counterclockwise">Counterclockwise</option></select></label></> : null}
+    </div>
     <label className="guided-confirm"><input type="checkbox" checked={confirmed} onChange={e => setConfirmedFor(e.target.checked ? confirmationKey : null)} />
       <span>I confirm target {targetKey ?? '—'}, its armed Guided state, and this bounded movement.</span></label>
     <button type="button" className="segment guided-send" disabled={!gate.enabled || pending}

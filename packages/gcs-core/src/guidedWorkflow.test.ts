@@ -40,10 +40,23 @@ describe('resolveGuidedWorkflow', () => {
     expect(pending).toMatchObject({ busy: true, canEnterGuided: false, reason: 'A workflow command is pending' })
   })
 
-  it('requires explicit operator confirmation and bounded takeoff inputs', () => {
+  it('requires explicit confirmation only for arm and bounded takeoff inputs', () => {
     expect(resolveGuidedWorkflow(base({ actor: '' })).reason).toMatch(/identity/)
-    expect(resolveGuidedWorkflow(base({ confirmedFor: null })).reason).toMatch(/Confirm/)
+    expect(resolveGuidedWorkflow(base({ confirmedFor: null }))).toMatchObject({
+      reason: null, canEnterGuided: true,
+    })
+    const unconfirmedGuided = resolveGuidedWorkflow(base({
+      confirmedFor: null, flightState: { ...base().flightState!, customMode: 4 },
+    }))
+    expect(unconfirmedGuided).toMatchObject({ canPrepareArm: true, canArm: false })
     const guidedArmed = { ...base().flightState!, armed: true, customMode: 4 }
+    expect(resolveGuidedWorkflow(base({ confirmedFor: null, flightState: guidedArmed }))).toMatchObject({
+      canTakeoff: true, canLand: true,
+    })
+    expect(resolveGuidedWorkflow(base({ confirmedFor: null, flightState: guidedArmed,
+      relativeAltitudeM: 0.5, landStatus: { status: 'complete', touchdownAltitudeM: 0.75 } }))).toMatchObject({
+      canDisarm: true,
+    })
     expect(resolveGuidedWorkflow(base({ flightState: guidedArmed, altitudeM: 121 })).canTakeoff).toBe(false)
     expect(resolveGuidedWorkflow(base({ flightState: guidedArmed, altitudeToleranceM: 0.1 })).canTakeoff).toBe(false)
   })

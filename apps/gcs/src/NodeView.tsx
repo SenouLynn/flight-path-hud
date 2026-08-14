@@ -43,6 +43,7 @@ interface NodeViewProps {
   /** Change the exact node without returning through the fleet roster. */
   onScopeChange: (system: string | null) => void
   selectedSystem: string | null
+  operatorIdentity: string
 }
 
 export function NodeView({
@@ -55,6 +56,7 @@ export function NodeView({
   onBackToFleet,
   onScopeChange,
   selectedSystem,
+  operatorIdentity,
 }: NodeViewProps) {
   const [follow, setFollow] = useState(true)
   const [trackUp, setTrackUp] = useState(false)
@@ -271,46 +273,55 @@ export function NodeView({
               <HudPanel sample={feed.sample} track={feed.enuTrack} log={feed.log} />
             ) : null}
             {option.id === 'map' ? (
-              <>
-                <MapPanel
-                  ref={mapHandleRef}
-                  vehicle={vehicle}
-                  track={feed.track}
-                  tileSource={tileSource}
-                  follow={follow}
-                  trackUp={trackUp}
-                  pitchDeg={tilted ? TILTED_PITCH_DEG : 0}
-                  onCameraGrab={handOverCamera}
-                  onUserPitch={() => setTilted(false)}
-                  mission={feed.mission}
-                  home={feed.home}
-                  guidedTarget={guidedTarget}
-                  pickingGuidedTarget={pickingGuidedTarget}
-                  onPickGuidedTarget={(latDeg, lonDeg) => {
-                    setGuidedLatitude(latDeg.toFixed(7))
-                    setGuidedLongitude(lonDeg.toFixed(7))
-                    setPickingGuidedTarget(false)
-                  }}
-                  onCancelGuidedTargetPick={() => setPickingGuidedTarget(false)}
-                />
-                <MapControls
-                  basemaps={BASEMAPS}
-                  basemapId={basemapId}
-                  onBasemapChange={onBasemapChange}
-                  follow={follow}
-                  onFollowChange={setFollowExclusive}
-                  trackUp={trackUp}
-                  onTrackUpChange={setTrackUpExclusive}
-                  tilted={tilted}
-                  onTiltedChange={setTiltedExclusive}
-                  onResetView={() => {
-                    setTrackUp(false)
-                    setTilted(false)
-                    mapHandleRef.current?.resetNorth()
-                  }}
-                  maxZoom={tileSource.maxZoom}
-                />
-              </>
+              <div className="map-workspace">
+                <GuidedWorkflowPanel vehicle={vehicle} flightState={feed.flightState} actor={operatorIdentity}
+                  connectionState={feed.connectionState} replayMode={feed.replayMode}
+                  modeStatus={feed.modeChange} armStatus={feed.armDisarm} takeoffStatus={feed.guidedTakeoff} landStatus={feed.guidedLand}
+                  onSetGuided={(actor) => vehicle !== null && feed.sendSetGuided(vehicle.sysId, vehicle.compId, actor)}
+                  onSetArmed={(actor, arm) => vehicle !== null && feed.sendSetArmed(vehicle.sysId, vehicle.compId, actor, arm)}
+                  onTakeoff={(actor, altitudeM, toleranceM) => vehicle !== null && feed.sendGuidedTakeoff(vehicle.sysId, vehicle.compId, actor, altitudeM, toleranceM)}
+                  onLand={(actor) => vehicle !== null && feed.sendGuidedLand(vehicle.sysId, vehicle.compId, actor)} />
+                <div className="map-stage">
+                  <MapPanel
+                    ref={mapHandleRef}
+                    vehicle={vehicle}
+                    track={feed.track}
+                    tileSource={tileSource}
+                    follow={follow}
+                    trackUp={trackUp}
+                    pitchDeg={tilted ? TILTED_PITCH_DEG : 0}
+                    onCameraGrab={handOverCamera}
+                    onUserPitch={() => setTilted(false)}
+                    mission={feed.mission}
+                    home={feed.home}
+                    guidedTarget={guidedTarget}
+                    pickingGuidedTarget={pickingGuidedTarget}
+                    onPickGuidedTarget={(latDeg, lonDeg) => {
+                      setGuidedLatitude(latDeg.toFixed(7))
+                      setGuidedLongitude(lonDeg.toFixed(7))
+                      setPickingGuidedTarget(false)
+                    }}
+                    onCancelGuidedTargetPick={() => setPickingGuidedTarget(false)}
+                  />
+                  <MapControls
+                    basemaps={BASEMAPS}
+                    basemapId={basemapId}
+                    onBasemapChange={onBasemapChange}
+                    follow={follow}
+                    onFollowChange={setFollowExclusive}
+                    trackUp={trackUp}
+                    onTrackUpChange={setTrackUpExclusive}
+                    tilted={tilted}
+                    onTiltedChange={setTiltedExclusive}
+                    onResetView={() => {
+                      setTrackUp(false)
+                      setTilted(false)
+                      mapHandleRef.current?.resetNorth()
+                    }}
+                    maxZoom={tileSource.maxZoom}
+                  />
+                </div>
+              </div>
             ) : null}
             {option.id === 'mission' ? (
               <div className="mission-workspace">
@@ -322,14 +333,7 @@ export function NodeView({
                   onLoadMission={() => vehicle !== null && feed.requestMission(vehicle.sysId, vehicle.compId)}
                   onSelectWaypoint={selectMissionWaypoint}
                 />
-                <GuidedWorkflowPanel vehicle={vehicle} flightState={feed.flightState}
-                  connectionState={feed.connectionState} replayMode={feed.replayMode}
-                  modeStatus={feed.modeChange} armStatus={feed.armDisarm} takeoffStatus={feed.guidedTakeoff} landStatus={feed.guidedLand}
-                  onSetGuided={(actor) => vehicle !== null && feed.sendSetGuided(vehicle.sysId, vehicle.compId, actor)}
-                  onSetArmed={(actor, arm) => vehicle !== null && feed.sendSetArmed(vehicle.sysId, vehicle.compId, actor, arm)}
-                  onTakeoff={(actor, altitudeM, toleranceM) => vehicle !== null && feed.sendGuidedTakeoff(vehicle.sysId, vehicle.compId, actor, altitudeM, toleranceM)}
-                  onLand={(actor) => vehicle !== null && feed.sendGuidedLand(vehicle.sysId, vehicle.compId, actor)} />
-                <GuidedRepositionPanel vehicle={vehicle} flightState={feed.flightState}
+                <GuidedRepositionPanel vehicle={vehicle} flightState={feed.flightState} actor={operatorIdentity}
                   status={feed.guidedReposition} connectionState={feed.connectionState}
                   replayMode={feed.replayMode}
                   onSend={(actor, draft) => vehicle !== null

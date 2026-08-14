@@ -22,6 +22,7 @@ import { useMemo, useState } from 'react'
 import { FleetView } from './fleet/FleetView'
 import { DEFAULT_BASEMAP, findBasemap } from './map/tileSource'
 import { NodeView } from './NodeView'
+import { DEFAULT_OPERATOR_IDENTITY } from './operatorPreferences'
 import { useVehicleFeed } from './useVehicleFeed'
 
 const DEFAULT_URL = 'ws://localhost:8080/telemetry'
@@ -30,6 +31,7 @@ type AppView = 'fleet' | 'node'
 
 function App() {
   const [url, setUrl] = useState(DEFAULT_URL)
+  const [operatorIdentity, setOperatorIdentity] = useState(DEFAULT_OPERATOR_IDENTITY)
   // Fleet first: it is the view that shows whether anything is on the link at
   // all, which is the question an operator has before any other.
   const [appView, setAppView] = useState<AppView>('fleet')
@@ -91,6 +93,11 @@ function App() {
     <div className="app-shell">
       <header className="gcs-topbar">
         <span className="app-title">Ground control</span>
+        <label className="topbar-operator">
+          <span>Operator</span>
+          <input value={operatorIdentity} onChange={(event) => setOperatorIdentity(event.target.value)}
+            autoComplete="off" aria-label="Operator identity" />
+        </label>
       </header>
 
       {appView === 'fleet' ? (
@@ -117,6 +124,7 @@ function App() {
           onBackToFleet={() => setAppView('fleet')}
           onScopeChange={changeScope}
           selectedSystem={scopedSystem}
+          operatorIdentity={operatorIdentity}
         />
       )}
     </div>

@@ -1,5 +1,10 @@
 # Changelog
 
+- Documented the phased linked PID-tuning workflow from disarmed wireless edits
+  through separately gated co-pilot in-flight deltas, including pilot authority,
+  parameter protocol caveats, rollback policy, metadata requirements, and
+  SITL/bench/flight evidence gates (ADR-0033).
+
 - Completed strict protocol-v0 schema coverage for every current server frame
   and all thirteen bridge client-command families, including mission items,
   Guided safety envelopes, and bridge-only lifecycle outputs. Raw MAVLink

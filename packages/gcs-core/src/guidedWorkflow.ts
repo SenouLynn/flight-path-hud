@@ -60,7 +60,9 @@ export interface GuidedWorkflowState {
   fresh: boolean
   inGuided: boolean
   landed: boolean
+  takeoffInputsValid: boolean
   canEnterGuided: boolean
+  canPrepareArm: boolean
   canArm: boolean
   canTakeoff: boolean
   canLand: boolean
@@ -98,7 +100,7 @@ export function resolveGuidedWorkflow(input: GuidedWorkflowStateInput): GuidedWo
   const landed = input.landStatus?.status === 'complete'
     && typeof touchdownAltitudeM === 'number' && Number.isFinite(input.relativeAltitudeM)
     && (input.relativeAltitudeM as number) <= touchdownAltitudeM
-  const validTakeoff = Number.isFinite(input.altitudeM) && input.altitudeM >= 2 && input.altitudeM <= 120
+  const takeoffInputsValid = Number.isFinite(input.altitudeM) && input.altitudeM >= 2 && input.altitudeM <= 120
     && Number.isFinite(input.altitudeToleranceM) && input.altitudeToleranceM >= 0.5
     && input.altitudeToleranceM <= 10
 
@@ -109,15 +111,16 @@ export function resolveGuidedWorkflow(input: GuidedWorkflowStateInput): GuidedWo
   else if (!fresh) reason = 'Fresh HEARTBEAT state required'
   else if (state?.autopilotType !== 3 || state.vehicleType !== 2) reason = 'This workflow currently supports ArduCopter only'
   else if (!input.actor.trim()) reason = 'Operator identity required'
-  else if (!confirmed) reason = 'Confirm the exact target and isolated-SITL workflow'
   else if (busy) reason = 'A workflow command is pending'
 
   const common = reason === null
+  const canPrepareArm = common && state?.armed === false && inGuided
   return {
-    confirmationKey, confirmed, reason, busy, fresh, inGuided, landed,
+    confirmationKey, confirmed, reason, busy, fresh, inGuided, landed, takeoffInputsValid,
     canEnterGuided: common && state?.armed === false && !inGuided,
-    canArm: common && state?.armed === false && inGuided,
-    canTakeoff: common && state?.armed === true && inGuided && validTakeoff,
+    canPrepareArm,
+    canArm: canPrepareArm && confirmed && takeoffInputsValid,
+    canTakeoff: common && state?.armed === true && inGuided && takeoffInputsValid,
     canLand: common && state?.armed === true && inGuided,
     canDisarm: common && state?.armed === true && landed,
   }
