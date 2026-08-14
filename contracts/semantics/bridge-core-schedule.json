@@ -1,0 +1,34 @@
+{
+  "provenance": "Hand-authored protocol-v0 JSON envelopes exercising the documented bridge-core clock seam; no runtime clock defaults are permitted.",
+  "systemTtlMs": 5000,
+  "steps": [
+    {
+      "kind": "ingest",
+      "atMs": 1000,
+      "source": "fixture:copter",
+      "envelope": {
+        "recvTimestampMs": 1000,
+        "sysId": 1,
+        "compId": 1,
+        "messageName": "HEARTBEAT",
+        "sequence": 0,
+        "payload": { "timestampMs": 1000 }
+      }
+    },
+    { "kind": "tick", "atMs": 2000 },
+    {
+      "kind": "ingest",
+      "atMs": 2100,
+      "source": "fixture:plane",
+      "envelope": {
+        "recvTimestampMs": 2100,
+        "sysId": 2,
+        "compId": 1,
+        "messageName": "VFR_HUD",
+        "sequence": 9,
+        "payload": { "timestampMs": 2100, "vfrHud": { "headingDeg": 120 } }
+      }
+    },
+    { "kind": "tick", "atMs": 7101 }
+  ]
+}
