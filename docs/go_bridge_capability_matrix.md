@@ -6,33 +6,33 @@ tests do not add rows. Evidence provenance is recorded beside each artifact.
 
 | Case ID | Behavior | Evidence artifact and provenance | Node status/test | Go status/test | Difference |
 | --- | --- | --- | --- | --- | --- |
-| NORM-HEARTBEAT | HEARTBEAT normalization | `contracts/mavlink/normalization-vectors.json`, MAVLink common dialect layout | unstarted | unstarted | none expected |
-| NORM-PARAM-VALUE | PARAM_VALUE normalization | same | unstarted | unstarted | none expected |
-| NORM-ATTITUDE | ATTITUDE normalization | same | unstarted | unstarted | none expected |
-| NORM-GPS-RAW-INT | GPS_RAW_INT normalization | same | unstarted | unstarted | none expected |
-| NORM-GLOBAL-POSITION-INT | GLOBAL_POSITION_INT normalization | same | unstarted | unstarted | none expected |
-| NORM-VFR-HUD | VFR_HUD normalization | same | unstarted | unstarted | none expected |
-| NORM-COMMAND-ACK | COMMAND_ACK normalization | same | unstarted | unstarted | none expected |
-| NORM-MISSION-COUNT | MISSION_COUNT normalization | same | unstarted | unstarted | none expected |
-| NORM-MISSION-ITEM-INT | MISSION_ITEM_INT normalization | same | unstarted | unstarted | none expected |
-| NORM-MISSION-REQUEST-INT | MISSION_REQUEST_INT normalization | same | unstarted | unstarted | none expected |
-| NORM-MISSION-REQUEST | MISSION_REQUEST normalization | same | unstarted | unstarted | none expected |
-| NORM-MISSION-CURRENT | MISSION_CURRENT normalization | same | unstarted | unstarted | none expected |
-| NORM-MISSION-ACK | MISSION_ACK normalization | same | unstarted | unstarted | none expected |
-| NORM-HOME-POSITION | HOME_POSITION normalization | same | unstarted | unstarted | none expected |
-| NORM-GPS-GLOBAL-ORIGIN | GPS_GLOBAL_ORIGIN normalization | same | unstarted | unstarted | none expected |
-| FRAME-V1 | MAVLink v1 accepted with CRC | normalization vectors plus published X.25 check vector | unstarted | unstarted | none expected |
-| FRAME-V2 | unsigned MAVLink v2 accepted with CRC/trailing-zero behavior | normalization vectors, common dialect | unstarted | unstarted | none expected |
+| NORM-HEARTBEAT | HEARTBEAT normalization | raw mixed-SITL recordings + Node decoder tests; common dialect | complete: `normalize.test.js` + raw capture | unstarted | OQ-001 blocks portable output shape |
+| NORM-PARAM-VALUE | PARAM_VALUE normalization | Node decoder test; no raw read capture | complete: `normalize.test.js` | unstarted | independent normalization vector still required |
+| NORM-ATTITUDE | ATTITUDE normalization | raw mixed-SITL recordings + Node decoder tests | complete | unstarted | OQ-001 blocks portable output shape |
+| NORM-GPS-RAW-INT | GPS_RAW_INT normalization | raw motion recording + Node decoder tests | complete | unstarted | OQ-001 blocks portable output shape |
+| NORM-GLOBAL-POSITION-INT | GLOBAL_POSITION_INT normalization | raw mixed-SITL recordings + Node decoder tests | complete | unstarted | OQ-001 blocks portable output shape |
+| NORM-VFR-HUD | VFR_HUD normalization | raw mixed-SITL recordings + Node decoder tests | complete | unstarted | OQ-001 blocks portable output shape |
+| NORM-COMMAND-ACK | COMMAND_ACK normalization | Node decoder test; no raw read capture | complete | unstarted | independent normalization vector still required |
+| NORM-MISSION-COUNT | MISSION_COUNT normalization | raw mixed-SITL recordings + Node decoder tests | complete | unstarted | OQ-001 blocks portable output shape |
+| NORM-MISSION-ITEM-INT | MISSION_ITEM_INT normalization | raw mixed-SITL recordings + Node decoder tests | complete | unstarted | OQ-001 blocks portable output shape |
+| NORM-MISSION-REQUEST-INT | MISSION_REQUEST_INT normalization | Node decoder test; no raw read capture | complete | unstarted | independent normalization vector still required |
+| NORM-MISSION-REQUEST | MISSION_REQUEST normalization | Node decoder test; no raw read capture | complete | unstarted | independent normalization vector still required |
+| NORM-MISSION-CURRENT | MISSION_CURRENT normalization | raw motion recording + Node decoder tests | complete | unstarted | OQ-001 blocks portable output shape |
+| NORM-MISSION-ACK | MISSION_ACK normalization | Node decoder test; no raw read capture | complete | unstarted | independent normalization vector still required |
+| NORM-HOME-POSITION | HOME_POSITION normalization | raw motion recording + Node decoder tests | complete | unstarted | OQ-001 blocks portable output shape |
+| NORM-GPS-GLOBAL-ORIGIN | GPS_GLOBAL_ORIGIN normalization | Node decoder test; no raw read capture | complete | unstarted | independent normalization vector still required |
+| FRAME-V1 | MAVLink v1 accepted with CRC | Node-generated frames plus published X.25 check vector | complete: `normalize.test.js` | unstarted | independent frame vector still required |
+| FRAME-V2 | unsigned MAVLink v2 accepted with CRC/trailing-zero behavior | provenanced raw mixed-SITL recordings + Node tests | complete | unstarted | none expected after OQ resolution |
 | FRAME-SIGNED-V2 | signed v2 rejected | constructed negative vector; Node behavior is not accepted authority | partial: apparent CRC-location defect documented | unstarted | Go deliberately rejects until signature policy exists |
-| FRAME-BAD-CRC | bad CRC rejected and resynchronized | constructed corruption of golden frame | unstarted | unstarted | none expected |
-| FRAME-TRUNCATED | truncated frame rejected without panic | constructed prefix of golden frame | unstarted | unstarted | none expected |
-| FRAME-UNSUPPORTED | valid unsupported message ignored | dialect-derived message id without decoder | unstarted | unstarted | none expected |
-| FRAME-JSON | protocol-v0 JSON envelope input | strict envelope contract plus normalization case | unstarted | unstarted | none expected |
-| CORE-HEALTH | health on every envelope and counters | fixed-clock schedule | unstarted | unstarted | none expected |
-| CORE-SEQUENCE | zero fallback and uint8 wrap | fixed-clock schedule | unstarted | unstarted | protocol-v0 debt retained |
-| CORE-ROSTER | sorted roster and strict TTL boundary | fixed-clock schedule | unstarted | unstarted | none expected |
-| CORE-RATES | rate sorting by rate then name | fixed-clock schedule | unstarted | unstarted | none expected |
-| CORE-CONFLICTS | duplicate exact-system source conflict | fixed-clock schedule | unstarted | unstarted | none expected |
+| FRAME-BAD-CRC | bad CRC rejected and resynchronized | constructed corruption in `normalize.test.js` | complete | unstarted | OQ-002 blocks complete negative taxonomy |
+| FRAME-TRUNCATED | truncated frame rejected without panic | Node truncation/padding tests | partial | unstarted | OQ-002: whole-frame and short-payload accounting differ |
+| FRAME-UNSUPPORTED | valid unsupported message ignored | Node combined-frame test | complete | unstarted | OQ-002: CRC/accounting policy unresolved |
+| FRAME-JSON | protocol-v0 JSON envelope input | fixed-clock schedule + Node normalization test | complete | unstarted | OQ-001 blocks schema relationship |
+| CORE-HEALTH | health on every envelope and counters | fixed-clock schedule + recording equality test | complete | unstarted | OQ-001/OQ-002 |
+| CORE-SEQUENCE | zero fallback and uint8 wrap | fixed-clock schedule + Node harness test | complete | unstarted | protocol-v0 debt retained |
+| CORE-ROSTER | sorted roster and strict TTL boundary | Node `bridgeCore.test.js` + fixed schedule | complete | unstarted | none expected |
+| CORE-RATES | rate sorting by rate then name | Node core/recording behavior; no focused portable case yet | partial | unstarted | portable tie/rate case still required |
+| CORE-CONFLICTS | duplicate exact-system source conflict | Node `bridgeCore.test.js` | complete | unstarted | none expected |
 | ROUTE-EXACT | exact `sysId:compId` route lookup | language-neutral route cases | complete: `systemRoutes.test.js` | complete: `routes_test.go` | none |
 | ROUTE-EXPIRY | explicit-time route expiration | language-neutral route cases | complete: `systemRoutes.test.js` | complete: `routes_test.go` | none |
 | REC-RAW | `base64` JSONL entry dispatches raw bytes | repository recording fixtures | complete: `mixedSitlFixture.test.js` | complete: `reader_test.go` | none |
