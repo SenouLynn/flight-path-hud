@@ -20,9 +20,12 @@ replay are interchangeable ingress adapters (ADR-0022).
 From the repository root:
 
 ```bash
-pnpm start:bridge     # bridge (records by default)
-pnpm sample:bridge    # synthetic vehicle, if you have no real one
+pnpm --filter @flight-path-hud/mavlink-bridge start       # bridge (records by default)
+pnpm --filter @flight-path-hud/mavlink-bridge sample:udp  # synthetic fleet
 ```
+
+To start the browser GCS, bridge, synthetic two-vehicle fleet, and mock video
+together, run `pnpm gcs:mock` from the repository root.
 
 Defaults: UDP `0.0.0.0:14550`, WebSocket `ws://localhost:8080/telemetry`.
 
