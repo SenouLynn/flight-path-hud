@@ -54,6 +54,96 @@ The entries below were reconstructed from the initial implementation (commits `9
 `355baff`) and documented on 2026-07-23. Dates reflect when each decision was first made in
 the code.
 
+## ADR-0036: Video channel model — inbound, outbound, and bidirectional adapters
+
+- **Status:** Proposed
+- **Date:** 2026-08-14
+- **Deciders:** team
+- **Extends:** [ADR-0021](#adr-0021-video-streaming-is-a-first-class-sidecar-with-adapter-ports)
+
+### Context
+
+ADR-0021 established video as a first-class sidecar and named MediaMTX + WHEP as the primary
+browser delivery path. The first concrete implementation of that port — `VideoPanel.tsx` —
+hardcoded `createMjpegSource(url)`, so the panel accepts a URL string rather than a
+`VideoSource`. That is an unexercised port: the interface exists but only one adapter can plug
+into it, and only by circumventing the interface's own shape.
+
+Separately, "video" on a GCS is not synonymous with FPV drone camera. The same panel surface
+may carry an operator webcam, a video call from a co-pilot, or a shared ground view — each
+pointing in a different direction on the network. The existing `VideoSource` interface models
+only inbound display and has no counterpart for outbound capture or bidirectional channels.
+OpenIPC hardware (a common drone camera firmware) is a concrete near-term adapter target; it
+is a firmware, not a protocol, and may deliver video over RTSP, RTMP, or WFB-ng depending on
+configuration.
+
+### Decision
+
+**1. Expand the port model to three interfaces:**
+
+| Interface | Direction | Primary use |
+|---|---|---|
+| `VideoSource` | Inbound — receives and displays | FPV feed, inbound call, WHEP, MJPEG |
+| `VideoEgress` | Outbound — captures and sends | Operator webcam out, WHIP |
+| `VideoChannel` | Bidirectional (`VideoSource & VideoEgress`) | Video chat, peer-to-peer |
+
+`VideoEgress` takes `(handlers) => teardown` with no container argument; it captures and
+transmits but does not render. `VideoChannel` composes both.
+
+**2. Decouple `VideoPanel` from the transport:**
+
+`VideoPanel` accepts `source: VideoSource` instead of `url: string`. The parent component
+decides which adapter to instantiate and passes it in. Source selection UI — picker,
+URL input, device chooser — lives in the caller, not the panel.
+
+**3. Adapter escalation ladder:**
+
+| Tier | Adapter | Interface | What it needs |
+|---|---|---|---|
+| Now | `webcamSource` | `VideoSource` | Browser `getUserMedia()`, zero deps |
+| Now | `mjpegSource` | `VideoSource` | Exists; becomes the MJPEG transport adapter |
+| Mid | `webcamEgress` | `VideoEgress` | `getUserMedia()` + WHIP push |
+| Mid | `whepSource` | `VideoSource` | MediaMTX WHEP endpoint |
+| Mid | `whipEgress` | `VideoEgress` | MediaMTX WHIP endpoint |
+| Long | `webrtcChannel` | `VideoChannel` | WebRTC peer connection, bidirectional |
+
+**4. OpenIPC is a source profile, not a transport adapter:**
+
+OpenIPC firmware selects its delivery transport (RTSP, RTMP, or WFB-ng) at configuration
+time. The GCS never learns what firmware is on the other end. An `openIpcSource` adapter is a
+thin configuration profile that knows OpenIPC-typical defaults (ports, stream paths, expected
+codecs) and wraps the appropriate transport adapter (`whepSource` via MediaMTX relay, or
+`rtspSource` if added). WFB-ng requires a ground-side `wfb_rx` daemon before it reaches the
+browser; the GCS adapter connects to the daemon's relay output, not to the RF link directly.
+
+### Consequences
+
+- ✅ `VideoPanel` becomes genuinely adapter-agnostic; swapping MJPEG for WHEP is a
+  one-line change at the caller with no panel modifications.
+- ✅ The webcam adapter is immediately useful in `gcs:mock` mode as a local dev stand-in and
+  is the seed for the outbound and bidirectional paths — no throwaway work.
+- ✅ OpenIPC, analog capture, and digital camera paths all terminate at the same port
+  contracts, as ADR-0021 required.
+- ✅ A future video chat surface is a `VideoChannel` adapter, not a new architectural concept.
+- ⚠️ `VideoPanel`'s `url` prop must be replaced with `source: VideoSource`; callers that
+  currently pass a URL string need updating.
+- ⚠️ `VideoEgress` has no UI surface yet; the outbound path is interface-only until a caller
+  and a send destination exist.
+- ⚠️ WFB-ng's `wfb_rx` daemon is a ground-station process dependency outside the browser and
+  outside this repository; its availability is a precondition for the OpenIPC WFB-ng profile.
+
+### Alternatives considered
+
+- Keep `VideoPanel` URL-driven and branch internally by URL scheme — rejected: it couples
+  transport detection to the panel and hides adapter choice inside a string heuristic.
+- Model outbound as a second `VideoSource` with an empty container — rejected: it abuses
+  the interface shape and makes "send" look like "display" to callers.
+- Make OpenIPC a transport adapter — rejected: it is firmware-plus-configuration, not a
+  protocol; the transport is a downstream choice the firmware makes, not the GCS.
+- Defer the channel model until a call feature is scheduled — rejected: naming the interfaces
+  now keeps the webcam adapter from hardcoding inbound-only assumptions that would need
+  unwinding when outbound arrives.
+
 ## ADR-0035: Evaluate Go as a contract-compatible bridge; defer transport selection
 
 - **Status:** Accepted
