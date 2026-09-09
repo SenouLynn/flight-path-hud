@@ -15,7 +15,7 @@
     "react": "^19.2.7",
     "react-dom": "^19.2.7",
     "@flight-path-hud/hud-ui": "workspace:*",
-    "maplibre-gl": "^5.9.0"
+    "maplibre-gl": "^6.4.1"
   },
   "devDependencies": {
     "@types/react": "^19.2.17",
